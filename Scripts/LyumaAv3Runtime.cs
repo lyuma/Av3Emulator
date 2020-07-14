@@ -668,7 +668,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         }
         if (Seated != PrevSeated && sittingIndex >= 0)
         {
-            playableBlendingStates[sittingIndex].StartBlend(playableMixer.GetInputWeight(sittingIndex), Seated ? 1f : 0f, 0.5f);
+            playableBlendingStates[sittingIndex].StartBlend(playableMixer.GetInputWeight(sittingIndex), Seated ? 1f : 0f, 0.25f);
             PrevSeated = Seated;
         }
         if (VisemeI != Viseme) {

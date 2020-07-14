@@ -46,11 +46,11 @@ public static class LyumaAv3EditorSupport
         {VRCAvatarDescriptor.AnimLayerType.TPose, "vrc_MusclesOnly"},
         {VRCAvatarDescriptor.AnimLayerType.IKPose, "vrc_MusclesOnly"},
         {VRCAvatarDescriptor.AnimLayerType.SpecialIK, "vrc_MusclesOnly"},
-        {VRCAvatarDescriptor.AnimLayerType.Base, "LyumaFullMask"},
-        {VRCAvatarDescriptor.AnimLayerType.Sitting, "LyumaFullMask"},
-        {VRCAvatarDescriptor.AnimLayerType.Additive, "LyumaFullMask"},
-        {VRCAvatarDescriptor.AnimLayerType.FX, "LyumaEmptyMask"},
-        {VRCAvatarDescriptor.AnimLayerType.Action,"vrc_MusclesOnly"},
+        {VRCAvatarDescriptor.AnimLayerType.Base, null},//"LyumaFullMask"},
+        {VRCAvatarDescriptor.AnimLayerType.Sitting, null},//"LyumaFullMask"},
+        {VRCAvatarDescriptor.AnimLayerType.Additive, null},//"LyumaFullMask"},
+        {VRCAvatarDescriptor.AnimLayerType.FX, "LyumaEmptyMask"}, // TODO
+        {VRCAvatarDescriptor.AnimLayerType.Action, null},//"vrc_MusclesOnly"},
         {VRCAvatarDescriptor.AnimLayerType.Gesture, "vrc_HandsOnly"},
     };
 
