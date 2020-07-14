@@ -99,17 +99,17 @@ public class LyumaAv3Runtime : MonoBehaviour
     public GestureIndex GestureRight;
     [Range(0, 1)] public float GestureRightWeight;
     public Vector3 Velocity;
-    [Range(-1, 1)] public float AngularY; // Not documented
-    [Range(-1, 1)] public float Upright; // Not documented
-    [Range(-1, 1)] public float GroundProximity; // Not documented
-    public int LocomotionMode; // Not documented
+    [Range(-1, 1)] public float AngularY;
+    [Range(0, 1)] public float Upright;
+    [Range(-1, 1)] public float GroundProximity; // Not implemented
+    private int LocomotionMode; // Does not exist.
     public bool Grounded;
     private bool PrevSeated;
     public bool Seated;
     public bool AFK;
     //TODO:
-    public bool Supine; // Not documented
-    public bool FootstepDisable; // Not documented
+    public bool Supine; // Not implemented
+    private bool FootstepDisable; // Does not exist.
 
     [Header("Output State (Read-only)")]
     public bool IsLocal;
