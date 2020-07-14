@@ -460,7 +460,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         playableBlendingStates.Clear();
         actionIndex = fxIndex = gestureIndex = additiveIndex = sittingIndex = -1;
 
-        Animator[] animators = this.gameObject.GetComponentsInChildren<Animator>();
+        Animator[] animators = this.gameObject.GetComponentsInChildren<Animator>(true);
         Debug.Log("anim len "+animators.Length);
         foreach (Animator anim in animators)
         {
