@@ -88,7 +88,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         Neutral, Fist, HandOpen, Fingerpoint, Victory, RockNRoll, HandGun, ThumbsUp
     }
     static HashSet<string> BUILTIN_PARAMETERS = new HashSet<string> {
-        "Viseme", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "LocomotionMode", "Upright", "AngularY", "GroundProximity"
+        "Viseme", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "LocomotionMode", "Upright", "AngularY", "GroundProximity", "Grounded", "Supine", "FootstepDisable", "Seated", "AFK"
     };
     [Header("Built-in locomotion inputs")]
     public int VisemeI;
@@ -116,6 +116,8 @@ public class LyumaAv3Runtime : MonoBehaviour
     public bool LocomotionIsDisabled;
     private Vector3 HeadRelativeViewPosition;
     public Vector3 ViewPosition;
+    float AvatarScaleFactor;
+    public VRCAnimatorTrackingControl.TrackingType trackingHead;
     public VRCAnimatorTrackingControl.TrackingType trackingRightFingers;
     public VRCAnimatorTrackingControl.TrackingType trackingLeftFingers;
     public VRCAnimatorTrackingControl.TrackingType trackingEyes;
@@ -146,10 +148,21 @@ public class LyumaAv3Runtime : MonoBehaviour
     public List<IntParam> Ints = new List<IntParam>();
     public Dictionary<string, int> IntToIndex = new Dictionary<string, int>();
 
+    [Serializable]
+    public class BoolParam
+    {
+        public string name;
+        public bool value;
+    }
+    public List<BoolParam> Bools = new List<BoolParam>();
+    public Dictionary<string, int> BoolToIndex = new Dictionary<string, int>();
+
     static public Dictionary<Animator, LyumaAv3Runtime> animatorToTopLevelRuntime = new Dictionary<Animator, LyumaAv3Runtime>();
     private List<Animator> attachedAnimators = new List<Animator>();
 
-    public IEnumerator DelayedSetView(bool setView, float time) {
+    const float BASE_HEIGHT = 1.4f;
+
+    public IEnumerator DelayedEnterPoseSpace(bool setView, float time) {
         yield return new WaitForSeconds(time);
         if (setView) {
             Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
@@ -157,6 +170,12 @@ public class LyumaAv3Runtime : MonoBehaviour
         } else {
             ViewPosition = avadesc.ViewPosition;
         }
+    }
+    public IEnumerator DelayedRemeasureAvatar(float time) {
+        yield return new WaitForSeconds(time);
+        Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
+        Vector3 tmpViewPosition = animator.transform.InverseTransformPoint(head.TransformPoint(HeadRelativeViewPosition));
+        AvatarScaleFactor = tmpViewPosition.magnitude / BASE_HEIGHT;
     }
 
     class BlendingState {
@@ -194,7 +213,7 @@ public class LyumaAv3Runtime : MonoBehaviour
 
     static LyumaAv3Runtime () {
         VRCAvatarParameterDriver.Initialize += (x) => {
-            x.ApplySettings += (VRC.SDKBase.VRC_AvatarParameterDriver behaviour, Animator animator) =>
+            x.ApplySettings += (behaviour, animator) =>
             {
                 LyumaAv3Runtime runtime;
                 if (!animatorToTopLevelRuntime.TryGetValue(animator, out runtime)) {
@@ -218,11 +237,14 @@ public class LyumaAv3Runtime : MonoBehaviour
                     if (runtime.FloatToIndex.TryGetValue(parameter.name, out idx)) {
                         runtime.Floats[idx].value = parameter.value;
                     }
+                    if (runtime.BoolToIndex.TryGetValue(parameter.name, out idx)) {
+                        runtime.Bools[idx].value = parameter.value != 0;
+                    }
                 }
             };
         };
         VRCPlayableLayerControl.Initialize += (x) => {
-            x.ApplySettings += (VRC.SDKBase.VRC_PlayableLayerControl behaviour, Animator animator) =>
+            x.ApplySettings += (behaviour, animator) =>
             {
                 LyumaAv3Runtime runtime;
                 if (!animatorToTopLevelRuntime.TryGetValue(animator, out runtime)) {
@@ -260,7 +282,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             };
         };
         VRCAnimatorLayerControl.Initialize += (x) => {
-            x.ApplySettings += (VRC.SDKBase.VRC_AnimatorLayerControl behaviour, Animator animator) =>
+            x.ApplySettings += (behaviour, animator) =>
             {
                 LyumaAv3Runtime runtime;
                 if (!animatorToTopLevelRuntime.TryGetValue(animator, out runtime)) {
@@ -301,7 +323,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             };
         };
         VRCAnimatorLocomotionControl.Initialize += (x) => {
-            x.ApplySettings += (VRC.SDKBase.VRC_AnimatorLocomotionControl behaviour, Animator animator) =>
+            x.ApplySettings += (behaviour, animator) =>
             {
                 LyumaAv3Runtime runtime;
                 if (!animatorToTopLevelRuntime.TryGetValue(animator, out runtime)) {
@@ -320,8 +342,8 @@ public class LyumaAv3Runtime : MonoBehaviour
                 runtime.LocomotionIsDisabled = behaviour.disableLocomotion;
             };
         };
-        VRCAnimatorSetView.Initialize += (x) => {
-            x.ApplySettings += (VRC.SDKBase.VRC_AnimatorSetView behaviour, Animator animator) =>
+        VRCAnimatorRemeasureAvatar.Initialize += (x) => {
+            x.ApplySettings += (behaviour, animator) =>
             {
                 LyumaAv3Runtime runtime;
                 if (!animatorToTopLevelRuntime.TryGetValue(animator, out runtime)) {
@@ -336,11 +358,34 @@ public class LyumaAv3Runtime : MonoBehaviour
                 {
                     return;
                 }
-                runtime.StartCoroutine(runtime.DelayedSetView(behaviour.setView, behaviour.delayTime));
+                // fixedDelay: Is the delay fixed or normalized...
+                // The layerIndex is not passed into the delegate, so we cannot reimplement fixedDelay.
+                runtime.StartCoroutine(runtime.DelayedRemeasureAvatar(behaviour.delayTime));
+            };
+        };
+        VRCAnimatorTemporaryPoseSpace.Initialize += (x) => {
+            x.ApplySettings += (behaviour, animator) =>
+            {
+                LyumaAv3Runtime runtime;
+                if (!animatorToTopLevelRuntime.TryGetValue(animator, out runtime)) {
+                    Debug.LogError("[VRCAnimatorSetView: animator is not known: " + animator, animator);
+                    return;
+                }
+                if (behaviour.debugString != null && behaviour.debugString.Length > 0)
+                {
+                    Debug.Log("[VRCAnimatorSetView:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
+                }
+                if (!runtime)
+                {
+                    return;
+                }
+                // fixedDelay: Is the delay fixed or normalized...
+                // The layerIndex is not passed into the delegate, so we cannot reimplement fixedDelay.
+                runtime.StartCoroutine(runtime.DelayedEnterPoseSpace(behaviour.enterPoseSpace, behaviour.delayTime));
             };
         };
         VRCAnimatorTrackingControl.Initialize += (x) => {
-            x.ApplySettings += (VRC.SDKBase.VRC_AnimatorTrackingControl behaviour, Animator animator) =>
+            x.ApplySettings += (behaviour, animator) =>
             {
                 LyumaAv3Runtime runtime;
                 if (!animatorToTopLevelRuntime.TryGetValue(animator, out runtime)) {
@@ -356,6 +401,10 @@ public class LyumaAv3Runtime : MonoBehaviour
                     return;
                 }
 
+                if (behaviour.trackingHead != VRCAnimatorTrackingControl.TrackingType.NoChange)
+                {
+                    runtime.trackingHead = behaviour.trackingHead;
+                }
                 if (behaviour.trackingRightFingers != VRCAnimatorTrackingControl.TrackingType.NoChange)
                 {
                     runtime.trackingRightFingers = behaviour.trackingRightFingers;
@@ -425,6 +474,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         animator = this.gameObject.GetComponent<Animator>();
         avadesc = this.gameObject.GetComponent<VRCAvatarDescriptor>();
         ViewPosition = avadesc.ViewPosition;
+        AvatarScaleFactor = ViewPosition.magnitude / BASE_HEIGHT; // mostly guessing...
         HeadRelativeViewPosition = ViewPosition;
         if (animator.avatar != null)
         {
@@ -447,8 +497,17 @@ public class LyumaAv3Runtime : MonoBehaviour
         VRCAvatarDescriptor.CustomAnimLayer[] baselayers = avadesc.baseAnimationLayers;
         VRCAvatarDescriptor.CustomAnimLayer[] speciallayers = avadesc.specialAnimationLayers;
         List<VRCAvatarDescriptor.CustomAnimLayer> allLayers = new List<VRCAvatarDescriptor.CustomAnimLayer>();
-        allLayers.AddRange(baselayers);
+        foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
+            if (cal.type == VRCAvatarDescriptor.AnimLayerType.Base || cal.type == VRCAvatarDescriptor.AnimLayerType.Additive) {
+                allLayers.Add(cal);
+            }
+        }
         allLayers.AddRange(speciallayers);
+        foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
+            if (!(cal.type == VRCAvatarDescriptor.AnimLayerType.Base || cal.type == VRCAvatarDescriptor.AnimLayerType.Additive)) {
+                allLayers.Add(cal);
+            }
+        }
 
         // var director = avadesc.gameObject.GetComponent<PlayableDirector>();
         playableGraph = PlayableGraph.Create("LyumaAvatarRuntime - " + this.gameObject.name);
@@ -473,6 +532,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         Upright = 1.0f;
 
         Ints.Clear();
+        Bools.Clear();
         Floats.Clear();
         HashSet<string> usedparams = new HashSet<string>(BUILTIN_PARAMETERS);
         i = 0;
@@ -520,6 +580,9 @@ public class LyumaAv3Runtime : MonoBehaviour
             {
                 ac = vrcAnimLayer.animatorController;
                 mask = vrcAnimLayer.mask;
+                if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.FX) {
+                    mask = animLayerToDefaultAvaMask[vrcAnimLayer.type]; // Force mask to prevent muscle overrides.
+                }
             }
             if (ac == null) {
                 // i is not incremented.
@@ -607,6 +670,13 @@ public class LyumaAv3Runtime : MonoBehaviour
                     param.value = aparam.defaultFloat;
                     FloatToIndex[param.name] = Floats.Count;
                     Floats.Add(param);
+                    usedparams.Add(aparam.name);
+                } else if (aparam.type == AnimatorControllerParameterType.Bool) {
+                    BoolParam param = new BoolParam();
+                    param.name = aparam.name;
+                    param.value = aparam.defaultBool;
+                    BoolToIndex[param.name] = Bools.Count;
+                    Bools.Add(param);
                     usedparams.Add(aparam.name);
                 }
             }
@@ -712,6 +782,18 @@ public class LyumaAv3Runtime : MonoBehaviour
                     }
                     playable.SetInteger(param.name, param.value);
                     paramterInts[paramid] = param.value;
+                }
+            }
+            foreach (BoolParam param in Bools)
+            {
+                if (parameterIndices.TryGetValue(param.name, out paramid))
+                {
+                    if (paramterInts.TryGetValue(paramid, out iparam) && iparam != (playable.GetBool(paramid) ? 1 : 0)) {
+                        // Debug.Log("Reflecting change in int parameter " + param.name + " from " + param.value + " to " + playable.GetFloat(paramid));
+                        param.value = playable.GetBool(paramid);
+                    }
+                    playable.SetBool(param.name, param.value);
+                    paramterInts[paramid] = param.value ? 1 : 0;
                 }
             }
             if (parameterIndices.TryGetValue("Viseme", out paramid))
