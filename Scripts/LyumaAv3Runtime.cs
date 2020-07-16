@@ -130,8 +130,8 @@ public class LyumaAv3Runtime : MonoBehaviour
     [Serializable]
     public class FloatParam
     {
+        public string stageName;
         public string name;
-        public bool synced;
         [Range(-1, 1)] public float value;
     }
     [Header("User-generated inputs")]
@@ -141,8 +141,8 @@ public class LyumaAv3Runtime : MonoBehaviour
     [Serializable]
     public class IntParam
     {
+        public string stageName;
         public string name;
-        public bool synced;
         public int value;
     }
     public List<IntParam> Ints = new List<IntParam>();
@@ -156,6 +156,8 @@ public class LyumaAv3Runtime : MonoBehaviour
     }
     public List<BoolParam> Bools = new List<BoolParam>();
     public Dictionary<string, int> BoolToIndex = new Dictionary<string, int>();
+
+    public Dictionary<string, string> StageParamterToBuiltin = new Dictionary<string, string>();
 
     static public Dictionary<Animator, LyumaAv3Runtime> animatorToTopLevelRuntime = new Dictionary<Animator, LyumaAv3Runtime>();
     private List<Animator> attachedAnimators = new List<Animator>();
@@ -230,14 +232,18 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
                 foreach (var parameter in behaviour.parameters)
                 {
+                    string actualName;
+                    if (!runtime.StageParamterToBuiltin.TryGetValue(parameter.name, out actualName)) {
+                        actualName = parameter.name;
+                    }
                     int idx;
-                    if (runtime.IntToIndex.TryGetValue(parameter.name, out idx)) {
+                    if (runtime.IntToIndex.TryGetValue(actualName, out idx)) {
                         runtime.Ints[idx].value = (int)parameter.value;
                     }
-                    if (runtime.FloatToIndex.TryGetValue(parameter.name, out idx)) {
+                    if (runtime.FloatToIndex.TryGetValue(actualName, out idx)) {
                         runtime.Floats[idx].value = parameter.value;
                     }
-                    if (runtime.BoolToIndex.TryGetValue(parameter.name, out idx)) {
+                    if (runtime.BoolToIndex.TryGetValue(actualName, out idx)) {
                         runtime.Bools[idx].value = parameter.value != 0;
                     }
                 }
@@ -538,15 +544,19 @@ public class LyumaAv3Runtime : MonoBehaviour
         i = 0;
         if (stageParameters != null)
         {
+            int stageId = 0;
             foreach (var stageParam in stageParameters.stageParameters)
             {
+                stageId++; // one-indexed
                 if (stageParam.name == null || stageParam.name.Length == 0) {
                     continue;
                 }
+                string stageName = "Stage" + stageId;
+                StageParamterToBuiltin.Add(stageName, stageParam.name);
                 if ((int)stageParam.valueType == 0)
                 {
                     IntParam param = new IntParam();
-                    param.synced = true;
+                    param.stageName = stageName;
                     param.name = stageParam.name;
                     param.value = 0;
                     IntToIndex[param.name] = Ints.Count;
@@ -555,7 +565,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 else
                 {
                     FloatParam param = new FloatParam();
-                    param.synced = true;
+                    param.stageName = stageName;
                     param.name = stageParam.name;
                     param.value = 0;
                     FloatToIndex[param.name] = Floats.Count;
@@ -651,13 +661,17 @@ public class LyumaAv3Runtime : MonoBehaviour
             playableParamterIds.Add(parameterIndices);
             for (i = 0; i < pcnt; i++) {
                 AnimatorControllerParameter aparam = playable.GetParameter(i);
-                parameterIndices[aparam.name] = aparam.nameHash;
-                if (usedparams.Contains(aparam.name)) {
+                string actualName;
+                if (!StageParamterToBuiltin.TryGetValue(aparam.name, out actualName)) {
+                    actualName = aparam.name;
+                }
+                parameterIndices[actualName] = aparam.nameHash;
+                if (usedparams.Contains(actualName)) {
                     continue;
                 }
                 if (aparam.type == AnimatorControllerParameterType.Int) {
                     IntParam param = new IntParam();
-                    param.synced = false;
+                    param.stageName = aparam.name + " (local)";
                     param.name = aparam.name;
                     param.value = aparam.defaultInt;
                     IntToIndex[param.name] = Ints.Count;
@@ -665,7 +679,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                     usedparams.Add(aparam.name);
                 } else if (aparam.type == AnimatorControllerParameterType.Float) {
                     FloatParam param = new FloatParam();
-                    param.synced = false;
+                    param.stageName = aparam.name + " (local)";
                     param.name = aparam.name;
                     param.value = aparam.defaultFloat;
                     FloatToIndex[param.name] = Floats.Count;
@@ -702,12 +716,12 @@ public class LyumaAv3Runtime : MonoBehaviour
         }
         if (AvatarSyncSource != this) {
             for (int i = 0; i < Ints.Count; i++) {
-                if (Ints[i].synced) {
+                if (StageParamterToBuiltin.ContainsKey(Ints[i].stageName)) {
                     Ints[i].value = ClampByte(AvatarSyncSource.Ints[i].value);
                 }
             }
             for (int i = 0; i < Floats.Count; i++) {
-                if (Floats[i].synced) {
+                if (StageParamterToBuiltin.ContainsKey(Ints[i].stageName)) {
                     Floats[i].value = ClampFloat(AvatarSyncSource.Floats[i].value);
                 }
             }
@@ -764,11 +778,12 @@ public class LyumaAv3Runtime : MonoBehaviour
             {
                 if (parameterIndices.TryGetValue(param.name, out paramid))
                 {
-                    if (paramterFloats.TryGetValue(paramid, out fparam) && fparam != playable.GetFloat(paramid)) {
-                        // Debug.Log("Reflecting change in float parameter " + param.name + " from " + param.value + " to " + playable.GetFloat(paramid));
-                        param.value = playable.GetFloat(paramid);
+                    if (paramterFloats.TryGetValue(paramid, out fparam)) {
+                        if (fparam != playable.GetFloat(paramid)) {
+                            param.value = playable.GetFloat(paramid);
+                        }
+                        playable.SetFloat(paramid, param.value);
                     }
-                    playable.SetFloat(paramid, param.value);
                     paramterFloats[paramid] = param.value;
                 }
             }
@@ -776,11 +791,12 @@ public class LyumaAv3Runtime : MonoBehaviour
             {
                 if (parameterIndices.TryGetValue(param.name, out paramid))
                 {
-                    if (paramterInts.TryGetValue(paramid, out iparam) && iparam != playable.GetInteger(paramid)) {
-                        // Debug.Log("Reflecting change in int parameter " + param.name + " from " + param.value + " to " + playable.GetFloat(paramid));
-                        param.value = playable.GetInteger(paramid);
+                    if (paramterInts.TryGetValue(paramid, out iparam)) {
+                        if (iparam != playable.GetInteger(paramid)) {
+                            param.value = playable.GetInteger(paramid);
+                        }
+                        playable.SetInteger(paramid, param.value);
                     }
-                    playable.SetInteger(param.name, param.value);
                     paramterInts[paramid] = param.value;
                 }
             }
@@ -788,11 +804,12 @@ public class LyumaAv3Runtime : MonoBehaviour
             {
                 if (parameterIndices.TryGetValue(param.name, out paramid))
                 {
-                    if (paramterInts.TryGetValue(paramid, out iparam) && iparam != (playable.GetBool(paramid) ? 1 : 0)) {
-                        // Debug.Log("Reflecting change in int parameter " + param.name + " from " + param.value + " to " + playable.GetFloat(paramid));
-                        param.value = playable.GetBool(paramid);
+                    if (paramterInts.TryGetValue(paramid, out iparam)) {
+                        if (iparam != (playable.GetBool(paramid) ? 1 : 0)) {
+                            param.value = playable.GetBool(paramid);
+                        }
+                        playable.SetBool(paramid, param.value);
                     }
-                    playable.SetBool(param.name, param.value);
                     paramterInts[paramid] = param.value ? 1 : 0;
                 }
             }
