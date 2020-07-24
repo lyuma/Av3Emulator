@@ -1,4 +1,8 @@
 # Avatar 3.0 Emulator
+**NEW IN v0.5.0**: UPDATED _July 24, 2020_ for the Open Beta with support for VRCExpressionParameters!
+
+Documentation here: https://docs.vrchat.com/v2020.3.2/docs/what-is-avatars-30
+
 This is an emulator for Avatars 3.0 reimplemented in the unity editor on top the the unity [PlayableGraph](https://docs.unity3d.com/Manual/Playables-Graph.html) API, using the [AnimationControllerPlayable](https://docs.unity3d.com/2018.4/Documentation/ScriptReference/Animations.AnimatorControllerPlayable.html) and [AnimationLayerMixerPlayable](https://docs.unity3d.com/2018.4/Documentation/ScriptReference/Animations.AnimationLayerMixerPlayable.html) APIs.
 
 ## Features:

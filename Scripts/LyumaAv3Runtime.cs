@@ -23,8 +23,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
-using VRC.SDK3.Components;
-using VRC.SDK3.ScriptableObjects;
+using VRC.SDK3.Avatars.Components;
+using VRC.SDK3.Avatars.ScriptableObjects;
 
 [RequireComponent(typeof(Animator))]
 public class LyumaAv3Runtime : MonoBehaviour
@@ -47,7 +47,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     AnimationLayerMixerPlayable playableMixer;
     PlayableGraph playableGraph;
     VRCExpressionsMenu expressionsMenu;
-    VRCStageParameters stageParameters;
+    VRCExpressionParameters stageParameters;
     int sittingIndex;
     int fxIndex;
     int actionIndex;
@@ -95,8 +95,12 @@ public class LyumaAv3Runtime : MonoBehaviour
     public VisemeIndex VisemeDD;
     private int Viseme;
     public GestureIndex GestureLeft;
+    public int GestureLeftIdx;
+    private char GestureLeftIdxInt;
     [Range(0, 1)] public float GestureLeftWeight;
     public GestureIndex GestureRight;
+    public int GestureRightIdx;
+    private char GestureRightIdxInt;
     [Range(0, 1)] public float GestureRightWeight;
     public Vector3 Velocity;
     [Range(-1, 1)] public float AngularY;
@@ -118,14 +122,15 @@ public class LyumaAv3Runtime : MonoBehaviour
     public Vector3 ViewPosition;
     float AvatarScaleFactor;
     public VRCAnimatorTrackingControl.TrackingType trackingHead;
-    public VRCAnimatorTrackingControl.TrackingType trackingRightFingers;
-    public VRCAnimatorTrackingControl.TrackingType trackingLeftFingers;
-    public VRCAnimatorTrackingControl.TrackingType trackingEyes;
-    public VRCAnimatorTrackingControl.TrackingType trackingLeftFoot;
-    public VRCAnimatorTrackingControl.TrackingType trackingHip;
-    public VRCAnimatorTrackingControl.TrackingType trackingRightHand;
     public VRCAnimatorTrackingControl.TrackingType trackingLeftHand;
+    public VRCAnimatorTrackingControl.TrackingType trackingRightHand;
+    public VRCAnimatorTrackingControl.TrackingType trackingHip;
+    public VRCAnimatorTrackingControl.TrackingType trackingLeftFoot;
     public VRCAnimatorTrackingControl.TrackingType trackingRightFoot;
+    public VRCAnimatorTrackingControl.TrackingType trackingLeftFingers;
+    public VRCAnimatorTrackingControl.TrackingType trackingRightFingers;
+    public VRCAnimatorTrackingControl.TrackingType trackingEyesAndEyelids;
+    public VRCAnimatorTrackingControl.TrackingType trackingMouthAndJaw;
 
     [Serializable]
     public class FloatParam
@@ -407,6 +412,10 @@ public class LyumaAv3Runtime : MonoBehaviour
                     return;
                 }
 
+                if (behaviour.trackingMouth != VRCAnimatorTrackingControl.TrackingType.NoChange)
+                {
+                    runtime.trackingMouthAndJaw = behaviour.trackingMouth;
+                }
                 if (behaviour.trackingHead != VRCAnimatorTrackingControl.TrackingType.NoChange)
                 {
                     runtime.trackingHead = behaviour.trackingHead;
@@ -417,7 +426,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
                 if (behaviour.trackingEyes != VRCAnimatorTrackingControl.TrackingType.NoChange)
                 {
-                    runtime.trackingEyes = behaviour.trackingEyes;
+                    runtime.trackingEyesAndEyelids = behaviour.trackingEyes;
                 }
                 if (behaviour.trackingLeftFingers != VRCAnimatorTrackingControl.TrackingType.NoChange)
                 {
@@ -490,7 +499,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         expressionsMenu = avadesc.expressionsMenu;
         if (expressionsMenu != null)
         {
-            stageParameters = expressionsMenu.stageParameters;
+            stageParameters = avadesc.expressionParameters;
         }
         origAnimatorController = animator.runtimeAnimatorController;
         animator.runtimeAnimatorController = null;
@@ -545,7 +554,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         if (stageParameters != null)
         {
             int stageId = 0;
-            foreach (var stageParam in stageParameters.stageParameters)
+            foreach (var stageParam in stageParameters.parameters)
             {
                 stageId++; // one-indexed
                 if (stageParam.name == null || stageParam.name.Length == 0) {
@@ -728,8 +737,12 @@ public class LyumaAv3Runtime : MonoBehaviour
             Viseme = VisemeI = AvatarSyncSource.Viseme;
             VisemeDD = (VisemeIndex)Viseme;
             GestureLeft = AvatarSyncSource.GestureLeft;
+            GestureLeftIdx = AvatarSyncSource.GestureLeftIdx;
+            GestureLeftIdxInt = AvatarSyncSource.GestureLeftIdxInt;
             GestureLeftWeight = AvatarSyncSource.GestureLeftWeight;
             GestureRight = AvatarSyncSource.GestureRight;
+            GestureRightIdx = AvatarSyncSource.GestureRightIdx;
+            GestureRightIdxInt = AvatarSyncSource.GestureRightIdxInt;
             GestureRightWeight = AvatarSyncSource.GestureRightWeight;
             Velocity = AvatarSyncSource.Velocity;
             AngularY = AvatarSyncSource.AngularY;
@@ -762,6 +775,24 @@ public class LyumaAv3Runtime : MonoBehaviour
         if ((int)VisemeDD != Viseme) {
             Viseme = (int)VisemeDD;
             VisemeI = Viseme;
+        }
+        if (GestureLeftIdx != GestureLeftIdxInt) {
+            GestureLeft = (GestureIndex)GestureLeftIdx;
+            GestureLeftIdx = (int)GestureLeft;
+            GestureLeftIdxInt = (char)GestureLeftIdx;
+        }
+        if ((int)GestureLeft != (int)GestureLeftIdxInt) {
+            GestureLeftIdx = (int)GestureLeft;
+            GestureLeftIdxInt = (char)GestureLeftIdx;
+        }
+        if (GestureRightIdx != GestureRightIdxInt) {
+            GestureRight = (GestureIndex)GestureRightIdx;
+            GestureRightIdx = (int)GestureRight;
+            GestureRightIdxInt = (char)GestureRightIdx;
+        }
+        if ((int)GestureRight != (int)GestureRightIdxInt) {
+            GestureRightIdx = (int)GestureRight;
+            GestureRightIdxInt = (char)GestureRightIdx;
         }
         IsLocal = AvatarSyncSource == this;
         int whichcontroller = 0;
@@ -825,7 +856,9 @@ public class LyumaAv3Runtime : MonoBehaviour
             if (parameterIndices.TryGetValue("GestureLeft", out paramid))
             {
                 if (paramterInts.TryGetValue(paramid, out iparam) && iparam != playable.GetInteger(paramid)) {
-                    GestureLeft = (GestureIndex)playable.GetInteger(paramid);
+                    GestureLeftIdx = playable.GetInteger(paramid);
+                    GestureLeftIdxInt = (char)GestureLeftIdx;
+                    GestureLeft = (GestureIndex)GestureLeftIdx;
                 }
                 playable.SetInteger(paramid, (int)GestureLeft);
                 paramterInts[paramid] = (int)GestureLeft;
@@ -841,7 +874,9 @@ public class LyumaAv3Runtime : MonoBehaviour
             if (parameterIndices.TryGetValue("GestureRight", out paramid))
             {
                 if (paramterInts.TryGetValue(paramid, out iparam) && iparam != playable.GetInteger(paramid)) {
-                    GestureRight = (GestureIndex)playable.GetInteger(paramid);
+                    GestureRightIdx = playable.GetInteger(paramid);
+                    GestureRightIdxInt = (char)GestureRightIdx;
+                    GestureRight = (GestureIndex)GestureRightIdx;
                 }
                 playable.SetInteger(paramid, (int)GestureRight);
                 paramterInts[paramid] = (int)GestureRight;

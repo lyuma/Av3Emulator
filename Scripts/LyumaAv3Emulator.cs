@@ -19,6 +19,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. */
 using UnityEngine;
 using System.Collections.Generic;
+using VRC.SDK3.Avatars.Components;
 
 public class LyumaAv3Emulator : MonoBehaviour
 {
@@ -30,7 +31,7 @@ public class LyumaAv3Emulator : MonoBehaviour
 
     private void Start()
     {
-        VRC.SDK3.Components.VRCAvatarDescriptor[] avatars = FindObjectsOfType<VRC.SDK3.Components.VRCAvatarDescriptor>();
+        VRCAvatarDescriptor[] avatars = FindObjectsOfType<VRCAvatarDescriptor>();
         Debug.Log("drv len "+avatars.Length);
         foreach (var avadesc in avatars)
         {

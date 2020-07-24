@@ -25,7 +25,7 @@ using UnityEngine.Animations;
 using UnityEditor.Animations;
 using UnityEditor.Playables;
 using UnityEngine.Playables;
-using VRC.SDK3.Components;
+using VRC.SDK3.Avatars.Components;
 
 [InitializeOnLoadAttribute]
 public static class LyumaAv3EditorSupport
