@@ -54,7 +54,6 @@ public static class LyumaAv3EditorSupport
         {VRCAvatarDescriptor.AnimLayerType.Gesture, "vrc_HandsOnly"},
     };
 
-
     static void InitDefaults() {
         foreach (var kv in animLayerToDefaultFile) {
             if (kv.Value == null) {
@@ -94,6 +93,34 @@ public static class LyumaAv3EditorSupport
                 LyumaAv3Runtime.animLayerToDefaultAvaMask[kv.Key] = mask;
             }
         }
+        foreach (string guid in AssetDatabase.FindAssets("EmptyController")) {
+            LyumaAv3Emulator.EmptyController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(AssetDatabase.GUIDToAssetPath(guid));
+        }
+
+        LyumaAv3Runtime.updateSelectionDelegate = (go) => {
+            if (go == null && LyumaAv3Emulator.emulatorInstance != null) {
+                Debug.Log("Resetting selected object: " + LyumaAv3Emulator.emulatorInstance);
+                go = LyumaAv3Emulator.emulatorInstance.gameObject;
+            }
+            Debug.Log("Setting selected object: " + go);
+            Selection.SetActiveObjectWithContext(go, go);
+            // Highlighter.Highlight("Inspector", "Animator To Debug");
+        };
+
+        LyumaAv3Runtime.addRuntimeDelegate = (runtime) => {
+            GameObject go = runtime.gameObject;
+            try {
+                if (PrefabUtility.IsPartOfAnyPrefab(go)) {
+                    PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+                }
+            } catch (System.Exception) {}
+            int moveUpCalls = go.GetComponents<Component>().Length - 2;
+            if (!PrefabUtility.IsPartOfAnyPrefab(go.GetComponents<Component>()[1])) {
+                for (int i = 0; i < moveUpCalls; i++) {
+                    UnityEditorInternal.ComponentUtility.MoveComponentUp(runtime);
+                }
+            }
+        };
     }
 
     // register an event handler when the class is initialized

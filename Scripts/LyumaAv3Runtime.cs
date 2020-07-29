@@ -26,17 +26,26 @@ using UnityEngine.Playables;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 
-[RequireComponent(typeof(Animator))]
+// [RequireComponent(typeof(Animator))]
 public class LyumaAv3Runtime : MonoBehaviour
 {
     static public Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController> animLayerToDefaultController = new Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController>();
     static public Dictionary<VRCAvatarDescriptor.AnimLayerType, AvatarMask> animLayerToDefaultAvaMask = new Dictionary<VRCAvatarDescriptor.AnimLayerType, AvatarMask>();
+    public delegate void UpdateSelectionFunc(GameObject obj);
+    public static UpdateSelectionFunc updateSelectionDelegate;
+    public delegate void AddRuntime(LyumaAv3Runtime runtime);
+    public static AddRuntime addRuntimeDelegate;
 
+    public bool ResetAvatar;
+    public bool ResetAndHold;
+    [Tooltip("Selects the playable layer to be visible in Unity's Animator window. Because this layer is moved to the top, the output may no longer be correct unless this is set to Base.")] public VRCAvatarDescriptor.AnimLayerType AnimatorToDebug;
+    private char PrevAnimatorToDebug;
     [HideInInspector] public string SourceObjectPath;
     [Header("Assign to non-local duplicate")]public LyumaAv3Runtime AvatarSyncSource;
     private int CloneCount;
     public bool CreateNonLocalClone;
     VRCAvatarDescriptor avadesc;
+    Avatar animatorAvatar;
     Animator animator;
     private RuntimeAnimatorController origAnimatorController;
 
@@ -135,9 +144,10 @@ public class LyumaAv3Runtime : MonoBehaviour
     [Serializable]
     public class FloatParam
     {
-        public string stageName;
+        [HideInInspector] public string stageName;
         public string name;
         [Range(-1, 1)] public float value;
+        [HideInInspector] public float lastValue;
     }
     [Header("User-generated inputs")]
     public List<FloatParam> Floats = new List<FloatParam>();
@@ -146,9 +156,10 @@ public class LyumaAv3Runtime : MonoBehaviour
     [Serializable]
     public class IntParam
     {
-        public string stageName;
+        [HideInInspector] public string stageName;
         public string name;
         public int value;
+        [HideInInspector] public int lastValue;
     }
     public List<IntParam> Ints = new List<IntParam>();
     public Dictionary<string, int> IntToIndex = new Dictionary<string, int>();
@@ -158,6 +169,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     {
         public string name;
         public bool value;
+        [HideInInspector] public bool lastValue;
     }
     public List<BoolParam> Bools = new List<BoolParam>();
     public Dictionary<string, int> BoolToIndex = new Dictionary<string, int>();
@@ -457,7 +469,9 @@ public class LyumaAv3Runtime : MonoBehaviour
     }
 
     void OnDestroy () {
-        this.playableGraph.Destroy();
+        if (this.playableGraph.IsValid()) {
+            this.playableGraph.Destroy();
+        }
         foreach (var anim in attachedAnimators) {
             LyumaAv3Runtime runtime;
             if (animatorToTopLevelRuntime.TryGetValue(anim, out runtime) && runtime == this)
@@ -486,7 +500,32 @@ public class LyumaAv3Runtime : MonoBehaviour
             AvatarSyncSource = GameObject.Find(SourceObjectPath).GetComponent<LyumaAv3Runtime>();
         }
 
-        animator = this.gameObject.GetComponent<Animator>();
+        animator = this.gameObject.GetOrAddComponent<Animator>();
+        animatorAvatar = animator.avatar;
+        // Default values.
+        Grounded = true;
+        Upright = 1.0f;
+        AnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base;
+        // AnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.FX;
+
+        InitializeAnimator();
+        if (addRuntimeDelegate != null) {
+            addRuntimeDelegate(this);
+        }
+    }
+
+    private void InitializeAnimator()
+    {
+        ResetAvatar = false;
+        PrevAnimatorToDebug = (char)(int)AnimatorToDebug;
+
+        animator = this.gameObject.GetOrAddComponent<Animator>();
+        animator.avatar = animatorAvatar;
+        animator.applyRootMotion = false;
+        animator.updateMode = AnimatorUpdateMode.Normal;
+        animator.cullingMode = AnimatorCullingMode.CullCompletely;
+        animator.runtimeAnimatorController = null;
+
         avadesc = this.gameObject.GetComponent<VRCAvatarDescriptor>();
         ViewPosition = avadesc.ViewPosition;
         AvatarScaleFactor = ViewPosition.magnitude / BASE_HEIGHT; // mostly guessing...
@@ -501,39 +540,76 @@ public class LyumaAv3Runtime : MonoBehaviour
         {
             stageParameters = avadesc.expressionParameters;
         }
-        origAnimatorController = animator.runtimeAnimatorController;
-        animator.runtimeAnimatorController = null;
-        if (animator.playableGraph.IsValid())
-        {
-            animator.playableGraph.Destroy();
+        if (origAnimatorController != null) {
+            origAnimatorController = animator.runtimeAnimatorController;
         }
-        animator.applyRootMotion = false;
 
         VRCAvatarDescriptor.CustomAnimLayer[] baselayers = avadesc.baseAnimationLayers;
         VRCAvatarDescriptor.CustomAnimLayer[] speciallayers = avadesc.specialAnimationLayers;
         List<VRCAvatarDescriptor.CustomAnimLayer> allLayers = new List<VRCAvatarDescriptor.CustomAnimLayer>();
+        // foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
+        //     if (AnimatorToDebug == cal.type) {
+        //         allLayers.Add(cal);
+        //     }
+        // }
+        // foreach (VRCAvatarDescriptor.CustomAnimLayer cal in speciallayers) {
+        //     if (AnimatorToDebug == cal.type) {
+        //         allLayers.Add(cal);
+        //     }
+        // }
+        int i;
+        int layerToDebug = 1;
+        i = 0;
         foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
             if (cal.type == VRCAvatarDescriptor.AnimLayerType.Base || cal.type == VRCAvatarDescriptor.AnimLayerType.Additive) {
+                i++;
+                if (AnimatorToDebug == cal.type) {
+                    layerToDebug = i;
+                    // continue;
+                }
                 allLayers.Add(cal);
             }
         }
-        allLayers.AddRange(speciallayers);
+        foreach (VRCAvatarDescriptor.CustomAnimLayer cal in speciallayers) {
+            i++;
+            if (AnimatorToDebug == cal.type) {
+                layerToDebug = i;
+                // continue;
+            }
+            allLayers.Add(cal);
+        }
         foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
             if (!(cal.type == VRCAvatarDescriptor.AnimLayerType.Base || cal.type == VRCAvatarDescriptor.AnimLayerType.Additive)) {
+                i++;
+                if (AnimatorToDebug == cal.type) {
+                    layerToDebug = i;
+                    // continue;
+                }
                 allLayers.Add(cal);
             }
         }
 
-        // var director = avadesc.gameObject.GetComponent<PlayableDirector>();
-        playableGraph = PlayableGraph.Create("LyumaAvatarRuntime - " + this.gameObject.name);
-        var externalOutput = AnimationPlayableOutput.Create(playableGraph, "ExternalAnimator", animator);
-        playableMixer = AnimationLayerMixerPlayable.Create(playableGraph, allLayers.Count + 1);
-        externalOutput.SetSourcePlayable(playableMixer);
-        int i;
+        if (playableGraph.IsValid()) {
+            playableGraph.Destroy();
+        }
         playables.Clear();
         playableBlendingStates.Clear();
+
+        for (i = 0; i < allLayers.Count; i++) {
+            playables.Add(new AnimatorControllerPlayable());
+            playableBlendingStates.Add(null);
+        }
+
         actionIndex = fxIndex = gestureIndex = additiveIndex = sittingIndex = -1;
 
+        foreach (var anim in attachedAnimators) {
+            LyumaAv3Runtime runtime;
+            if (animatorToTopLevelRuntime.TryGetValue(anim, out runtime) && runtime == this)
+            {
+                animatorToTopLevelRuntime.Remove(anim);
+            }
+        }
+        attachedAnimators.Clear();
         Animator[] animators = this.gameObject.GetComponentsInChildren<Animator>(true);
         Debug.Log("anim len "+animators.Length);
         foreach (Animator anim in animators)
@@ -542,13 +618,16 @@ public class LyumaAv3Runtime : MonoBehaviour
             animatorToTopLevelRuntime.Add(anim, this);
         }
 
-        // Default values.
-        Grounded = true;
-        Upright = 1.0f;
-
         Ints.Clear();
         Bools.Clear();
         Floats.Clear();
+        StageParamterToBuiltin.Clear();
+        IntToIndex.Clear();
+        FloatToIndex.Clear();
+        BoolToIndex.Clear();
+        playableParamterFloats.Clear();
+        playableParamterIds.Clear();
+        playableParamterInts.Clear();
         HashSet<string> usedparams = new HashSet<string>(BUILTIN_PARAMETERS);
         i = 0;
         if (stageParameters != null)
@@ -568,6 +647,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                     param.stageName = stageName;
                     param.name = stageParam.name;
                     param.value = 0;
+                    param.lastValue = 0;
                     IntToIndex[param.name] = Ints.Count;
                     Ints.Add(param);
                 }
@@ -577,6 +657,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                     param.stageName = stageName;
                     param.name = stageParam.name;
                     param.value = 0;
+                    param.lastValue = 0;
                     FloatToIndex[param.name] = Floats.Count;
                     Floats.Add(param);
                 }
@@ -585,7 +666,26 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
         }
 
+        if (animator.playableGraph.IsValid())
+        {
+            animator.playableGraph.Destroy();
+        }
+        // var director = avadesc.gameObject.GetComponent<PlayableDirector>();
+        playableGraph = PlayableGraph.Create("LyumaAvatarRuntime - " + this.gameObject.name);
+        var externalOutput = AnimationPlayableOutput.Create(playableGraph, "ExternalAnimator", animator);
+        playableMixer = AnimationLayerMixerPlayable.Create(playableGraph, allLayers.Count + 1);
+        externalOutput.SetSourcePlayable(playableMixer);
+        animator.applyRootMotion = false;
+
         i = 0;
+        foreach (VRCAvatarDescriptor.CustomAnimLayer vrcAnimLayer in allLayers) {
+            i++; // Ignore zeroth layer.
+        }
+
+        AnimatorControllerPlayable mainPlayable;
+
+        i = 0;
+        // playableMixer.ConnectInput(0, AnimatorControllerPlayable.Create(playableGraph, allLayers[layerToDebug - 1].animatorController), 0, 0);
         foreach (VRCAvatarDescriptor.CustomAnimLayer vrcAnimLayer in allLayers)
         {
             i++; // Ignore zeroth layer.
@@ -607,7 +707,6 @@ public class LyumaAv3Runtime : MonoBehaviour
                 // i is not incremented.
                 continue;
             }
-
             AnimatorControllerPlayable humanAnimatorPlayable = AnimatorControllerPlayable.Create(playableGraph, ac);
             PlayableBlendingState pbs = new PlayableBlendingState();
             for (int j = 0; j < humanAnimatorPlayable.GetLayerCount(); j++)
@@ -615,46 +714,51 @@ public class LyumaAv3Runtime : MonoBehaviour
                 humanAnimatorPlayable.SetLayerWeight(j, 1f);
                 pbs.layerBlends.Add(new BlendingState());
             }
-            playableMixer.ConnectInput((int)i, humanAnimatorPlayable, 0, 1);
-            playables.Add(humanAnimatorPlayable);
-            playableBlendingStates.Add(pbs);
+
+            // If we are debugging a particular layer, we must put that first.
+            // The Animator Controller window only shows the first layer.
+            int effectiveIdx = i == layerToDebug ? 1 : (i < layerToDebug ? i + 1 : i);
+
+            playableMixer.ConnectInput((int)effectiveIdx, humanAnimatorPlayable, 0, 1);
+            playables[effectiveIdx - 1] = humanAnimatorPlayable;
+            playableBlendingStates[effectiveIdx - 1] = pbs;
             if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.Sitting) {
-                sittingIndex = i;
-                playableMixer.SetInputWeight(i, 0f);
+                sittingIndex = effectiveIdx;
+                playableMixer.SetInputWeight(effectiveIdx, 0f);
             }
             if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.IKPose)
             {
-                playableMixer.SetInputWeight(i, 0f);
+                playableMixer.SetInputWeight(effectiveIdx, 0f);
             }
             if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.TPose)
             {
-                playableMixer.SetInputWeight(i, 0f);
+                playableMixer.SetInputWeight(effectiveIdx, 0f);
             }
             if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.Action)
             {
                 playableMixer.SetInputWeight(i, 0f);
-                actionIndex = i;
+                actionIndex = effectiveIdx;
             }
             if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.Gesture)
             {
-                gestureIndex = i;
+                gestureIndex = effectiveIdx;
             }
             if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.Additive)
             {
-                additiveIndex = i;
+                additiveIndex = effectiveIdx;
             }
             if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.FX)
             {
-                fxIndex = i;
+                fxIndex = effectiveIdx;
             }
             // AnimationControllerLayer acLayer = new AnimationControllerLayer()
             if (mask != null)
             {
-                playableMixer.SetLayerMaskFromAvatarMask((uint)i, mask);
+                playableMixer.SetLayerMaskFromAvatarMask((uint)effectiveIdx, mask);
             }
             if (additive)
             {
-                playableMixer.SetLayerAdditive((uint)i, true);
+                playableMixer.SetLayerAdditive((uint)effectiveIdx, true);
             }
         }
 
@@ -683,6 +787,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                     param.stageName = aparam.name + " (local)";
                     param.name = aparam.name;
                     param.value = aparam.defaultInt;
+                    param.lastValue = param.value;
                     IntToIndex[param.name] = Ints.Count;
                     Ints.Add(param);
                     usedparams.Add(aparam.name);
@@ -691,6 +796,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                     param.stageName = aparam.name + " (local)";
                     param.name = aparam.name;
                     param.value = aparam.defaultFloat;
+                    param.lastValue = param.value;
                     FloatToIndex[param.name] = Floats.Count;
                     Floats.Add(param);
                     usedparams.Add(aparam.name);
@@ -698,6 +804,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                     BoolParam param = new BoolParam();
                     param.name = aparam.name;
                     param.value = aparam.defaultBool;
+                    param.lastValue = param.value;
                     BoolToIndex[param.name] = Bools.Count;
                     Bools.Add(param);
                     usedparams.Add(aparam.name);
@@ -713,9 +820,59 @@ public class LyumaAv3Runtime : MonoBehaviour
         Debug.Log(this.gameObject.name + " : Playing.");
     }
 
+
+    private bool isResetting;
+    private bool isResettingHold;
+    private bool isResettingSel;
     // Update is called once per frame
     void Update()
     {
+        if (isResettingSel) {
+            isResettingSel = false;
+            if (updateSelectionDelegate != null) {
+                updateSelectionDelegate(this.gameObject);
+            }
+        }
+        if (isResettingHold && (!ResetAvatar || !ResetAndHold)) {
+            ResetAndHold = ResetAvatar = false;
+            isResettingSel = true;
+            if (updateSelectionDelegate != null) {
+                updateSelectionDelegate(null);
+            }
+        }
+        if (ResetAvatar && ResetAndHold) {
+            return;
+        }
+        if (ResetAndHold && !ResetAvatar && !isResetting) {
+            ResetAvatar = true;
+            isResettingHold = true;
+        }
+        if (isResetting && !ResetAndHold) {
+            InitializeAnimator();
+            isResetting = false;
+            isResettingHold = false;
+        }
+        if (PrevAnimatorToDebug != (char)(int)AnimatorToDebug || ResetAvatar) {
+            // animator.runtimeAnimatorController = null;
+            if (playableGraph.IsValid()) {
+                playableGraph.Destroy();
+            }
+            if (animator.playableGraph.IsValid()) {
+                animator.playableGraph.Destroy();
+            }
+            animator.Update(0);
+            animator.Rebind();
+            animator.Update(0);
+            animator.StopPlayback();
+            GameObject.DestroyImmediate(animator);
+            // animator.runtimeAnimatorController = EmptyController;
+            if (updateSelectionDelegate != null) {
+                updateSelectionDelegate(null);
+            }
+            isResetting = true;
+            isResettingSel = true;
+            return;
+        }
         if (CreateNonLocalClone) {
             CreateNonLocalClone = false;
             GameObject go = GameObject.Instantiate(AvatarSyncSource.gameObject);
@@ -755,13 +912,15 @@ public class LyumaAv3Runtime : MonoBehaviour
             Supine = AvatarSyncSource.Supine;
             FootstepDisable = AvatarSyncSource.FootstepDisable;
         }
-        foreach (FloatParam param in Floats)
-        {
-            param.value = ClampFloat(param.value);
+        for (int i = 0; i < Floats.Count; i++) {
+            if (StageParamterToBuiltin.ContainsKey(Floats[i].stageName)) {
+                Floats[i].value = ClampFloat(Floats[i].value);
+            }
         }
-        foreach (IntParam param in Ints)
-        {
-            param.value = ClampByte(param.value);
+        for (int i = 0; i < Ints.Count; i++) {
+            if (StageParamterToBuiltin.ContainsKey(Ints[i].stageName)) {
+                Ints[i].value = ClampByte(Ints[i].value);
+            }
         }
         if (Seated != PrevSeated && sittingIndex >= 0)
         {
@@ -795,7 +954,54 @@ public class LyumaAv3Runtime : MonoBehaviour
             GestureRightIdxInt = (char)GestureRightIdx;
         }
         IsLocal = AvatarSyncSource == this;
-        int whichcontroller = 0;
+
+        int whichcontroller;
+        whichcontroller = 0;
+        foreach (AnimatorControllerPlayable playable in playables)
+        {
+            // Debug.Log("Index " + whichcontroller + " len " + playables.Count);
+            Dictionary<string, int> parameterIndices = playableParamterIds[whichcontroller];
+            int paramid;
+            foreach (FloatParam param in Floats)
+            {
+                if (parameterIndices.TryGetValue(param.name, out paramid))
+                {
+                    if (param.value != param.lastValue) {
+                        playable.SetFloat(paramid, param.value);
+                    }
+                }
+            }
+            foreach (IntParam param in Ints)
+            {
+                if (parameterIndices.TryGetValue(param.name, out paramid))
+                {
+                    if (param.value != param.lastValue) {
+                        playable.SetInteger(paramid, param.value);
+                    }
+                }
+            }
+            foreach (BoolParam param in Bools)
+            {
+                if (parameterIndices.TryGetValue(param.name, out paramid))
+                {
+                    if (param.value != param.lastValue) {
+                        playable.SetBool(paramid, param.value);
+                    }
+                }
+            }
+            whichcontroller++;
+        }
+        foreach (FloatParam param in Floats) {
+            param.lastValue = param.value;
+        }
+        foreach (IntParam param in Ints) {
+            param.lastValue = param.value;
+        }
+        foreach (BoolParam param in Bools) {
+            param.lastValue = param.value;
+        }
+
+        whichcontroller = 0;
         foreach (AnimatorControllerPlayable playable in playables)
         {
             // Debug.Log("Index " + whichcontroller + " len " + playables.Count);
@@ -811,9 +1017,8 @@ public class LyumaAv3Runtime : MonoBehaviour
                 {
                     if (paramterFloats.TryGetValue(paramid, out fparam)) {
                         if (fparam != playable.GetFloat(paramid)) {
-                            param.value = playable.GetFloat(paramid);
+                            param.value = param.lastValue = playable.GetFloat(paramid);
                         }
-                        playable.SetFloat(paramid, param.value);
                     }
                     paramterFloats[paramid] = param.value;
                 }
@@ -824,9 +1029,8 @@ public class LyumaAv3Runtime : MonoBehaviour
                 {
                     if (paramterInts.TryGetValue(paramid, out iparam)) {
                         if (iparam != playable.GetInteger(paramid)) {
-                            param.value = playable.GetInteger(paramid);
+                            param.value = param.lastValue = playable.GetInteger(paramid);
                         }
-                        playable.SetInteger(paramid, param.value);
                     }
                     paramterInts[paramid] = param.value;
                 }
@@ -837,9 +1041,8 @@ public class LyumaAv3Runtime : MonoBehaviour
                 {
                     if (paramterInts.TryGetValue(paramid, out iparam)) {
                         if (iparam != (playable.GetBool(paramid) ? 1 : 0)) {
-                            param.value = playable.GetBool(paramid);
+                            param.value = param.lastValue = playable.GetBool(paramid);
                         }
-                        playable.SetBool(paramid, param.value);
                     }
                     paramterInts[paramid] = param.value ? 1 : 0;
                 }

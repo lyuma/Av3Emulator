@@ -21,13 +21,25 @@ using UnityEngine;
 using System.Collections.Generic;
 using VRC.SDK3.Avatars.Components;
 
+[RequireComponent(typeof(Animator))]
 public class LyumaAv3Emulator : MonoBehaviour
 {
     public bool RestartEmulator;
     private bool RestartingEmulator;
     public bool CreateNonLocalClone;
 
+    static public LyumaAv3Emulator emulatorInstance;
+    static public RuntimeAnimatorController EmptyController;
+
     public List<LyumaAv3Runtime> runtimes = new List<LyumaAv3Runtime>();
+
+    private void Awake()
+    {
+        Animator animator = gameObject.GetOrAddComponent<Animator>();
+        animator.enabled = false;
+        animator.runtimeAnimatorController = EmptyController;
+        emulatorInstance = this;
+    }
 
     private void Start()
     {
