@@ -177,7 +177,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     public Dictionary<string, string> StageParamterToBuiltin = new Dictionary<string, string>();
 
     static public Dictionary<Animator, LyumaAv3Runtime> animatorToTopLevelRuntime = new Dictionary<Animator, LyumaAv3Runtime>();
-    private List<Animator> attachedAnimators = new List<Animator>();
+    private HashSet<Animator> attachedAnimators;
 
     const float BASE_HEIGHT = 1.4f;
 
@@ -230,13 +230,37 @@ public class LyumaAv3Runtime : MonoBehaviour
     }
     List<PlayableBlendingState> playableBlendingStates = new List<PlayableBlendingState>();
 
+    static bool getTopLevelRuntime(string component, Animator innerAnimator, out LyumaAv3Runtime runtime) {
+        if (animatorToTopLevelRuntime.TryGetValue(innerAnimator, out runtime)) {
+            return true;
+        }
+        Transform transform = innerAnimator.transform;
+        while (transform != null && runtime == null) {
+            runtime = transform.GetComponent<LyumaAv3Runtime>();
+            transform = transform.parent;
+        }
+        if (runtime != null) {
+            if (runtime.attachedAnimators != null) {
+                Debug.Log("[" + component + "]: " + innerAnimator + " found parent runtime after it was Awoken! Adding to cache. Did you move me?");
+                animatorToTopLevelRuntime.Add(innerAnimator, runtime);
+                runtime.attachedAnimators.Add(innerAnimator);
+            } else {
+                Debug.Log("[" + component + "]: " + innerAnimator + " found parent runtime without being Awoken! Wakey Wakey...");
+                runtime.Awake();
+            }
+            return true;
+        }
+        Debug.LogError("[" + component + "]: outermost Animator is not known: " + innerAnimator + ". If you changed something, consider resetting avatar", innerAnimator);
+
+        return false;
+    }
+
     static LyumaAv3Runtime () {
         VRCAvatarParameterDriver.Initialize += (x) => {
             x.ApplySettings += (behaviour, animator) =>
             {
                 LyumaAv3Runtime runtime;
-                if (!animatorToTopLevelRuntime.TryGetValue(animator, out runtime)) {
-                    Debug.LogError("[VRCAvatarParameterDriver: animator is not known: " + animator, animator);
+                if (!getTopLevelRuntime("VRCAvatarParameterDriver", animator, out runtime)) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -270,8 +294,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             x.ApplySettings += (behaviour, animator) =>
             {
                 LyumaAv3Runtime runtime;
-                if (!animatorToTopLevelRuntime.TryGetValue(animator, out runtime)) {
-                    Debug.LogError("[VRCPlayableLayerControl: animator is not known: " + animator, animator);
+                if (!getTopLevelRuntime("VRCPlayableLayerControl", animator, out runtime)) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -308,8 +331,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             x.ApplySettings += (behaviour, animator) =>
             {
                 LyumaAv3Runtime runtime;
-                if (!animatorToTopLevelRuntime.TryGetValue(animator, out runtime)) {
-                    Debug.LogError("[VRCAnimatorLayerControl: animator is not known: " + animator, animator);
+                if (!getTopLevelRuntime("VRCAnimatorLayerControl", animator, out runtime)) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -349,8 +371,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             x.ApplySettings += (behaviour, animator) =>
             {
                 LyumaAv3Runtime runtime;
-                if (!animatorToTopLevelRuntime.TryGetValue(animator, out runtime)) {
-                    Debug.LogError("[VRCAnimatorLocomotionControl: animator is not known: " + animator, animator);
+                if (!getTopLevelRuntime("VRCAnimatorLocomotionControl", animator, out runtime)) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -369,8 +390,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             x.ApplySettings += (behaviour, animator) =>
             {
                 LyumaAv3Runtime runtime;
-                if (!animatorToTopLevelRuntime.TryGetValue(animator, out runtime)) {
-                    Debug.LogError("[VRCAnimatorSetView: animator is not known: " + animator, animator);
+                if (!getTopLevelRuntime("VRCAnimatorSetView", animator, out runtime)) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -390,8 +410,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             x.ApplySettings += (behaviour, animator) =>
             {
                 LyumaAv3Runtime runtime;
-                if (!animatorToTopLevelRuntime.TryGetValue(animator, out runtime)) {
-                    Debug.LogError("[VRCAnimatorSetView: animator is not known: " + animator, animator);
+                if (!getTopLevelRuntime("VRCAnimatorSetView", animator, out runtime)) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -411,8 +430,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             x.ApplySettings += (behaviour, animator) =>
             {
                 LyumaAv3Runtime runtime;
-                if (!animatorToTopLevelRuntime.TryGetValue(animator, out runtime)) {
-                    Debug.LogError("[VRCAnimatorTrackingControl: animator is not known: " + animator, animator);
+                if (!getTopLevelRuntime("VRCAnimatorTrackingControl", animator, out runtime)) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -488,6 +506,11 @@ public class LyumaAv3Runtime : MonoBehaviour
 
     void Awake()
     {
+        if (attachedAnimators != null) {
+            Debug.Log("Deduplicating Awake() call if we already got awoken by our children.");
+            return;
+        }
+        attachedAnimators = new HashSet<Animator>();
         if (AvatarSyncSource == null) {
             Transform transform = this.transform;
             SourceObjectPath = "";
