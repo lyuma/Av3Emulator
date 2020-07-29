@@ -95,11 +95,11 @@ public class LyumaAv3Runtime : MonoBehaviour
     public VisemeIndex VisemeDD;
     private int Viseme;
     public GestureIndex GestureLeft;
-    public int GestureLeftIdx;
+    [Range(0, 9)] public int GestureLeftIdx;
     private char GestureLeftIdxInt;
     [Range(0, 1)] public float GestureLeftWeight;
     public GestureIndex GestureRight;
-    public int GestureRightIdx;
+    [Range(0, 9)] public int GestureRightIdx;
     private char GestureRightIdxInt;
     [Range(0, 1)] public float GestureRightWeight;
     public Vector3 Velocity;
@@ -730,7 +730,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
             }
             for (int i = 0; i < Floats.Count; i++) {
-                if (StageParamterToBuiltin.ContainsKey(Ints[i].stageName)) {
+                if (StageParamterToBuiltin.ContainsKey(Floats[i].stageName)) {
                     Floats[i].value = ClampFloat(AvatarSyncSource.Floats[i].value);
                 }
             }
