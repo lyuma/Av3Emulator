@@ -190,12 +190,6 @@ public class LyumaAv3Runtime : MonoBehaviour
             ViewPosition = avadesc.ViewPosition;
         }
     }
-    public IEnumerator DelayedRemeasureAvatar(float time) {
-        yield return new WaitForSeconds(time);
-        Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
-        Vector3 tmpViewPosition = animator.transform.InverseTransformPoint(head.TransformPoint(HeadRelativeViewPosition));
-        AvatarScaleFactor = tmpViewPosition.magnitude / BASE_HEIGHT;
-    }
 
     class BlendingState {
         float startWeight;
@@ -384,26 +378,6 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
                 // I legit don't know
                 runtime.LocomotionIsDisabled = behaviour.disableLocomotion;
-            };
-        };
-        VRCAnimatorRemeasureAvatar.Initialize += (x) => {
-            x.ApplySettings += (behaviour, animator) =>
-            {
-                LyumaAv3Runtime runtime;
-                if (!getTopLevelRuntime("VRCAnimatorSetView", animator, out runtime)) {
-                    return;
-                }
-                if (behaviour.debugString != null && behaviour.debugString.Length > 0)
-                {
-                    Debug.Log("[VRCAnimatorSetView:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
-                }
-                if (!runtime)
-                {
-                    return;
-                }
-                // fixedDelay: Is the delay fixed or normalized...
-                // The layerIndex is not passed into the delegate, so we cannot reimplement fixedDelay.
-                runtime.StartCoroutine(runtime.DelayedRemeasureAvatar(behaviour.delayTime));
             };
         };
         VRCAnimatorTemporaryPoseSpace.Initialize += (x) => {
