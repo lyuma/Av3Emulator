@@ -33,7 +33,6 @@ public static class LyumaAv3EditorSupport
     static Dictionary<VRCAvatarDescriptor.AnimLayerType, string> animLayerToDefaultFile = new Dictionary<VRCAvatarDescriptor.AnimLayerType, string> {
         {VRCAvatarDescriptor.AnimLayerType.TPose, "vrc_AvatarV3UtilityTPose"},
         {VRCAvatarDescriptor.AnimLayerType.IKPose, "vrc_AvatarV3UtilityIKPose"},
-        {VRCAvatarDescriptor.AnimLayerType.SpecialIK, "vrc_AvatarV3UtilityTPose"},
         {VRCAvatarDescriptor.AnimLayerType.Base, "vrc_AvatarV3LocomotionLayer"},
         {VRCAvatarDescriptor.AnimLayerType.Sitting, "vrc_AvatarV3SittingLayer"},
         {VRCAvatarDescriptor.AnimLayerType.Additive, "vrc_AvatarV3IdleLayer"},
@@ -45,7 +44,6 @@ public static class LyumaAv3EditorSupport
     {
         {VRCAvatarDescriptor.AnimLayerType.TPose, "vrc_MusclesOnly"},
         {VRCAvatarDescriptor.AnimLayerType.IKPose, "vrc_MusclesOnly"},
-        {VRCAvatarDescriptor.AnimLayerType.SpecialIK, "vrc_MusclesOnly"},
         {VRCAvatarDescriptor.AnimLayerType.Base, null},//"LyumaFullMask"},
         {VRCAvatarDescriptor.AnimLayerType.Sitting, null},//"LyumaFullMask"},
         {VRCAvatarDescriptor.AnimLayerType.Additive, null},//"LyumaFullMask"},
