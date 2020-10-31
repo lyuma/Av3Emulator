@@ -96,8 +96,11 @@ public class LyumaAv3Runtime : MonoBehaviour
     public enum GestureIndex {
         Neutral, Fist, HandOpen, Fingerpoint, Victory, RockNRoll, HandGun, ThumbsUp
     }
+    public enum TrackingTypeIndex {
+        Uninitialized, GenericRig, NoFingers, HeadHands, HeadHandsHip, HeadHandsHipFeet = 6
+    }
     static HashSet<string> BUILTIN_PARAMETERS = new HashSet<string> {
-        "Viseme", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "LocomotionMode", "Upright", "AngularY", "GroundProximity", "Grounded", "Supine", "FootstepDisable", "Seated", "AFK"
+        "Viseme", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "LocomotionMode", "Upright", "AngularY", "GroundProximity", "Grounded", "Supine", "FootstepDisable", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation"
     };
     [Header("Built-in locomotion inputs")]
     public int VisemeI;
@@ -123,6 +126,12 @@ public class LyumaAv3Runtime : MonoBehaviour
     //TODO:
     public bool Supine; // Not implemented
     private bool FootstepDisable; // Does not exist.
+    public TrackingTypeIndex TrackingType;
+    [Range(0, 6)] public int TrackingTypeIdx;
+    private char TrackingTypeIdxInt;
+    public bool VRMode;
+    public bool MuteSelf;
+    public bool InStation;
 
     [Header("Output State (Read-only)")]
     public bool IsLocal;
@@ -502,6 +511,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         // Default values.
         Grounded = true;
         Upright = 1.0f;
+        TrackingType = TrackingTypeIndex.HeadHands;
         AnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base;
         // AnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.FX;
 
@@ -907,6 +917,12 @@ public class LyumaAv3Runtime : MonoBehaviour
             Seated = AvatarSyncSource.Seated;
             AFK = AvatarSyncSource.AFK;
             Supine = AvatarSyncSource.Supine;
+            TrackingType = AvatarSyncSource.TrackingType;
+            TrackingTypeIdx = AvatarSyncSource.TrackingTypeIdx;
+            TrackingTypeIdxInt = AvatarSyncSource.TrackingTypeIdxInt;
+            VRMode = AvatarSyncSource.VRMode;
+            MuteSelf = AvatarSyncSource.MuteSelf;
+            InStation = AvatarSyncSource.InStation;
             FootstepDisable = AvatarSyncSource.FootstepDisable;
         }
         for (int i = 0; i < Floats.Count; i++) {
@@ -949,6 +965,15 @@ public class LyumaAv3Runtime : MonoBehaviour
         if ((int)GestureRight != (int)GestureRightIdxInt) {
             GestureRightIdx = (int)GestureRight;
             GestureRightIdxInt = (char)GestureRightIdx;
+        }
+        if (TrackingTypeIdx != TrackingTypeIdxInt) {
+            TrackingType = (TrackingTypeIndex)TrackingTypeIdx;
+            TrackingTypeIdx = (int)TrackingType;
+            TrackingTypeIdxInt = (char)TrackingTypeIdx;
+        }
+        if ((int)TrackingType != TrackingTypeIdxInt) {
+            TrackingTypeIdx = (int)TrackingType;
+            TrackingTypeIdxInt = (char)TrackingTypeIdx;
         }
         IsLocal = AvatarSyncSource == this;
 
@@ -1188,6 +1213,41 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
                 playable.SetBool(paramid, FootstepDisable);
                 paramterInts[paramid] = FootstepDisable ? 1 : 0;
+            }
+            if (parameterIndices.TryGetValue("TrackingType", out paramid))
+            {
+                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != playable.GetInteger(paramid)) {
+                    TrackingTypeIdx = playable.GetInteger(paramid);
+                    TrackingTypeIdxInt = (char)TrackingTypeIdx;
+                    TrackingType = (TrackingTypeIndex)TrackingTypeIdx;
+                }
+                playable.SetInteger(paramid, (int)TrackingType);
+                paramterInts[paramid] = (int)TrackingType;
+            }
+            if (parameterIndices.TryGetValue("VRMode", out paramid))
+            {
+                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != playable.GetInteger(paramid)) {
+                    VRMode = playable.GetInteger(paramid) != 0;
+                }
+                playable.SetInteger(paramid, VRMode ? 1 : 0);
+                paramterInts[paramid] = VRMode ? 1 : 0;
+            }
+            if (parameterIndices.TryGetValue("MuteSelf", out paramid))
+            {
+                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != (playable.GetBool(paramid) ? 1 : 0)) {
+                    MuteSelf = playable.GetBool(paramid);
+                }
+                playable.SetBool(paramid, MuteSelf);
+                paramterInts[paramid] = MuteSelf ? 1 : 0;
+            }
+            if (parameterIndices.TryGetValue("InStation", out paramid))
+            {
+                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != (playable.GetBool(paramid) ? 1 : 0))
+                {
+                    InStation = playable.GetBool(paramid);
+                }
+                playable.SetBool(paramid, InStation);
+                paramterInts[paramid] = InStation ? 1 : 0;
             }
             whichcontroller++;
         }
