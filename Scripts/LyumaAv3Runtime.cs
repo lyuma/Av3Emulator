@@ -102,7 +102,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     static HashSet<string> BUILTIN_PARAMETERS = new HashSet<string> {
         "Viseme", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "LocomotionMode", "Upright", "AngularY", "GroundProximity", "Grounded", "Supine", "FootstepDisable", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation"
     };
-    [Header("Built-in locomotion inputs")]
+    [Header("Built-in inputs")]
     public int VisemeI;
     public VisemeIndex VisemeDD;
     private int Viseme;
