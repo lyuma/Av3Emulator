@@ -48,7 +48,12 @@ public class LyumaAv3Emulator : MonoBehaviour
         foreach (var avadesc in avatars)
         {
             // Creates the playable director, and initializes animator.
-            runtimes.Add(avadesc.gameObject.GetOrAddComponent<LyumaAv3Runtime>());
+            var runtime = avadesc.gameObject.GetOrAddComponent<LyumaAv3Runtime>();
+            runtimes.Add(runtime);
+
+            var mainMenu = avadesc.gameObject.AddComponent<LyumaAv3Menu>();
+            mainMenu.Runtime = runtime;
+            mainMenu.RootMenu = avadesc.expressionsMenu;
         }
     }
     private void OnDisable() {
