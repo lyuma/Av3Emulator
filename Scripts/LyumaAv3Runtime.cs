@@ -514,15 +514,27 @@ public class LyumaAv3Runtime : MonoBehaviour
             AvatarSyncSource = GameObject.Find(SourceObjectPath).GetComponent<LyumaAv3Runtime>();
         }
 
+        AnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base;
+
+        if (LyumaAv3Emulator.emulatorInstance == null) {
+            Debug.LogError("LyumaAv3Runtime awoken without an LyumaAv3Emulator instance!", this);
+        } else {
+            this.VRMode = LyumaAv3Emulator.emulatorInstance.DefaultToVR;
+            this.TrackingType = LyumaAv3Emulator.emulatorInstance.DefaultTrackingType;
+            this.InStation = LyumaAv3Emulator.emulatorInstance.DefaultTestInStation;
+            this.AnimatorToDebug = LyumaAv3Emulator.emulatorInstance.DefaultAnimatorToDebug;
+        }
+
         animator = this.gameObject.GetOrAddComponent<Animator>();
         animatorAvatar = animator.avatar;
         // Default values.
         Grounded = true;
         Upright = 1.0f;
-        TrackingType = TrackingTypeIndex.HeadHands;
-        AnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base;
-        // AnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.FX;
-
+        if (!animator.isHuman) {
+            TrackingType = TrackingTypeIndex.GenericRig;
+        } else if (!VRMode) {
+            TrackingType = TrackingTypeIndex.HeadHands;
+        }
         avadesc = this.gameObject.GetComponent<VRCAvatarDescriptor>();
         if (avadesc.VisemeSkinnedMesh == null) {
             mouthOpenBlendShapeIdx = -1;

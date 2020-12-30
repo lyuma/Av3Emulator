@@ -6,6 +6,7 @@
 * Support for testing Visemes.
 * Support for the Is VR checkbox, tracking type and more. (Thanks to @hai-vr for the contribution!)
 * Basic support for Generic avatars.
+* After using **Tools** -> **Enable Avatars 3.0 Emulator**, set default VR tracking type and other settings by selecting the **Avatars 3.0 Emulator Control** object before entering Play Mode.
 
 ### **About the Avatar 3.0 Emulator:**
 
@@ -36,7 +37,7 @@ This is an emulator for Avatars 3.0 reimplemented in the unity editor on top the
 ## How to use the Av3 Emulator:
 
 Go to the **Tools** menu, and select **Avatar 3.0 Emulator**.
-This will add an object to your scene: you can always remove it if you don't want it to run.
+This will add an object to your scene: you can always remove it if you don't want it to run. Use this object to set default VR mode, tracking type or Animator to Debug settings. Let me know if other settings would be useful here.
 
 To emulate walking and movement, click the avatar and scroll down the inspector to the bottom section with Lyuma Av3 Runtime component. Here you can change stuff.
 
