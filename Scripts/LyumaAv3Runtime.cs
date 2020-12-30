@@ -564,34 +564,36 @@ public class LyumaAv3Runtime : MonoBehaviour
         //         allLayers.Add(cal);
         //     }
         // }
-        int i;
-        int layerToDebug = 1;
-        i = 0;
+        int i = 0;
+        if (AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base) {
+            foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
+                if (AnimatorToDebug == cal.type) {
+                    i++;
+                    allLayers.Add(cal);
+                    break;
+                }
+            }
+            foreach (VRCAvatarDescriptor.CustomAnimLayer cal in speciallayers) {
+                if (AnimatorToDebug == cal.type) {
+                    i++;
+                    allLayers.Add(cal);
+                    break;
+                }
+            }
+        }
         foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
             if (cal.type == VRCAvatarDescriptor.AnimLayerType.Base || cal.type == VRCAvatarDescriptor.AnimLayerType.Additive) {
                 i++;
-                if (AnimatorToDebug == cal.type) {
-                    layerToDebug = i;
-                    // continue;
-                }
                 allLayers.Add(cal);
             }
         }
         foreach (VRCAvatarDescriptor.CustomAnimLayer cal in speciallayers) {
             i++;
-            if (AnimatorToDebug == cal.type) {
-                layerToDebug = i;
-                // continue;
-            }
             allLayers.Add(cal);
         }
         foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
             if (!(cal.type == VRCAvatarDescriptor.AnimLayerType.Base || cal.type == VRCAvatarDescriptor.AnimLayerType.Additive)) {
                 i++;
-                if (AnimatorToDebug == cal.type) {
-                    layerToDebug = i;
-                    // continue;
-                }
                 allLayers.Add(cal);
             }
         }
@@ -684,11 +686,6 @@ public class LyumaAv3Runtime : MonoBehaviour
         externalOutput.SetSourcePlayable(playableMixer);
         animator.applyRootMotion = false;
 
-        i = 0;
-        foreach (VRCAvatarDescriptor.CustomAnimLayer vrcAnimLayer in allLayers) {
-            i++; // Ignore zeroth layer.
-        }
-
         AnimatorControllerPlayable mainPlayable;
 
         i = 0;
@@ -724,7 +721,7 @@ public class LyumaAv3Runtime : MonoBehaviour
 
             // If we are debugging a particular layer, we must put that first.
             // The Animator Controller window only shows the first layer.
-            int effectiveIdx = i == layerToDebug ? 1 : (i < layerToDebug ? i + 1 : i);
+            int effectiveIdx = i;
 
             playableMixer.ConnectInput((int)effectiveIdx, humanAnimatorPlayable, 0, 1);
             playables[effectiveIdx - 1] = humanAnimatorPlayable;
@@ -766,6 +763,10 @@ public class LyumaAv3Runtime : MonoBehaviour
             if (additive)
             {
                 playableMixer.SetLayerAdditive((uint)effectiveIdx, true);
+            }
+
+            if (i == 0 && AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base) {
+                playableMixer.SetInputWeight(i, 0f);
             }
         }
 

@@ -126,7 +126,7 @@ public static class LyumaAv3EditorSupport
                     PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
                 }
             } catch (System.Exception) {}
-            int moveUpCalls = go.GetComponents<Component>().Length - 3;
+            int moveUpCalls = go.GetComponents<Component>().Length - 2;
             if (!PrefabUtility.IsPartOfAnyPrefab(go.GetComponents<Component>()[1])) {
                 for (int i = 0; i < moveUpCalls; i++) {
                     UnityEditorInternal.ComponentUtility.MoveComponentUp(menu);
