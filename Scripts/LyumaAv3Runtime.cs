@@ -63,6 +63,9 @@ public class LyumaAv3Runtime : MonoBehaviour
     int additiveIndex;
     int gestureIndex;
 
+    private int mouthOpenBlendShapeIdx;
+    private int[] visemeBlendShapeIdxs;
+
     public static float ClampFloat(float val) {
         if (val < -1.0f) {
             val = -1.0f;
@@ -102,10 +105,11 @@ public class LyumaAv3Runtime : MonoBehaviour
     static HashSet<string> BUILTIN_PARAMETERS = new HashSet<string> {
         "Viseme", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "LocomotionMode", "Upright", "AngularY", "GroundProximity", "Grounded", "Supine", "FootstepDisable", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation"
     };
-    [Header("Built-in inputs")]
-    public int VisemeI;
-    public VisemeIndex VisemeDD;
-    private int Viseme;
+    [Header("Built-in inputs / Viseme")]
+    public VisemeIndex Viseme;
+    [Range(0, 15)] public int VisemeIdx;
+    private int VisemeInt;
+    [Header("Built-in inputs / Hand Gestures")]
     public GestureIndex GestureLeft;
     [Range(0, 9)] public int GestureLeftIdx;
     private char GestureLeftIdxInt;
@@ -114,6 +118,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     [Range(0, 9)] public int GestureRightIdx;
     private char GestureRightIdxInt;
     [Range(0, 1)] public float GestureRightWeight;
+    [Header("Built-in inputs / Locomotion")]
     public Vector3 Velocity;
     [Range(-1, 1)] public float AngularY;
     [Range(0, 1)] public float Upright;
@@ -124,8 +129,9 @@ public class LyumaAv3Runtime : MonoBehaviour
     public bool Seated;
     public bool AFK;
     //TODO:
-    public bool Supine; // Not implemented
+    bool Supine; // Not implemented
     private bool FootstepDisable; // Does not exist.
+    [Header("Built-in inputs / Tracking Setup and Other")]
     public TrackingTypeIndex TrackingType;
     [Range(0, 6)] public int TrackingTypeIdx;
     private char TrackingTypeIdxInt;
@@ -517,6 +523,19 @@ public class LyumaAv3Runtime : MonoBehaviour
         AnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base;
         // AnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.FX;
 
+        avadesc = this.gameObject.GetComponent<VRCAvatarDescriptor>();
+        if (avadesc.VisemeSkinnedMesh == null) {
+            mouthOpenBlendShapeIdx = -1;
+            visemeBlendShapeIdxs = new int[0];
+        } else {
+            mouthOpenBlendShapeIdx = avadesc.VisemeSkinnedMesh.sharedMesh.GetBlendShapeIndex(avadesc.MouthOpenBlendShapeName);
+            visemeBlendShapeIdxs = new int[avadesc.VisemeBlendShapes == null ? 0 : avadesc.VisemeBlendShapes.Length];
+            if (avadesc.VisemeBlendShapes != null) {
+                for (int i = 0; i < avadesc.VisemeBlendShapes.Length; i++) {
+                    visemeBlendShapeIdxs[i] = avadesc.VisemeSkinnedMesh.sharedMesh.GetBlendShapeIndex(avadesc.VisemeBlendShapes[i]);
+                }
+            }
+        }
         InitializeAnimator();
         if (addRuntimeDelegate != null) {
             addRuntimeDelegate(this);
@@ -903,8 +922,8 @@ public class LyumaAv3Runtime : MonoBehaviour
                     Floats[i].value = ClampFloat(AvatarSyncSource.Floats[i].value);
                 }
             }
-            Viseme = VisemeI = AvatarSyncSource.Viseme;
-            VisemeDD = (VisemeIndex)Viseme;
+            VisemeInt = VisemeIdx = AvatarSyncSource.VisemeInt;
+            Viseme = (VisemeIndex)VisemeInt;
             GestureLeft = AvatarSyncSource.GestureLeft;
             GestureLeftIdx = AvatarSyncSource.GestureLeftIdx;
             GestureLeftIdxInt = AvatarSyncSource.GestureLeftIdxInt;
@@ -945,13 +964,13 @@ public class LyumaAv3Runtime : MonoBehaviour
             playableBlendingStates[sittingIndex].StartBlend(playableMixer.GetInputWeight(sittingIndex), Seated ? 1f : 0f, 0.25f);
             PrevSeated = Seated;
         }
-        if (VisemeI != Viseme) {
-            Viseme = VisemeI;
-            VisemeDD = (VisemeIndex)Viseme;
+        if (VisemeIdx != VisemeInt) {
+            VisemeInt = VisemeIdx;
+            Viseme = (VisemeIndex)VisemeInt;
         }
-        if ((int)VisemeDD != Viseme) {
-            Viseme = (int)VisemeDD;
-            VisemeI = Viseme;
+        if ((int)Viseme != VisemeInt) {
+            VisemeInt = (int)Viseme;
+            VisemeIdx = VisemeInt;
         }
         if (GestureLeftIdx != GestureLeftIdxInt) {
             GestureLeft = (GestureIndex)GestureLeftIdx;
@@ -1077,11 +1096,11 @@ public class LyumaAv3Runtime : MonoBehaviour
             if (parameterIndices.TryGetValue("Viseme", out paramid))
             {
                 if (paramterInts.TryGetValue(paramid, out iparam) && iparam != playable.GetInteger(paramid)) {
-                    Viseme = VisemeI = playable.GetInteger(paramid);
-                    VisemeDD = (VisemeIndex)Viseme;
+                    VisemeInt = VisemeIdx = playable.GetInteger(paramid);
+                    Viseme = (VisemeIndex)VisemeInt;
                 }
-                playable.SetInteger(paramid, Viseme);
-                paramterInts[paramid] = Viseme;
+                playable.SetInteger(paramid, VisemeInt);
+                paramterInts[paramid] = VisemeInt;
             }
             if (parameterIndices.TryGetValue("GestureLeft", out paramid))
             {
@@ -1266,6 +1285,25 @@ public class LyumaAv3Runtime : MonoBehaviour
                 if (pbs.layerBlends[j].blending) {
                     float newWeight = pbs.layerBlends[j].UpdateBlending();
                     playables[i].SetLayerWeight(j, newWeight);
+                }
+            }
+        }
+        if (avadesc.lipSync == VRC.SDKBase.VRC_AvatarDescriptor.LipSyncStyle.JawFlapBone && avadesc.lipSyncJawBone != null) {
+            if (Viseme == VisemeIndex.sil) {
+                avadesc.lipSyncJawBone.transform.rotation = avadesc.lipSyncJawClosed;
+            } else {
+                avadesc.lipSyncJawBone.transform.rotation = avadesc.lipSyncJawOpen;
+            }
+        } else if (avadesc.lipSync == VRC.SDKBase.VRC_AvatarDescriptor.LipSyncStyle.JawFlapBlendShape && avadesc.VisemeSkinnedMesh != null && mouthOpenBlendShapeIdx != -1) {
+            if (Viseme == VisemeIndex.sil) {
+                avadesc.VisemeSkinnedMesh.SetBlendShapeWeight(mouthOpenBlendShapeIdx, 0.0f);
+            } else {
+                avadesc.VisemeSkinnedMesh.SetBlendShapeWeight(mouthOpenBlendShapeIdx, 100.0f);
+            }
+        } else if (avadesc.lipSync == VRC.SDKBase.VRC_AvatarDescriptor.LipSyncStyle.VisemeBlendShape && avadesc.VisemeSkinnedMesh != null) {
+            for (int i = 0; i < visemeBlendShapeIdxs.Length; i++) {
+                if (visemeBlendShapeIdxs[i] != -1) {
+                    avadesc.VisemeSkinnedMesh.SetBlendShapeWeight(visemeBlendShapeIdxs[i], (i == VisemeIdx ? 100.0f : 0.0f));
                 }
             }
         }
