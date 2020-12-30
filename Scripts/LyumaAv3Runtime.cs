@@ -194,7 +194,9 @@ public class LyumaAv3Runtime : MonoBehaviour
         yield return new WaitForSeconds(time);
         if (setView) {
             Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
-            ViewPosition = animator.transform.InverseTransformPoint(head.TransformPoint(HeadRelativeViewPosition));
+            if (head != null) {
+                ViewPosition = animator.transform.InverseTransformPoint(head.TransformPoint(HeadRelativeViewPosition));
+            }
         } else {
             ViewPosition = avadesc.ViewPosition;
         }
@@ -539,8 +541,10 @@ public class LyumaAv3Runtime : MonoBehaviour
         HeadRelativeViewPosition = ViewPosition;
         if (animator.avatar != null)
         {
-            Transform head = animator.GetBoneTransform(HumanBodyBones.Head);;
-            HeadRelativeViewPosition = head.InverseTransformPoint(animator.transform.TransformPoint(ViewPosition));
+            Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
+            if (head != null) {
+                HeadRelativeViewPosition = head.InverseTransformPoint(animator.transform.TransformPoint(ViewPosition));
+            }
         }
         expressionsMenu = avadesc.expressionsMenu;
         if (expressionsMenu != null)
