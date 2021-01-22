@@ -2,13 +2,14 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
-### **New features in v 2.1.0:**
+### **New features in v 2.1.1:**
 * Supports new features in VRChat 2021.1.1
-* Removed support for Paramater Drivers from sub-animators, to match ingame. Use a checkbox on the "Avatar 3.0 Emulator" control object to re-enable the legacy behavior for nostalgia sake, I dunno.
-* To test saving, there is a checkbox (on by default) which keeps saved paramters when the avatar is reset.
+* Expression menu support for Bool and Float toggles and submenus, in addition to existing support for Int.
+* Removed support for Parameter Drivers from sub-animators, to match ingame. Use a checkbox on the "Avatar 3.0 Emulator" control object to re-enable the legacy behavior for nostalgia sake, I dunno.
+* To test saving, there is a checkbox (on by default) which keeps saved parameters when the avatar is reset.
 * Supports synced bools and triggers same as ingame. The rules for "Add" and "Set" operations are different for bools and triggers in expression parameters and those not. See below for the rules.
-* Fixed issues with 8-bit float quantization. Should now match serialization in-game. Quantization of floats is now off by default except if you check the "Locally 8-bit quanized floats" box or make a non-local clone.
-* *What is quanization?* Basically, 0.5 locally is not 0.5 for other users. You should not assume floats are sent precisely over the network. A float is serialized into a value between -127 and 127, and deserialized back to -1.0 to 1.0 range. Only -1.0, 0.0 and 1.0 are sent precisely over the network.
+* Fixed issues with 8-bit float quantization. Should now match serialization in-game. Quantization of floats is now off by default except if you check the "Locally 8-bit quantized floats" box or make a non-local clone.
+* *What is quantization?* Basically, 0.5 locally is not 0.5 for other users. You should not assume floats are sent precisely over the network. A float is serialized into a value between -127 and 127, and deserialized back to -1.0 to 1.0 range. Only -1.0, 0.0 and 1.0 are sent precisely over the network.
 
 Not implemented: saving and loading saved expression parameters. Parameters are lost every time you enter play mode.
 

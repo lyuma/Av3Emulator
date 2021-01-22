@@ -30,22 +30,22 @@ public class LyumaAv3Menu : MonoBehaviour
     public class MenuConditional
     {
         public VRCExpressionsMenu ExpressionsMenu { get; }
-        public LyumaAv3Runtime.IntParam MandatedParam { get; }
+        public LyumaAv3Runtime.FloatParam MandatedParam { get; }
 
         public MenuConditional(VRCExpressionsMenu expressionsMenu)
         {
             ExpressionsMenu = expressionsMenu;
         }
 
-        public MenuConditional(VRCExpressionsMenu expressionsMenu, LyumaAv3Runtime.IntParam mandatedParam)
+        public MenuConditional(VRCExpressionsMenu expressionsMenu, LyumaAv3Runtime.FloatParam mandatedParam)
         {
             ExpressionsMenu = expressionsMenu;
             MandatedParam = mandatedParam;
         }
 
-        bool ShouldMenuRemainOpen(List<LyumaAv3Runtime.IntParam> allConditions)
+        bool ShouldMenuRemainOpen(List<LyumaAv3Runtime.FloatParam> allConditions)
         {
-            if (MandatedParam == null) return true;
+            if (MandatedParam.name == null) return true;
 
             var actualParam = allConditions.Find(param => param.name == MandatedParam.name);
             if (actualParam == null) return false;
@@ -58,7 +58,7 @@ public class LyumaAv3Menu : MonoBehaviour
     public List<MenuConditional> MenuStack { get; } = new List<MenuConditional>();
     public bool IsMenuOpen { get; private set; }
     private int? _activeControlIndex = null;
-    private LyumaAv3Runtime.IntParam _activeControlParameter;
+    private string _activeControlParameterName;
 
     public delegate void AddRuntime(LyumaAv3Menu runtime);
     public static AddRuntime addRuntimeDelegate;
@@ -82,11 +82,25 @@ public class LyumaAv3Menu : MonoBehaviour
         IsMenuOpen = !IsMenuOpen;
     }
 
-    public void UserToggle(string paramName, int intValue)
-    {
-        var currentValue = Runtime.Ints.Find(param => param.name == paramName).value;
-        var newValue = intValue == currentValue ? 0 : intValue;
-        DoSetRuntimeInt(paramName, newValue);
+    public void UserToggle(string paramName, float wantedValue) {
+        var intx = Runtime.Ints.Find(param => param.name == paramName);
+        if (intx != null) {
+            var currentValue = intx.value;
+            var newValue = (int)wantedValue == currentValue ? 0 : wantedValue;
+            DoSetRuntimeX(paramName, newValue);
+        }
+        var floatx = Runtime.Floats.Find(param => param.name == paramName);
+        if (floatx != null) {
+            var currentValue = floatx.value;
+            var newValue = wantedValue == currentValue ? 0.0f : wantedValue;
+            DoSetRuntimeX(paramName, newValue);
+        }
+        var boolx = Runtime.Bools.Find(param => param.name == paramName);
+        if (boolx != null) {
+            var currentValue = boolx.value;
+            var newValue = !currentValue;
+            DoSetRuntimeX(paramName, newValue ? 1.0f : 0.0f);
+        }
     }
 
     public void UserSubMenu(VRCExpressionsMenu subMenu)
@@ -94,10 +108,10 @@ public class LyumaAv3Menu : MonoBehaviour
         MenuStack.Add(new MenuConditional(subMenu));
     }
 
-    public void UserSubMenu(VRCExpressionsMenu subMenu, string paramName, int intValue)
+    public void UserSubMenu(VRCExpressionsMenu subMenu, string paramName, float wantedValue)
     {
-        MenuStack.Add(new MenuConditional(subMenu, new LyumaAv3Runtime.IntParam {name = paramName, value = intValue}));
-        DoSetRuntimeInt(paramName, intValue);
+        MenuStack.Add(new MenuConditional(subMenu, new LyumaAv3Runtime.FloatParam {name = paramName, value = wantedValue}));
+        DoSetRuntimeX(paramName, wantedValue);
     }
 
     public void UserBack()
@@ -110,7 +124,7 @@ public class LyumaAv3Menu : MonoBehaviour
         var last = MenuStack[lastIndex];
         if (last.MandatedParam != null)
         {
-            DoSetRuntimeInt(last.MandatedParam.name, 0);
+            DoSetRuntimeX(last.MandatedParam.name, 0.0f);
         }
         MenuStack.RemoveAt(lastIndex);
     }
@@ -122,41 +136,60 @@ public class LyumaAv3Menu : MonoBehaviour
         _activeControlIndex = controlIndex;
     }
 
-    public void UserControlEnter(int controlIndex, string paramName, int intValue)
+    public void UserControlEnter(int controlIndex, string paramName, float enterValue)
     {
         if (_activeControlIndex != null) return;
 
         _activeControlIndex = controlIndex;
-        _activeControlParameter = new LyumaAv3Runtime.IntParam {name = paramName, value = intValue};
-        DoSetRuntimeInt(paramName, intValue);
+        _activeControlParameterName = paramName;
+        DoSetRuntimeX(paramName, enterValue);
     }
 
     public void UserControlExit()
     {
         if (_activeControlIndex == null) return;
 
-        if (_activeControlParameter != null)
+        if (_activeControlParameterName != null)
         {
-            DoSetRuntimeInt(_activeControlParameter.name, 0);
+            DoSetRuntimeX(_activeControlParameterName, 0.0f);
         }
         _activeControlIndex = null;
-        _activeControlParameter = null;
+        _activeControlParameterName = null;
     }
 
-    private void DoSetRuntimeInt(string paramName, int newValue)
+    private void DoSetRuntimeX(string paramName, float newValue)
     {
         var intParam = Runtime.Ints.Find(param => param.name == paramName);
-        if (intParam == null) return;
-
-        intParam.value = newValue;
+        if (intParam != null) {
+            intParam.value = (int)newValue;
+        }
+        var floatParam = Runtime.Floats.Find(param => param.name == paramName);
+        if (floatParam != null) {
+            floatParam.value = newValue;
+        }
+        var boolParam = Runtime.Bools.Find(param => param.name == paramName);
+        if (boolParam != null) {
+            boolParam.value = newValue != 0.0;
+        }
     }
 
-    public bool IsVisualActive(string paramName, int value)
+    public bool IsVisualActive(string paramName, float value)
     {
         var intParam = Runtime.Ints.Find(param => param.name == paramName);
-        if (intParam == null) return false;
+        if (intParam != null) {
+            return intParam.value == (int)value;
+        }
 
-        return intParam.value == value;
+        var floatParam = Runtime.Floats.Find(param => param.name == paramName);
+        if (floatParam != null) {
+            return floatParam.value == value;
+        }
+
+        var boolParam = Runtime.Bools.Find(param => param.name == paramName);
+        if (boolParam != null) {
+            return boolParam.value == (value != 0.0);
+        }
+        return false;
     }
 
     public float FindFloat(string paramName)

@@ -138,15 +138,15 @@ public class LyumaAv3MenuEditor : Editor
         var menu = (LyumaAv3Menu)target;
 
         var parameterName = control.parameter.name;
-        var intValue = (int) control.value;
+        var controlValue = control.value;
 
-        var isActive = menu.IsVisualActive(parameterName, intValue);
+        var isActive = menu.IsVisualActive(parameterName, controlValue);
 
         EditorGUILayout.BeginHorizontal();
         EditorGUI.BeginDisabledGroup(menu.HasActiveControl());
-        if (GreenBackground(isActive, () => ParameterizedButton(control, parameterName, intValue)))
+        if (GreenBackground(isActive, () => ParameterizedButton(control, parameterName, controlValue)))
         {
-            menu.UserToggle(parameterName, intValue);
+            menu.UserToggle(parameterName, controlValue);
         }
         EditorGUI.EndDisabledGroup();
         LabelType(labelType);
@@ -158,15 +158,15 @@ public class LyumaAv3MenuEditor : Editor
         var menu = (LyumaAv3Menu)target;
 
         var parameterName = control.parameter.name;
-        var intValue = (int) control.value;
+        var wantedValue = control.value;
 
         EditorGUILayout.BeginHorizontal();
         EditorGUI.BeginDisabledGroup(menu.HasActiveControl());
-        if (ParameterizedButton(control, parameterName, intValue))
+        if (ParameterizedButton(control, parameterName, wantedValue))
         {
             if (IsValidParameterName(parameterName))
             {
-                menu.UserSubMenu(control.subMenu, parameterName, intValue);
+                menu.UserSubMenu(control.subMenu, parameterName, wantedValue);
             }
             else
             {
@@ -297,10 +297,10 @@ public class LyumaAv3MenuEditor : Editor
         menu.UserFloat(subParam.name, EditorGUILayout.Slider(intent + " (" + subParam.name + ")", menu.FindFloat(subParam.name), left, right));
     }
 
-    private bool ParameterizedButton(VRCExpressionsMenu.Control control, string parameterName, int intValue)
+    private bool ParameterizedButton(VRCExpressionsMenu.Control control, string parameterName, float wantedValue)
     {
         var hasParameter = IsValidParameterName(parameterName);
-        return GUILayout.Button(new GUIContent(control.name + (hasParameter ? " (" + parameterName + " = " + intValue + ")" : ""), ResizedIcon(control.icon)));
+        return GUILayout.Button(new GUIContent(control.name + (hasParameter ? " (" + parameterName + " = " + wantedValue + ")" : ""), ResizedIcon(control.icon)));
     }
 
     private Texture2D ResizedIcon(Texture2D originalIcon)
