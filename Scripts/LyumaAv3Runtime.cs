@@ -36,9 +36,15 @@ public class LyumaAv3Runtime : MonoBehaviour
     public delegate void AddRuntime(LyumaAv3Runtime runtime);
     public static AddRuntime addRuntimeDelegate;
 
+    [Tooltip("Resets avatar state machine instantly")]
     public bool ResetAvatar;
+    [Tooltip("Resets avatar state machine and waits until you uncheck this to start")]
     public bool ResetAndHold;
-    [Tooltip("Selects the playable layer to be visible in Unity's Animator window. Because this layer is moved to the top, the output may no longer be correct unless this is set to Base.")] public VRCAvatarDescriptor.AnimLayerType AnimatorToDebug;
+    [Tooltip("Simulates saving and reloading the avatar")]
+    public bool KeepSavedParametersOnReset = true;
+    [Tooltip("In VRChat, 8-bit float quantization only happens remotely. Check this to test your robustness to quantization locally, too. (example: 0.5 -> 0.503")]
+    public bool locally8bitQuantizedFloats = false;
+    [Tooltip("Selects the playable layer to be visible in Unity's Animator window. Unless this is set to Base, creates duplicate playable layers with weight 0. It hopefully works the same.")] public VRCAvatarDescriptor.AnimLayerType AnimatorToDebug;
     private char PrevAnimatorToDebug;
     [HideInInspector] public string SourceObjectPath;
     [Header("Assign to non-local duplicate")]public LyumaAv3Runtime AvatarSyncSource;
@@ -53,6 +59,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     private List<Dictionary<string, int>> playableParamterIds = new List<Dictionary<string, int>>();
     private List<Dictionary<int, float>> playableParamterFloats = new List<Dictionary<int, float>>();
     private List<Dictionary<int, int>> playableParamterInts = new List<Dictionary<int, int>>();
+    private List<Dictionary<int, bool>> playableParamterBools = new List<Dictionary<int, bool>>();
     AnimationLayerMixerPlayable playableMixer;
     PlayableGraph playableGraph;
     VRCExpressionsMenu expressionsMenu;
@@ -66,21 +73,24 @@ public class LyumaAv3Runtime : MonoBehaviour
     private int mouthOpenBlendShapeIdx;
     private int[] visemeBlendShapeIdxs;
 
-    public static float ClampFloat(float val) {
+    public static float ClampFloatOnly(float val) {
         if (val < -1.0f) {
             val = -1.0f;
         }
         if (val > 1.0f) {
             val = 1.0f;
         }
-        if (val > 0.0f) {
-            val *= 128f / 127; // apply bias.
-        }
-        val = (((sbyte)((val) * -127.0f)) / -127.0f);
-        if (val > 1.0f)
-        {
-            val = 1.0f;
-        }
+        return val;
+    }
+    public static float ClampAndQuantizeFloat(float val) {
+        val = ClampFloatOnly(val);
+        val *= 127.00f;
+        // if (val > 127.0f) {
+        //     val = 127.0f;
+        // }
+        val = Mathf.Round(val);
+        val = (((sbyte)val) / 127.0f);
+        val = ClampFloatOnly(val);
         return val;
     }
     public static int ClampByte(int val) {
@@ -161,6 +171,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     {
         [HideInInspector] public string stageName;
         public string name;
+        [HideInInspector] public bool synced;
         [Range(-1, 1)] public float value;
         [HideInInspector] public float lastValue;
     }
@@ -173,6 +184,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     {
         [HideInInspector] public string stageName;
         public string name;
+        [HideInInspector] public bool synced;
         public int value;
         [HideInInspector] public int lastValue;
     }
@@ -182,17 +194,25 @@ public class LyumaAv3Runtime : MonoBehaviour
     [Serializable]
     public class BoolParam
     {
+        [HideInInspector] public string stageName;
+
         public string name;
+        [HideInInspector] public bool synced;
         public bool value;
         [HideInInspector] public bool lastValue;
+        [HideInInspector] public bool[] hasTrigger;
+        [HideInInspector] public bool[] hasBool;
     }
     public List<BoolParam> Bools = new List<BoolParam>();
     public Dictionary<string, int> BoolToIndex = new Dictionary<string, int>();
 
     public Dictionary<string, string> StageParamterToBuiltin = new Dictionary<string, string>();
 
+    public LyumaAv3Emulator emulator;
+
     static public Dictionary<Animator, LyumaAv3Runtime> animatorToTopLevelRuntime = new Dictionary<Animator, LyumaAv3Runtime>();
     private HashSet<Animator> attachedAnimators;
+    private HashSet<string> duplicateParameterAdds = new HashSet<string>();
 
     const float BASE_HEIGHT = 1.4f;
 
@@ -266,12 +286,15 @@ public class LyumaAv3Runtime : MonoBehaviour
         return false;
     }
 
-    static LyumaAv3Runtime () {
+    static LyumaAv3Runtime() {
         VRCAvatarParameterDriver.Initialize += (x) => {
             x.ApplySettings += (behaviour, animator) =>
             {
                 LyumaAv3Runtime runtime;
                 if (!getTopLevelRuntime("VRCAvatarParameterDriver", animator, out runtime)) {
+                    return;
+                }
+                if (animator != runtime.animator && (!runtime.emulator || !runtime.emulator.legacySubAnimatorParameterDriverMode)) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -282,22 +305,136 @@ public class LyumaAv3Runtime : MonoBehaviour
                 {
                     return;
                 }
-                foreach (var parameter in behaviour.parameters)
-                {
-                    string actualName;
-                    if (!runtime.StageParamterToBuiltin.TryGetValue(parameter.name, out actualName)) {
-                        actualName = parameter.name;
+                if (!runtime.IsLocal && behaviour.localOnly) {
+                    return;
+                }
+                HashSet<string> newParameterAdds = new HashSet<string>();
+                HashSet<string> deleteParameterAdds = new HashSet<string>();
+                foreach (var parameter in behaviour.parameters) {
+                    if (parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add || parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random) {
+                        string dupeKey = parameter.value + ((parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add) ? "add " : "rand ") + parameter.name;
+                        if (!runtime.duplicateParameterAdds.Contains(dupeKey)) {
+                            newParameterAdds.Add(dupeKey);
+                            continue;
+                        }
+                        deleteParameterAdds.Add(dupeKey);
                     }
+                    string actualName = parameter.name;
                     int idx;
                     if (runtime.IntToIndex.TryGetValue(actualName, out idx)) {
-                        runtime.Ints[idx].value = (int)parameter.value;
+                        switch (parameter.type) {
+                            case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Set:
+                                runtime.Ints[idx].value = (int)parameter.value;
+                                break;
+                            case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add:
+                                runtime.Ints[idx].value += (int)parameter.value;
+                                break;
+                            case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random:
+                                runtime.Ints[idx].value = UnityEngine.Random.Range((int)parameter.valueMin, (int)parameter.valueMax);
+                                break;
+                        }
                     }
                     if (runtime.FloatToIndex.TryGetValue(actualName, out idx)) {
-                        runtime.Floats[idx].value = parameter.value;
+                        switch (parameter.type) {
+                            case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Set:
+                                runtime.Floats[idx].value = parameter.value;
+                                break;
+                            case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add:
+                                runtime.Floats[idx].value += parameter.value;
+                                break;
+                            case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random:
+                                runtime.Floats[idx].value = UnityEngine.Random.Range(parameter.valueMin, parameter.valueMax);
+                                break;
+                        }
                     }
                     if (runtime.BoolToIndex.TryGetValue(actualName, out idx)) {
-                        runtime.Bools[idx].value = parameter.value != 0;
+                        bool newValue;
+                        BoolParam bp = runtime.Bools[idx];
+                        int whichController;
+                        // bp.value = parameter.value != 0;
+                        switch (parameter.type) {
+                            case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Set:
+                                newValue = parameter.value != 0.0f;
+                                if (!bp.synced) {
+                                    // Triggers ignore alue and Set unconditionally.
+                                    whichController = 0;
+                                    foreach (var p in runtime.playables) {
+                                        if (bp.hasBool[whichController]) {
+                                            p.SetBool(actualName, newValue);
+                                        }
+                                        whichController++;
+                                    }
+                                    whichController = 0;
+                                    foreach (var p in runtime.playables) {
+                                        if (bp.hasTrigger[whichController]) {
+                                            Debug.Log("Set: setting local trigger " + actualName);
+                                            p.SetTrigger(actualName);
+                                        }
+                                        whichController++;
+                                    }
+                                    bp.lastValue = newValue;
+                                }
+                                bp.value = newValue;
+                                break;
+                            case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add:
+                                /* editor script treats it as random, but it is its own operation */
+                                newValue = ((bp.value ? 1.0 : 0.0) + parameter.value) != 0.0f; // weird but ok...
+                                Debug.Log("Add bool " + bp.name + " to " + newValue + ", " + (bp.value ? 1.0 : 0.0) + ", " + parameter.value);
+                                if (!bp.synced) {
+                                    newValue = parameter.value != 0.0f;
+                                    whichController = 0;
+                                    // Triggers ignore value and Set unconditionally.
+                                    foreach (var p in runtime.playables) {
+                                        if (bp.hasBool[whichController]) {
+                                            p.SetBool(actualName, newValue);
+                                        }
+                                        whichController++;
+                                    }
+                                    whichController = 0;
+                                    foreach (var p in runtime.playables) {
+                                        if (bp.hasTrigger[whichController]) {
+                                            Debug.Log("Add: setting local trigger " + actualName);
+                                            p.SetTrigger(actualName);
+                                        }
+                                        whichController++;
+                                    }
+                                    bp.lastValue = newValue;
+                                }
+                                bp.value = newValue;
+                                break;
+                            case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random:
+                                // random is *not* idempotent.
+                                newValue = UnityEngine.Random.Range(0.0f, 1.0f) < parameter.chance;
+                                if (!bp.synced) {
+                                    whichController = 0;
+                                    foreach (var p in runtime.playables) {
+                                        if (bp.hasBool[whichController]) {
+                                            p.SetBool(actualName, newValue);
+                                        }
+                                        whichController++;
+                                    }
+                                    if (newValue) {
+                                        whichController = 0;
+                                        foreach (var p in runtime.playables) {
+                                            if (bp.hasTrigger[whichController]) {
+                                                Debug.Log("Random: setting local trigger " + actualName);
+                                                p.SetTrigger(actualName);
+                                            }
+                                            whichController++;
+                                        }
+                                    }
+                                    bp.lastValue = newValue;
+                                }
+                                bp.value = newValue;
+                                break;
+                        }
                     }
+                }
+                foreach (var key in deleteParameterAdds) {
+                    runtime.duplicateParameterAdds.Remove(key);
+                }
+                foreach (var key in newParameterAdds) {
+                    runtime.duplicateParameterAdds.Add(key);
                 }
             };
         };
@@ -615,7 +752,24 @@ public class LyumaAv3Runtime : MonoBehaviour
                     break;
                 }
             }
+            // WE ADD ALL THE LAYERS A SECOND TIME BECAUSE!
+            // Add and Random Parameter drivers are not idepotent.
+            // To solve this, we ignore every other invocation.
+            // Therefore, we must add all layers twice, not just the one we are debugging...???
+            foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
+                if (AnimatorToDebug != cal.type) {
+                    i++;
+                    allLayers.Add(cal);
+                }
+            }
+            foreach (VRCAvatarDescriptor.CustomAnimLayer cal in speciallayers) {
+                if (AnimatorToDebug != cal.type) {
+                    i++;
+                    allLayers.Add(cal);
+                }
+            }
         }
+        int firstMainIdx = i;
         foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
             if (cal.type == VRCAvatarDescriptor.AnimLayerType.Base || cal.type == VRCAvatarDescriptor.AnimLayerType.Additive) {
                 i++;
@@ -662,6 +816,16 @@ public class LyumaAv3Runtime : MonoBehaviour
             animatorToTopLevelRuntime.Add(anim, this);
         }
 
+        Dictionary<string, float> stageNameToValue = new Dictionary<string, float>();
+        foreach (var val in Ints) {
+            stageNameToValue[val.stageName] = val.value;
+        }
+        foreach (var val in Floats) {
+            stageNameToValue[val.stageName] = val.value;
+        }
+        foreach (var val in Bools) {
+            stageNameToValue[val.stageName] = val.value ? 1.0f : 0.0f;
+        }
         Ints.Clear();
         Bools.Clear();
         Floats.Clear();
@@ -672,6 +836,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         playableParamterFloats.Clear();
         playableParamterIds.Clear();
         playableParamterInts.Clear();
+        playableParamterBools.Clear();
         HashSet<string> usedparams = new HashSet<string>(BUILTIN_PARAMETERS);
         i = 0;
         if (stageParameters != null)
@@ -683,27 +848,43 @@ public class LyumaAv3Runtime : MonoBehaviour
                 if (stageParam.name == null || stageParam.name.Length == 0) {
                     continue;
                 }
-                string stageName = "Stage" + stageId;
+                string stageName = stageParam.name + (stageParam.saved ? " (saved/SYNCED)" : " (SYNCED)"); //"Stage" + stageId;
+                float lastDefault = (stageParam.saved && KeepSavedParametersOnReset && stageNameToValue.ContainsKey(stageParam.name) ? stageNameToValue[stageParam.name] : stageParam.defaultValue);
                 StageParamterToBuiltin.Add(stageName, stageParam.name);
                 if ((int)stageParam.valueType == 0)
                 {
                     IntParam param = new IntParam();
                     param.stageName = stageName;
+                    param.synced = true;
                     param.name = stageParam.name;
-                    param.value = 0;
+                    param.value = (int)lastDefault;
                     param.lastValue = 0;
                     IntToIndex[param.name] = Ints.Count;
                     Ints.Add(param);
                 }
-                else
+                else if ((int)stageParam.valueType == 1)
                 {
                     FloatParam param = new FloatParam();
                     param.stageName = stageName;
+                    param.synced = true;
                     param.name = stageParam.name;
-                    param.value = 0;
+                    param.value = lastDefault;
                     param.lastValue = 0;
                     FloatToIndex[param.name] = Floats.Count;
                     Floats.Add(param);
+                }
+                else if ((int)stageParam.valueType == 2)
+                {
+                    BoolParam param = new BoolParam();
+                    param.stageName = stageName;
+                    param.synced = true;
+                    param.name = stageParam.name;
+                    param.value = lastDefault != 0.0;
+                    param.lastValue = false;
+                    param.hasBool = new bool[playables.Count];
+                    param.hasTrigger = new bool[playables.Count];
+                    BoolToIndex[param.name] = Bools.Count;
+                    Bools.Add(param);
                 }
                 usedparams.Add(stageParam.name);
                 i++;
@@ -720,8 +901,6 @@ public class LyumaAv3Runtime : MonoBehaviour
         playableMixer = AnimationLayerMixerPlayable.Create(playableGraph, allLayers.Count + 1);
         externalOutput.SetSourcePlayable(playableMixer);
         animator.applyRootMotion = false;
-
-        AnimatorControllerPlayable mainPlayable;
 
         i = 0;
         // playableMixer.ConnectInput(0, AnimatorControllerPlayable.Create(playableGraph, allLayers[layerToDebug - 1].animatorController), 0, 0);
@@ -800,7 +979,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 playableMixer.SetLayerAdditive((uint)effectiveIdx, true);
             }
 
-            if (i == 0 && AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base) {
+            if (i < firstMainIdx) {//i == 0 && AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base) {
                 playableMixer.SetInputWeight(i, 0f);
             }
         }
@@ -813,6 +992,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             Dictionary<string, int> parameterIndices = new Dictionary<string, int>();
             playableParamterInts.Add(new Dictionary<int, int>());
             playableParamterFloats.Add(new Dictionary<int, float>());
+            playableParamterBools.Add(new Dictionary<int, bool>());
             // Debug.Log("SETUP index " + whichcontroller + " len " + playables.Count);
             playableParamterIds.Add(parameterIndices);
             for (i = 0; i < pcnt; i++) {
@@ -823,11 +1003,18 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
                 parameterIndices[actualName] = aparam.nameHash;
                 if (usedparams.Contains(actualName)) {
+                    if (BoolToIndex.ContainsKey(aparam.name) && aparam.type == AnimatorControllerParameterType.Bool) {
+                        Bools[BoolToIndex[aparam.name]].hasBool[whichcontroller] = true;
+                    }
+                    if (BoolToIndex.ContainsKey(aparam.name) && aparam.type == AnimatorControllerParameterType.Trigger) {
+                        Bools[BoolToIndex[aparam.name]].hasTrigger[whichcontroller] = true;
+                    }
                     continue;
                 }
                 if (aparam.type == AnimatorControllerParameterType.Int) {
                     IntParam param = new IntParam();
                     param.stageName = aparam.name + " (local)";
+                    param.synced = false;
                     param.name = aparam.name;
                     param.value = aparam.defaultInt;
                     param.lastValue = param.value;
@@ -837,17 +1024,24 @@ public class LyumaAv3Runtime : MonoBehaviour
                 } else if (aparam.type == AnimatorControllerParameterType.Float) {
                     FloatParam param = new FloatParam();
                     param.stageName = aparam.name + " (local)";
+                    param.synced = false;
                     param.name = aparam.name;
                     param.value = aparam.defaultFloat;
                     param.lastValue = param.value;
                     FloatToIndex[param.name] = Floats.Count;
                     Floats.Add(param);
                     usedparams.Add(aparam.name);
-                } else if (aparam.type == AnimatorControllerParameterType.Bool) {
+                } else if (aparam.type == AnimatorControllerParameterType.Trigger || aparam.type == AnimatorControllerParameterType.Bool) {
                     BoolParam param = new BoolParam();
+                    param.stageName = aparam.name + " (local)";
+                    param.synced = false;
                     param.name = aparam.name;
                     param.value = aparam.defaultBool;
                     param.lastValue = param.value;
+                    param.hasBool = new bool[playables.Count];
+                    param.hasTrigger = new bool[playables.Count];
+                    param.hasBool[whichcontroller] = aparam.type == AnimatorControllerParameterType.Bool;
+                    param.hasTrigger[whichcontroller] = aparam.type == AnimatorControllerParameterType.Trigger;
                     BoolToIndex[param.name] = Bools.Count;
                     Bools.Add(param);
                     usedparams.Add(aparam.name);
@@ -931,7 +1125,12 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
             for (int i = 0; i < Floats.Count; i++) {
                 if (StageParamterToBuiltin.ContainsKey(Floats[i].stageName)) {
-                    Floats[i].value = ClampFloat(AvatarSyncSource.Floats[i].value);
+                    Floats[i].value = ClampAndQuantizeFloat(AvatarSyncSource.Floats[i].value);
+                }
+            }
+            for (int i = 0; i < Bools.Count; i++) {
+                if (StageParamterToBuiltin.ContainsKey(Bools[i].stageName)) {
+                    Bools[i].value = AvatarSyncSource.Bools[i].value;
                 }
             }
             VisemeInt = VisemeIdx = AvatarSyncSource.VisemeInt;
@@ -963,7 +1162,11 @@ public class LyumaAv3Runtime : MonoBehaviour
         }
         for (int i = 0; i < Floats.Count; i++) {
             if (StageParamterToBuiltin.ContainsKey(Floats[i].stageName)) {
-                Floats[i].value = ClampFloat(Floats[i].value);
+                if (locally8bitQuantizedFloats) {
+                    Floats[i].value = ClampAndQuantizeFloat(Floats[i].value);
+                } else {
+                    Floats[i].value = ClampFloatOnly(Floats[i].value);
+                }
             }
         }
         for (int i = 0; i < Ints.Count; i++) {
@@ -1043,7 +1246,11 @@ public class LyumaAv3Runtime : MonoBehaviour
                 if (parameterIndices.TryGetValue(param.name, out paramid))
                 {
                     if (param.value != param.lastValue) {
-                        playable.SetBool(paramid, param.value);
+                        Debug.Log("Set boolean " + param.name + " from " + param.lastValue + " to " + param.value + " / " + paramid);
+                        playable.SetBool(paramid, param.value); // also sets triggers.
+                        // if (param.value) {
+                        //     playable.SetTrigger(paramid);
+                        // }
                     }
                 }
             }
@@ -1066,9 +1273,11 @@ public class LyumaAv3Runtime : MonoBehaviour
             Dictionary<string, int> parameterIndices = playableParamterIds[whichcontroller];
             Dictionary<int, int> paramterInts = playableParamterInts[whichcontroller];
             Dictionary<int, float> paramterFloats = playableParamterFloats[whichcontroller];
+            Dictionary<int, bool> paramterBools = playableParamterBools[whichcontroller];
             int paramid;
             float fparam;
             int iparam;
+            bool bparam;
             foreach (FloatParam param in Floats)
             {
                 if (parameterIndices.TryGetValue(param.name, out paramid))
@@ -1095,14 +1304,14 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
             foreach (BoolParam param in Bools)
             {
-                if (parameterIndices.TryGetValue(param.name, out paramid))
+                if (param.hasBool[whichcontroller] && parameterIndices.TryGetValue(param.name, out paramid))
                 {
-                    if (paramterInts.TryGetValue(paramid, out iparam)) {
-                        if (iparam != (playable.GetBool(paramid) ? 1 : 0)) {
+                    if (paramterBools.TryGetValue(paramid, out bparam)) {
+                        if (bparam != (playable.GetBool(paramid))) {
                             param.value = param.lastValue = playable.GetBool(paramid);
                         }
                     }
-                    paramterInts[paramid] = param.value ? 1 : 0;
+                    paramterBools[paramid] = param.value;
                 }
             }
             if (parameterIndices.TryGetValue("Viseme", out paramid))

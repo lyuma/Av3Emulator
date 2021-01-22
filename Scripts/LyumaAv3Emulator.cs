@@ -31,6 +31,8 @@ public class LyumaAv3Emulator : MonoBehaviour
     public bool RestartEmulator;
     private bool RestartingEmulator;
     public bool CreateNonLocalClone;
+    [Tooltip("Simulate behavior with sub-animator parameter drivers prior to the 2021.1.1 patch (19 Jan 2021)")]
+    public bool legacySubAnimatorParameterDriverMode;
 
     static public LyumaAv3Emulator emulatorInstance;
     static public RuntimeAnimatorController EmptyController;
@@ -53,6 +55,7 @@ public class LyumaAv3Emulator : MonoBehaviour
         {
             // Creates the playable director, and initializes animator.
             var runtime = avadesc.gameObject.GetOrAddComponent<LyumaAv3Runtime>();
+            runtime.emulator = this;
             runtimes.Add(runtime);
 
             var mainMenu = avadesc.gameObject.AddComponent<LyumaAv3Menu>();

@@ -2,6 +2,16 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
+### **New features in v 2.1.0:**
+* Supports new features in VRChat 2021.1.1
+* Removed support for Paramater Drivers from sub-animators, to match ingame. Use a checkbox on the "Avatar 3.0 Emulator" control object to re-enable the legacy behavior for nostalgia sake, I dunno.
+* To test saving, there is a checkbox (on by default) which keeps saved paramters when the avatar is reset.
+* Supports synced bools and triggers same as ingame. The rules for "Add" and "Set" operations are different for bools and triggers in expression parameters and those not. See below for the rules.
+* Fixed issues with 8-bit float quantization. Should now match serialization in-game. Quantization of floats is now off by default except if you check the "Locally 8-bit quanized floats" box or make a non-local clone.
+* *What is quanization?* Basically, 0.5 locally is not 0.5 for other users. You should not assume floats are sent precisely over the network. A float is serialized into a value between -127 and 127, and deserialized back to -1.0 to 1.0 range. Only -1.0, 0.0 and 1.0 are sent precisely over the network.
+
+Not implemented: saving and loading saved expression parameters. Parameters are lost every time you enter play mode.
+
 ### **New features in v 2.0.0:**
 * **Animator To Debug** dropdown has been fixed. View your animator in action in the Unity Animator window, and update parameters in real time.
 * The **Lyuma Av3 Menu** component allows using your avatar's expression menu actions directly from the editor. Click + to open two radial menus at once to test combining puppets. (Thanks to @hai-vr for the contribution!)
@@ -57,6 +67,35 @@ Another useful tool is the "PlayableGraph Visualizer" which can be found in the 
 Use the expression menu under the **Lyuma Av3 Menu** header, or the Parameters tab of the Animator window, after selecting your layer as **Animator To Debug** in the inspector.
 
 For manual control, you can also alt-click the Floats and Ints sections at the bottom of the Lyuma Av3 Runtime script to expand them all, and change the values from there.
+
+## Notes about Set, Add ( blank ) and Random operations for boolean and trigger parameters.
+
+For **Bool and Trigger values not set in expression parameters**, the rules are straightforward:
+
+* Unsynced Bool Set: sets to true if Value is checked
+* Unsynced Bool Random: sets to true if RAND() < Chance, false otherwise
+* Unsynced Bool Add: sets to true if Value != 0.0 in debug inspector
+* Unsynced trigger Set: sets unconditionally
+* Unsynced trigger Random: sets if RAND() < Chance
+* Unsynced trigger Add: sets unconditionally
+
+(Note that "Add" shows up as a blank dropdown. Unlike the inspector, Add uses the Value instead of the Chance field. You need to check the debug inspector. Also, there is no point in using "Add" in this case, so just fix it if you see a blank dropdown.)
+
+*HOWEVER*, For **Bool values set in expression paramters**, there is a notable difference in the case of the "Add" (blank) operation:
+
+* Synced Bool Set: sets to true if Value is checked
+* Synced Bool Random: sets to true if RAND() < Chance, false otherwise
+* Synced Bool Add: sets to true if (Value + (currentValue?1.0:0.0)) != 0.0; sets to false otherwise
+
+Using Add (blank dropdown) with a Value of -1.0 (in the debug inspector or using "Set" first), it is possible to make a toggle operation, but only for Bool values in your expression parameters.
+
+Finally, Triggers set in expression parameters act completely unintuitively. **AVOID USING PARAMETER DRIVERS ON TRIGGER PARAMETERS SET IN EXPRESSION PARAMETERS!!!** Still, if you are interested, here are the rules for synced Trigger parameters:
+
+* Synced trigger Set: Uses the Value in the Debug inspector. sets to true if Value != 0.0; sets to false if Value == 0.0; does not set trigger if set to 0.0 by next frame.
+* Synced trigger Random: sets if RAND() < Chance, false otherwise
+* Synced trigger Add: sets to true if (Value + (currentValue?1.0:0.0)) != 0.0; sets to false otherwise; does not set trigger if set to 0.0 by next frame.
+
+Synced Trigger parameters remember if they were set to true, and will only set again if explicitly set to false and then true again.
 
 ## Other known issues:
 
