@@ -294,15 +294,15 @@ public class LyumaAv3Runtime : MonoBehaviour
                 if (!getTopLevelRuntime("VRCAvatarParameterDriver", animator, out runtime)) {
                     return;
                 }
-                if (animator != runtime.animator && (!runtime.emulator || !runtime.emulator.legacySubAnimatorParameterDriverMode)) {
-                    return;
-                }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
                 {
                     Debug.Log("[VRCAvatarParameterDriver:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
                 }
                 if (!runtime)
                 {
+                    return;
+                }
+                if (animator != runtime.animator && (!runtime.emulator || !runtime.emulator.legacySubAnimatorParameterDriverMode)) {
                     return;
                 }
                 if (!runtime.IsLocal && behaviour.localOnly) {
@@ -367,7 +367,6 @@ public class LyumaAv3Runtime : MonoBehaviour
                                     whichController = 0;
                                     foreach (var p in runtime.playables) {
                                         if (bp.hasTrigger[whichController]) {
-                                            Debug.Log("Set: setting local trigger " + actualName);
                                             p.SetTrigger(actualName);
                                         }
                                         whichController++;
@@ -393,7 +392,6 @@ public class LyumaAv3Runtime : MonoBehaviour
                                     whichController = 0;
                                     foreach (var p in runtime.playables) {
                                         if (bp.hasTrigger[whichController]) {
-                                            Debug.Log("Add: setting local trigger " + actualName);
                                             p.SetTrigger(actualName);
                                         }
                                         whichController++;
@@ -417,7 +415,6 @@ public class LyumaAv3Runtime : MonoBehaviour
                                         whichController = 0;
                                         foreach (var p in runtime.playables) {
                                             if (bp.hasTrigger[whichController]) {
-                                                Debug.Log("Random: setting local trigger " + actualName);
                                                 p.SetTrigger(actualName);
                                             }
                                             whichController++;
@@ -1246,7 +1243,6 @@ public class LyumaAv3Runtime : MonoBehaviour
                 if (parameterIndices.TryGetValue(param.name, out paramid))
                 {
                     if (param.value != param.lastValue) {
-                        Debug.Log("Set boolean " + param.name + " from " + param.lastValue + " to " + param.value + " / " + paramid);
                         playable.SetBool(paramid, param.value); // also sets triggers.
                         // if (param.value) {
                         //     playable.SetTrigger(paramid);
