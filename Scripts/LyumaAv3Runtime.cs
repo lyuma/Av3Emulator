@@ -828,14 +828,16 @@ public class LyumaAv3Runtime : MonoBehaviour
         }
 
         Dictionary<string, float> stageNameToValue = new Dictionary<string, float>();
-        foreach (var val in Ints) {
-            stageNameToValue[val.stageName] = val.value;
-        }
-        foreach (var val in Floats) {
-            stageNameToValue[val.stageName] = val.value;
-        }
-        foreach (var val in Bools) {
-            stageNameToValue[val.stageName] = val.value ? 1.0f : 0.0f;
+        if (IsLocal) {
+            foreach (var val in Ints) {
+                stageNameToValue[val.stageName] = val.value;
+            }
+            foreach (var val in Floats) {
+                stageNameToValue[val.stageName] = val.value;
+            }
+            foreach (var val in Bools) {
+                stageNameToValue[val.stageName] = val.value ? 1.0f : 0.0f;
+            }
         }
         Ints.Clear();
         Bools.Clear();
