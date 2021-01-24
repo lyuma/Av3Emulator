@@ -809,7 +809,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         }
 
         actionIndex = fxIndex = gestureIndex = additiveIndex = sittingIndex = ikposeIndex = tposeIndex = -1;
-        altActionIndex = altFXIndex = altGestureIndex = altAdditiveIndex;
+        altActionIndex = altFXIndex = altGestureIndex = altAdditiveIndex = -1;
 
         foreach (var anim in attachedAnimators) {
             LyumaAv3Runtime runtime;
@@ -1129,6 +1129,8 @@ public class LyumaAv3Runtime : MonoBehaviour
             isResettingHold = false;
         }
         if (PrevAnimatorToDebug != (char)(int)AnimatorToDebug || ResetAvatar) {
+            actionIndex = fxIndex = gestureIndex = additiveIndex = sittingIndex = ikposeIndex = tposeIndex = -1;
+            altActionIndex = altFXIndex = altGestureIndex = altAdditiveIndex = -1;
             // animator.runtimeAnimatorController = null;
             if (playableGraph.IsValid()) {
                 playableGraph.Destroy();

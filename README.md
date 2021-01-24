@@ -2,7 +2,7 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
-### **New features in v 2.2.0:**
+### **New features in v 2.2.1:**
 * Fix off-by-one errors with layer and playable weight changes
 * Fix bugs with layer control behaviours
 * Fixed saved parameters. They were broken in the last update.

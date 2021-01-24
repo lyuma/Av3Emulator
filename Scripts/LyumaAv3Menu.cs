@@ -23,7 +23,6 @@ using UnityEngine;
 using System.Collections.Generic;
 using VRC.SDK3.Avatars.ScriptableObjects;
 
-[RequireComponent(typeof(Animator))]
 public class LyumaAv3Menu : MonoBehaviour
 {
     [Serializable]
