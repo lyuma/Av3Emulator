@@ -64,11 +64,11 @@ public class LyumaAv3Runtime : MonoBehaviour
     PlayableGraph playableGraph;
     VRCExpressionsMenu expressionsMenu;
     VRCExpressionParameters stageParameters;
-    int sittingIndex;
-    int fxIndex;
-    int actionIndex;
-    int additiveIndex;
-    int gestureIndex;
+    int sittingIndex, tposeIndex, ikposeIndex;
+    int fxIndex, altFXIndex;
+    int actionIndex, altActionIndex;
+    int additiveIndex, altAdditiveIndex;
+    int gestureIndex, altGestureIndex;
 
     private int mouthOpenBlendShapeIdx;
     private int[] visemeBlendShapeIdxs;
@@ -135,9 +135,11 @@ public class LyumaAv3Runtime : MonoBehaviour
     [Range(-1, 1)] public float GroundProximity; // Not implemented
     private int LocomotionMode; // Does not exist.
     public bool Grounded;
-    private bool PrevSeated;
+    private bool PrevSeated, PrevTPoseCalibration, PrevIKPoseCalibration;
     public bool Seated;
     public bool AFK;
+    public bool TPoseCalibration;
+    public bool IKPoseCalibration;
     //TODO:
     bool Supine; // Not implemented
     private bool FootstepDisable; // Does not exist.
@@ -468,7 +470,8 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
                 if (idx >= 0 && idx < runtime.playableBlendingStates.Count)
                 {
-                    runtime.playableBlendingStates[idx].StartBlend(runtime.playableMixer.GetInputWeight(idx), behaviour.goalWeight, behaviour.blendDuration);
+                    runtime.playableBlendingStates[idx].StartBlend(runtime.playableMixer.GetInputWeight(idx + 1), behaviour.goalWeight, behaviour.blendDuration);
+                    Debug.Log("Start blend of whole playable " + idx + " from " + runtime.playableMixer.GetInputWeight(idx + 1) + " to " + behaviour.goalWeight);
                 }
             };
         };
@@ -487,20 +490,24 @@ public class LyumaAv3Runtime : MonoBehaviour
                 {
                     return;
                 }
-                int idx = -1;
+                int idx = -1, altidx = -1;
                 switch (behaviour.playable)
                 {
                     case VRCAnimatorLayerControl.BlendableLayer.Action:
                         idx = runtime.actionIndex;
+                        altidx = runtime.altActionIndex;
                         break;
                     case VRCAnimatorLayerControl.BlendableLayer.Additive:
                         idx = runtime.additiveIndex;
+                        altidx = runtime.altAdditiveIndex;
                         break;
                     case VRCAnimatorLayerControl.BlendableLayer.FX:
                         idx = runtime.fxIndex;
+                        altidx = runtime.altFXIndex;
                         break;
                     case VRCAnimatorLayerControl.BlendableLayer.Gesture:
                         idx = runtime.gestureIndex;
+                        altidx = runtime.altGestureIndex;
                         break;
                 }
                 if (idx >= 0 && idx < runtime.playableBlendingStates.Count)
@@ -508,6 +515,11 @@ public class LyumaAv3Runtime : MonoBehaviour
                     if (behaviour.layer >= 0 && behaviour.layer < runtime.playableBlendingStates[idx].layerBlends.Count)
                     {
                         runtime.playableBlendingStates[idx].layerBlends[behaviour.layer].StartBlend(runtime.playables[idx].GetLayerWeight(behaviour.layer), behaviour.goalWeight, behaviour.blendDuration);
+                        Debug.Log("Start blend of playable " + idx + " layer " + behaviour.layer + " from " + runtime.playables[idx].GetLayerWeight(behaviour.layer) + " to " + behaviour.goalWeight);
+                        if (altidx >= 0) {
+                            runtime.playableBlendingStates[altidx].layerBlends[behaviour.layer].StartBlend(runtime.playables[altidx].GetLayerWeight(behaviour.layer), behaviour.goalWeight, behaviour.blendDuration);
+                            Debug.Log("Start blend of alt playable " + altidx + " layer " + behaviour.layer + " from " + runtime.playables[altidx].GetLayerWeight(behaviour.layer) + " to " + behaviour.goalWeight);
+                        }
                     }
                 }
             };
@@ -766,7 +778,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
             }
         }
-        int firstMainIdx = i;
+        int dupeOffset = i;
         foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
             if (cal.type == VRCAvatarDescriptor.AnimLayerType.Base || cal.type == VRCAvatarDescriptor.AnimLayerType.Additive) {
                 i++;
@@ -795,7 +807,8 @@ public class LyumaAv3Runtime : MonoBehaviour
             playableBlendingStates.Add(null);
         }
 
-        actionIndex = fxIndex = gestureIndex = additiveIndex = sittingIndex = -1;
+        actionIndex = fxIndex = gestureIndex = additiveIndex = sittingIndex = ikposeIndex = tposeIndex = -1;
+        altActionIndex = altFXIndex = altGestureIndex = altAdditiveIndex;
 
         foreach (var anim in attachedAnimators) {
             LyumaAv3Runtime runtime;
@@ -938,33 +951,59 @@ public class LyumaAv3Runtime : MonoBehaviour
             playables[effectiveIdx - 1] = humanAnimatorPlayable;
             playableBlendingStates[effectiveIdx - 1] = pbs;
             if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.Sitting) {
-                sittingIndex = effectiveIdx;
+                if (i >= dupeOffset) {
+                    sittingIndex = effectiveIdx - 1;
+                }
                 playableMixer.SetInputWeight(effectiveIdx, 0f);
             }
             if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.IKPose)
             {
+                if (i >= dupeOffset) {
+                    ikposeIndex = effectiveIdx - 1;
+                }
                 playableMixer.SetInputWeight(effectiveIdx, 0f);
             }
             if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.TPose)
             {
+                if (i >= dupeOffset) {
+                    tposeIndex = effectiveIdx - 1;
+                }
                 playableMixer.SetInputWeight(effectiveIdx, 0f);
             }
             if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.Action)
             {
                 playableMixer.SetInputWeight(i, 0f);
-                actionIndex = effectiveIdx;
+                if (i < dupeOffset) {
+                    altActionIndex = effectiveIdx - 1;
+                } else {
+                    actionIndex = effectiveIdx - 1;
+                }
+
             }
-            if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.Gesture)
-            {
-                gestureIndex = effectiveIdx;
+            if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.Gesture) {
+                if (i < dupeOffset) {
+                    altGestureIndex = effectiveIdx - 1;
+                } else {
+                    gestureIndex = effectiveIdx - 1;
+                }
+
             }
             if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.Additive)
             {
-                additiveIndex = effectiveIdx;
+                if (i < dupeOffset) {
+                    altAdditiveIndex = effectiveIdx - 1;
+                } else {
+                    additiveIndex = effectiveIdx - 1;
+                }
+
             }
             if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.FX)
             {
-                fxIndex = effectiveIdx;
+                if (i < dupeOffset) {
+                    altFXIndex = effectiveIdx - 1;
+                } else {
+                    fxIndex = effectiveIdx - 1;
+                }
             }
             // AnimationControllerLayer acLayer = new AnimationControllerLayer()
             if (mask != null)
@@ -976,7 +1015,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 playableMixer.SetLayerAdditive((uint)effectiveIdx, true);
             }
 
-            if (i < firstMainIdx) {//i == 0 && AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base) {
+            if (i < dupeOffset) {//i == 0 && AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base) {
                 playableMixer.SetInputWeight(i, 0f);
             }
         }
@@ -1173,8 +1212,16 @@ public class LyumaAv3Runtime : MonoBehaviour
         }
         if (Seated != PrevSeated && sittingIndex >= 0)
         {
-            playableBlendingStates[sittingIndex].StartBlend(playableMixer.GetInputWeight(sittingIndex), Seated ? 1f : 0f, 0.25f);
+            playableBlendingStates[sittingIndex].StartBlend(playableMixer.GetInputWeight(sittingIndex + 1), Seated ? 1f : 0f, 0.25f);
             PrevSeated = Seated;
+        }
+        if (TPoseCalibration != PrevTPoseCalibration) {
+            playableBlendingStates[tposeIndex].StartBlend(playableMixer.GetInputWeight(tposeIndex + 1), TPoseCalibration ? 1f : 0f, 0.0f);
+            PrevTPoseCalibration = TPoseCalibration;
+        }
+        if (IKPoseCalibration != PrevIKPoseCalibration) {
+            playableBlendingStates[ikposeIndex].StartBlend(playableMixer.GetInputWeight(ikposeIndex + 1), IKPoseCalibration ? 1f : 0f, 0.0f);
+            PrevIKPoseCalibration = IKPoseCalibration;
         }
         if (VisemeIdx != VisemeInt) {
             VisemeInt = VisemeIdx;
@@ -1496,12 +1543,14 @@ public class LyumaAv3Runtime : MonoBehaviour
             var pbs = playableBlendingStates[i];
             if (pbs.blending) {
                 float newWeight = pbs.UpdateBlending();
-                playableMixer.SetInputWeight(i, newWeight);
+                playableMixer.SetInputWeight(i + 1, newWeight);
+                // Debug.Log("Whole playable " + i + " is blending to " + newWeight);
             }
             for (int j = 0; j < pbs.layerBlends.Count; j++) {
                 if (pbs.layerBlends[j].blending) {
                     float newWeight = pbs.layerBlends[j].UpdateBlending();
                     playables[i].SetLayerWeight(j, newWeight);
+                    // Debug.Log("Playable " + i + " layer " + j + " is blending to " + newWeight);
                 }
             }
         }
