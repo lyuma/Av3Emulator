@@ -860,7 +860,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                     continue;
                 }
                 string stageName = stageParam.name + (stageParam.saved ? " (saved/SYNCED)" : " (SYNCED)"); //"Stage" + stageId;
-                float lastDefault = (stageParam.saved && KeepSavedParametersOnReset && stageNameToValue.ContainsKey(stageParam.name) ? stageNameToValue[stageParam.name] : stageParam.defaultValue);
+                float lastDefault = (stageParam.saved && KeepSavedParametersOnReset && stageNameToValue.ContainsKey(stageName) ? stageNameToValue[stageName] : stageParam.defaultValue);
                 StageParamterToBuiltin.Add(stageName, stageParam.name);
                 if ((int)stageParam.valueType == 0)
                 {
