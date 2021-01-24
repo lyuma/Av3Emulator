@@ -150,6 +150,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     public bool VRMode;
     public bool MuteSelf;
     public bool InStation;
+    [HideInInspector] public int AvatarVersion = 3;
 
     [Header("Output State (Read-only)")]
     public bool IsLocal;
@@ -1536,6 +1537,9 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
                 playable.SetBool(paramid, InStation);
                 paramterInts[paramid] = InStation ? 1 : 0;
+            }
+            if (parameterIndices.TryGetValue("AvatarVersion", out paramid)) {
+                playable.SetInteger(paramid, AvatarVersion);
             }
             whichcontroller++;
         }
