@@ -58,12 +58,7 @@ public static class LyumaAv3EditorSupport
                 LyumaAv3Runtime.animLayerToDefaultController[kv.Key] = null;
             } else
             {
-                AnimatorController ac = null;
-                foreach (var guid in AssetDatabase.FindAssets(kv.Value))
-                {
-                    string path = AssetDatabase.GUIDToAssetPath(guid);
-                    ac = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
-                }
+                AnimatorController ac = AssetDatabase.LoadAssetAtPath<AnimatorController>("Assets/VRCSDK/Examples3/Animation/Controllers/" + kv.Value + ".controller");
                 if (ac == null)
                 {
                     Debug.LogWarning("Failed to resolve animator controller " + kv.Value + " for " + kv.Key);
