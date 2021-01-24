@@ -1027,13 +1027,13 @@ public class LyumaAv3Runtime : MonoBehaviour
         int whichcontroller = 0;
         playableParamterIds.Clear();
         foreach (AnimatorControllerPlayable playable in playables) {
-            int pcnt = playable.GetParameterCount();
             Dictionary<string, int> parameterIndices = new Dictionary<string, int>();
             playableParamterInts.Add(new Dictionary<int, int>());
             playableParamterFloats.Add(new Dictionary<int, float>());
             playableParamterBools.Add(new Dictionary<int, bool>());
             // Debug.Log("SETUP index " + whichcontroller + " len " + playables.Count);
             playableParamterIds.Add(parameterIndices);
+            int pcnt = playable.IsValid() ? playable.GetParameterCount() : 0;
             for (i = 0; i < pcnt; i++) {
                 AnimatorControllerParameter aparam = playable.GetParameter(i);
                 string actualName;
@@ -1267,6 +1267,9 @@ public class LyumaAv3Runtime : MonoBehaviour
         whichcontroller = 0;
         foreach (AnimatorControllerPlayable playable in playables)
         {
+            if (!playable.IsValid()) {
+                continue;
+            }
             // Debug.Log("Index " + whichcontroller + " len " + playables.Count);
             Dictionary<string, int> parameterIndices = playableParamterIds[whichcontroller];
             int paramid;
@@ -1315,6 +1318,9 @@ public class LyumaAv3Runtime : MonoBehaviour
         whichcontroller = 0;
         foreach (AnimatorControllerPlayable playable in playables)
         {
+            if (!playable.IsValid()) {
+                continue;
+            }
             // Debug.Log("Index " + whichcontroller + " len " + playables.Count);
             Dictionary<string, int> parameterIndices = playableParamterIds[whichcontroller];
             Dictionary<int, int> paramterInts = playableParamterInts[whichcontroller];
