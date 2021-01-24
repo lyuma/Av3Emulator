@@ -2,6 +2,15 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
+### **New features in v 2.2.0:**
+* Fix off-by-one errors with layer and playable weight changes
+* Fix bugs with layer control behaviours
+* Fixed saved parameters. They were broken in the last update.
+* Added AvatarVersion variable, set to 3 in debug inspector.
+* Allow testing IKPose and TPose calibration.
+* Force exact path for default controllers from VRCSDK to avoid finding edited duplicates.
+* Reduce logspam from parameter drivers.
+
 ### **New features in v 2.1.1:**
 * Supports new features in VRChat 2021.1.1
 * Expression menu support for Bool and Float toggles and submenus, in addition to existing support for Int.
