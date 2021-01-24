@@ -472,7 +472,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 if (idx >= 0 && idx < runtime.playableBlendingStates.Count)
                 {
                     runtime.playableBlendingStates[idx].StartBlend(runtime.playableMixer.GetInputWeight(idx + 1), behaviour.goalWeight, behaviour.blendDuration);
-                    Debug.Log("Start blend of whole playable " + idx + " from " + runtime.playableMixer.GetInputWeight(idx + 1) + " to " + behaviour.goalWeight);
+                    // Debug.Log("Start blend of whole playable " + idx + " from " + runtime.playableMixer.GetInputWeight(idx + 1) + " to " + behaviour.goalWeight);
                 }
             };
         };
@@ -516,10 +516,10 @@ public class LyumaAv3Runtime : MonoBehaviour
                     if (behaviour.layer >= 0 && behaviour.layer < runtime.playableBlendingStates[idx].layerBlends.Count)
                     {
                         runtime.playableBlendingStates[idx].layerBlends[behaviour.layer].StartBlend(runtime.playables[idx].GetLayerWeight(behaviour.layer), behaviour.goalWeight, behaviour.blendDuration);
-                        Debug.Log("Start blend of playable " + idx + " layer " + behaviour.layer + " from " + runtime.playables[idx].GetLayerWeight(behaviour.layer) + " to " + behaviour.goalWeight);
+                        // Debug.Log("Start blend of playable " + idx + " layer " + behaviour.layer + " from " + runtime.playables[idx].GetLayerWeight(behaviour.layer) + " to " + behaviour.goalWeight);
                         if (altidx >= 0) {
                             runtime.playableBlendingStates[altidx].layerBlends[behaviour.layer].StartBlend(runtime.playables[altidx].GetLayerWeight(behaviour.layer), behaviour.goalWeight, behaviour.blendDuration);
-                            Debug.Log("Start blend of alt playable " + altidx + " layer " + behaviour.layer + " from " + runtime.playables[altidx].GetLayerWeight(behaviour.layer) + " to " + behaviour.goalWeight);
+                            // Debug.Log("Start blend of alt playable " + altidx + " layer " + behaviour.layer + " from " + runtime.playables[altidx].GetLayerWeight(behaviour.layer) + " to " + behaviour.goalWeight);
                         }
                     }
                 }
