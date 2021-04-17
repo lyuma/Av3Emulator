@@ -333,7 +333,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                                 runtime.Ints[idx].value += (int)parameter.value;
                                 break;
                             case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random:
-                                runtime.Ints[idx].value = UnityEngine.Random.Range((int)parameter.valueMin, (int)parameter.valueMax);
+                                runtime.Ints[idx].value = UnityEngine.Random.Range((int)parameter.valueMin, (int)parameter.valueMax + 1);
                                 break;
                         }
                     }

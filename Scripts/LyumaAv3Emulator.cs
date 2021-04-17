@@ -27,7 +27,7 @@ public class LyumaAv3Emulator : MonoBehaviour
     public bool DefaultToVR = false;
     public bool DefaultTestInStation = false;
     public LyumaAv3Runtime.TrackingTypeIndex DefaultTrackingType = LyumaAv3Runtime.TrackingTypeIndex.HeadHands;
-    public VRCAvatarDescriptor.AnimLayerType DefaultAnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base;
+    public VRCAvatarDescriptor.AnimLayerType DefaultAnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.FX;
     public bool RestartEmulator;
     private bool RestartingEmulator;
     public bool CreateNonLocalClone;
@@ -65,7 +65,10 @@ public class LyumaAv3Emulator : MonoBehaviour
     }
     private void OnDisable() {
         foreach (var runtime in runtimes) {
-            runtime.enabled = false;
+            if (runtime != null)
+            {
+                runtime.enabled = false;
+            }
         }
     }
     private void OnEnable() {
