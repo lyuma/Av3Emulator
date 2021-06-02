@@ -65,7 +65,10 @@ public class LyumaAv3Emulator : MonoBehaviour
     }
     private void OnDisable() {
         foreach (var runtime in runtimes) {
-            runtime.enabled = false;
+            if (runtime != null)
+            {
+                runtime.enabled = false;
+            }
         }
     }
     private void OnEnable() {
