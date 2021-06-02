@@ -101,33 +101,32 @@ public static class LyumaAv3EditorSupport
         };
 
         LyumaAv3Runtime.addRuntimeDelegate = (runtime) => {
-            GameObject go = runtime.gameObject;
-            try {
-                if (PrefabUtility.IsPartOfAnyPrefab(go)) {
-                    PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
-                }
-            } catch (System.Exception) {}
-            int moveUpCalls = go.GetComponents<Component>().Length - 2;
-            if (!PrefabUtility.IsPartOfAnyPrefab(go.GetComponents<Component>()[1])) {
-                for (int i = 0; i < moveUpCalls; i++) {
-                    UnityEditorInternal.ComponentUtility.MoveComponentUp(runtime);
-                }
-            }
+            MoveComponentToTop(runtime);
         };
         LyumaAv3Menu.addRuntimeDelegate = (menu) => {
-            GameObject go = menu.gameObject;
-            try {
-                if (PrefabUtility.IsPartOfAnyPrefab(go)) {
-                    PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
-                }
-            } catch (System.Exception) {}
-            int moveUpCalls = go.GetComponents<Component>().Length - 2;
-            if (!PrefabUtility.IsPartOfAnyPrefab(go.GetComponents<Component>()[1])) {
-                for (int i = 0; i < moveUpCalls; i++) {
-                    UnityEditorInternal.ComponentUtility.MoveComponentUp(menu);
-                }
-            }
+            MoveComponentToTop(menu);
         };
+    }
+
+    static void MoveComponentToTop(Component c) {
+        GameObject go = c.gameObject;
+        Component[] components = go.GetComponents<Component>();
+        for (int i = 0; i < components.Length; i++) {
+            if (components[i].GetType().Name.Contains("PipelineSaver")) {
+                return;
+            }
+        }
+        try {
+            if (PrefabUtility.IsPartOfAnyPrefab(go)) {
+                PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            }
+        } catch (System.Exception) {}
+        int moveUpCalls = components.Length - 2;
+        if (!PrefabUtility.IsPartOfAnyPrefab(go.GetComponents<Component>()[1])) {
+            for (int i = 0; i < moveUpCalls; i++) {
+                UnityEditorInternal.ComponentUtility.MoveComponentUp(c);
+            }
+        }
     }
 
     // register an event handler when the class is initialized

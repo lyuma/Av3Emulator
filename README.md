@@ -2,6 +2,13 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
+**KNOWN ISSUE: Having a "Avatar 3.0 Emulator Control" object in your scene can cause uploads to fail. I have not yet determined the root cause of this, sorry. Please delete the Emulator Control from your scene before uploading an avatar.**
+
+### **New features in v 2.2.2:**
+* Fix max value for random int, for example used in ragdoll system (Thanks, ksivl)
+* Fix crash when emulator is enabled and exiting play mode (Thanks, ksivl)
+* Made a further attempt to mitigate interfering with the upload process if a PipelineSaver component is present.
+
 ### **New features in v 2.2.1:**
 * Fix off-by-one errors with layer and playable weight changes
 * Fix bugs with layer control behaviours
