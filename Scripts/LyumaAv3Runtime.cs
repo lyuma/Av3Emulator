@@ -942,7 +942,6 @@ public class LyumaAv3Runtime : MonoBehaviour
             PlayableBlendingState pbs = new PlayableBlendingState();
             for (int j = 0; j < humanAnimatorPlayable.GetLayerCount(); j++)
             {
-                humanAnimatorPlayable.SetLayerWeight(j, 1f);
                 pbs.layerBlends.Add(new BlendingState());
             }
 
