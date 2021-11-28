@@ -130,7 +130,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     [Range(0, 1)] public float GestureRightWeight;
     [Header("Built-in inputs / Locomotion")]
     public Vector3 Velocity;
-    [Range(-1, 1)] public float AngularY;
+    [Range(-400, 400)] public float AngularY;
     [Range(0, 1)] public float Upright;
     [Range(-1, 1)] public float GroundProximity; // Not implemented
     private int LocomotionMode; // Does not exist.
