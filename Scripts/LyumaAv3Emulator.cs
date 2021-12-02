@@ -31,6 +31,7 @@ public class LyumaAv3Emulator : MonoBehaviour
     public bool RestartEmulator;
     private bool RestartingEmulator;
     public bool CreateNonLocalClone;
+    public int CreateNonLocalCloneCount;
     [Tooltip("Simulate behavior with sub-animator parameter drivers prior to the 2021.1.1 patch (19 Jan 2021)")]
     public bool legacySubAnimatorParameterDriverMode;
 
@@ -41,6 +42,8 @@ public class LyumaAv3Emulator : MonoBehaviour
 
     private void Awake()
     {
+	if (CreateNonLocalCloneCount == 0) {
+        }
         Animator animator = gameObject.GetOrAddComponent<Animator>();
         animator.enabled = false;
         animator.runtimeAnimatorController = EmptyController;
@@ -93,7 +96,10 @@ public class LyumaAv3Emulator : MonoBehaviour
             RestartingEmulator = true;
         }
         if (CreateNonLocalClone) {
-            CreateNonLocalClone = false;
+            CreateNonLocalCloneCount -= 1;
+            if (CreateNonLocalCloneCount <= 0) {
+                CreateNonLocalClone = false;
+            }
             foreach (var runtime in runtimes)
             {
                 if (runtime.AvatarSyncSource == runtime)
