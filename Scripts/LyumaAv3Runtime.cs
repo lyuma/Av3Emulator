@@ -314,7 +314,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 HashSet<string> newParameterAdds = new HashSet<string>();
                 HashSet<string> deleteParameterAdds = new HashSet<string>();
                 foreach (var parameter in behaviour.parameters) {
-                    if (parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add || parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random) {
+                    if (runtime.AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base && (parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add || parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random)) {
                         string dupeKey = parameter.value + ((parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add) ? "add " : "rand ") + parameter.name;
                         if (!runtime.duplicateParameterAdds.Contains(dupeKey)) {
                             newParameterAdds.Add(dupeKey);
