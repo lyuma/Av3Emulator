@@ -25,7 +25,7 @@ using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.ScriptableObjects;
 
-[CustomEditor(typeof(LyumaAv3Menu))]
+[CustomEditor(typeof(LyumaAv3Menu), true)]
 public class LyumaAv3MenuEditor : Editor
 {
     private readonly Dictionary<Texture2D, Texture2D> _resizedIcons = new Dictionary<Texture2D, Texture2D>();

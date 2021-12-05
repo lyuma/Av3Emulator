@@ -33,8 +33,12 @@ public class LyumaAv3Runtime : MonoBehaviour
     static public Dictionary<VRCAvatarDescriptor.AnimLayerType, AvatarMask> animLayerToDefaultAvaMask = new Dictionary<VRCAvatarDescriptor.AnimLayerType, AvatarMask>();
     public delegate void UpdateSelectionFunc(GameObject obj);
     public static UpdateSelectionFunc updateSelectionDelegate;
-    public delegate void AddRuntime(LyumaAv3Runtime runtime);
+    public delegate void AddRuntime(Component runtime);
     public static AddRuntime addRuntimeDelegate;
+    public delegate void UpdateSceneLayersFunc(int layers);
+    public static UpdateSceneLayersFunc updateSceneLayersDelegate;
+
+    public LyumaAv3Runtime OriginalSourceClone = null;
 
     [Tooltip("Resets avatar state machine instantly")]
     public bool ResetAvatar;
@@ -44,17 +48,27 @@ public class LyumaAv3Runtime : MonoBehaviour
     public bool KeepSavedParametersOnReset = true;
     [Tooltip("In VRChat, 8-bit float quantization only happens remotely. Check this to test your robustness to quantization locally, too. (example: 0.5 -> 0.503")]
     public bool locally8bitQuantizedFloats = false;
+    public bool legacyMenuGUI;
+    private bool lastLegacyMenuGUI;
     [Tooltip("Selects the playable layer to be visible in Unity's Animator window. Unless this is set to Base, creates duplicate playable layers with weight 0. It hopefully works the same.")] public VRCAvatarDescriptor.AnimLayerType AnimatorToDebug;
     private char PrevAnimatorToDebug;
     [HideInInspector] public string SourceObjectPath;
     [Header("Assign to non-local duplicate")]public LyumaAv3Runtime AvatarSyncSource;
+    [Range(0.0f, 2.0f)] public float NonLocalSyncInterval = 0.1f;
+    private float nextUpdateTime = 0.0f;
     private int CloneCount;
     public bool CreateNonLocalClone;
-    VRCAvatarDescriptor avadesc;
+    public bool ViewMirrorReflection;
+    public bool ViewBothRealAndMirror;
+    private int mirState = -1;
+    private LyumaAv3Runtime MirrorClone;
+    [HideInInspector] public VRCAvatarDescriptor avadesc;
     Avatar animatorAvatar;
     Animator animator;
     private RuntimeAnimatorController origAnimatorController;
 
+    private Transform[] allTransforms;
+    private Transform[] allMirrorTransforms;
     private List<AnimatorControllerPlayable> playables = new List<AnimatorControllerPlayable>();
     private List<Dictionary<string, int>> playableParamterIds = new List<Dictionary<string, int>>();
     private List<Dictionary<int, float>> playableParamterFloats = new List<Dictionary<int, float>>();
@@ -112,8 +126,8 @@ public class LyumaAv3Runtime : MonoBehaviour
     public enum TrackingTypeIndex {
         Uninitialized, GenericRig, NoFingers, HeadHands, HeadHandsHip, HeadHandsHipFeet = 6
     }
-    static HashSet<string> BUILTIN_PARAMETERS = new HashSet<string> {
-        "Viseme", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "LocomotionMode", "Upright", "AngularY", "GroundProximity", "Grounded", "Supine", "FootstepDisable", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation"
+    public static HashSet<string> BUILTIN_PARAMETERS = new HashSet<string> {
+        "Viseme", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "Upright", "AngularY", "Grounded", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation"
     };
     [Header("Built-in inputs / Viseme")]
     public VisemeIndex Viseme;
@@ -132,17 +146,12 @@ public class LyumaAv3Runtime : MonoBehaviour
     public Vector3 Velocity;
     [Range(-400, 400)] public float AngularY;
     [Range(0, 1)] public float Upright;
-    [Range(-1, 1)] public float GroundProximity; // Not implemented
-    private int LocomotionMode; // Does not exist.
     public bool Grounded;
     private bool PrevSeated, PrevTPoseCalibration, PrevIKPoseCalibration;
     public bool Seated;
     public bool AFK;
     public bool TPoseCalibration;
     public bool IKPoseCalibration;
-    //TODO:
-    bool Supine; // Not implemented
-    private bool FootstepDisable; // Does not exist.
     [Header("Built-in inputs / Tracking Setup and Other")]
     public TrackingTypeIndex TrackingType;
     [Range(0, 6)] public int TrackingTypeIdx;
@@ -151,9 +160,11 @@ public class LyumaAv3Runtime : MonoBehaviour
     public bool MuteSelf;
     public bool InStation;
     [HideInInspector] public int AvatarVersion = 3;
+    private Component av3MenuComponent;
 
     [Header("Output State (Read-only)")]
     public bool IsLocal;
+    public bool IsMirrorClone;
     public bool LocomotionIsDisabled;
     private Vector3 HeadRelativeViewPosition;
     public Vector3 ViewPosition;
@@ -279,7 +290,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 animatorToTopLevelRuntime.Add(innerAnimator, runtime);
                 runtime.attachedAnimators.Add(innerAnimator);
             } else {
-                Debug.Log("[" + component + "]: " + innerAnimator + " found parent runtime without being Awoken! Wakey Wakey...");
+                Debug.Log("[" + component + "]: " + innerAnimator + " found parent runtime without being Awoken! Wakey Wakey...", runtime);
                 runtime.Awake();
             }
             return true;
@@ -295,6 +306,9 @@ public class LyumaAv3Runtime : MonoBehaviour
             {
                 LyumaAv3Runtime runtime;
                 if (!getTopLevelRuntime("VRCAvatarParameterDriver", animator, out runtime)) {
+                    return;
+                }
+                if (runtime.IsMirrorClone) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -314,7 +328,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 HashSet<string> newParameterAdds = new HashSet<string>();
                 HashSet<string> deleteParameterAdds = new HashSet<string>();
                 foreach (var parameter in behaviour.parameters) {
-                    if (runtime.AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base && (parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add || parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random)) {
+                    if (runtime.AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base && !runtime.IsMirrorClone && (parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add || parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random)) {
                         string dupeKey = parameter.value + ((parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add) ? "add " : "rand ") + parameter.name;
                         if (!runtime.duplicateParameterAdds.Contains(dupeKey)) {
                             newParameterAdds.Add(dupeKey);
@@ -445,6 +459,9 @@ public class LyumaAv3Runtime : MonoBehaviour
                 if (!getTopLevelRuntime("VRCPlayableLayerControl", animator, out runtime)) {
                     return;
                 }
+                if (runtime.IsMirrorClone) {
+                    return;
+                }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
                 {
                     Debug.Log("[VRCPlayableLayerControl:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
@@ -481,6 +498,9 @@ public class LyumaAv3Runtime : MonoBehaviour
             {
                 LyumaAv3Runtime runtime;
                 if (!getTopLevelRuntime("VRCAnimatorLayerControl", animator, out runtime)) {
+                    return;
+                }
+                if (runtime.IsMirrorClone) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -532,6 +552,9 @@ public class LyumaAv3Runtime : MonoBehaviour
                 if (!getTopLevelRuntime("VRCAnimatorLocomotionControl", animator, out runtime)) {
                     return;
                 }
+                if (runtime.IsMirrorClone) {
+                    return;
+                }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
                 {
                     Debug.Log("[VRCAnimatorLocomotionControl:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
@@ -549,6 +572,9 @@ public class LyumaAv3Runtime : MonoBehaviour
             {
                 LyumaAv3Runtime runtime;
                 if (!getTopLevelRuntime("VRCAnimatorSetView", animator, out runtime)) {
+                    return;
+                }
+                if (runtime.IsMirrorClone) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -569,6 +595,9 @@ public class LyumaAv3Runtime : MonoBehaviour
             {
                 LyumaAv3Runtime runtime;
                 if (!getTopLevelRuntime("VRCAnimatorTrackingControl", animator, out runtime)) {
+                    return;
+                }
+                if (runtime.IsMirrorClone) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -644,10 +673,15 @@ public class LyumaAv3Runtime : MonoBehaviour
 
     void Awake()
     {
-        if (attachedAnimators != null) {
-            Debug.Log("Deduplicating Awake() call if we already got awoken by our children.");
+        if (AvatarSyncSource != null && OriginalSourceClone == null) {
+            Debug.Log("Awake returning early for " + gameObject.name, this);
             return;
         }
+        if (attachedAnimators != null) {
+            Debug.Log("Deduplicating Awake() call if we already got awoken by our children.", this);
+            return;
+        }
+        Debug.Log("AWOKEN " + gameObject.name, this);
         attachedAnimators = new HashSet<Animator>();
         if (AvatarSyncSource == null) {
             Transform transform = this.transform;
@@ -695,9 +729,56 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
             }
         }
+        if (OriginalSourceClone == null) {
+            OriginalSourceClone = this;
+            GameObject cloned = GameObject.Instantiate(gameObject);
+            cloned.hideFlags = HideFlags.HideAndDontSave;
+            cloned.SetActive(false);
+            OriginalSourceClone = cloned.GetComponent<LyumaAv3Runtime>();
+            Debug.Log("ORIGINAL SOURCE CLONE IS " + OriginalSourceClone, this);
+            OriginalSourceClone.OriginalSourceClone = OriginalSourceClone;
+            if (LyumaAv3Emulator.emulatorInstance != null && !LyumaAv3Emulator.emulatorInstance.DisableMirrorClone) {
+                OriginalSourceClone.IsMirrorClone = true;
+                MirrorClone = GameObject.Instantiate(cloned).GetComponent<LyumaAv3Runtime>();
+                MirrorClone.GetComponent<Animator>().avatar = null;
+                OriginalSourceClone.IsMirrorClone = false;
+                MirrorClone.gameObject.SetActive(true);
+                MirrorClone.gameObject.name = gameObject.name + " (MirrorReflection)";
+                allMirrorTransforms = MirrorClone.gameObject.GetComponentsInChildren<Transform>(true);
+                foreach (var audio in MirrorClone.gameObject.GetComponentsInChildren<AudioSource>(true)) {
+                    UnityEngine.Object.Destroy(audio);
+                }
+                foreach (var camera in MirrorClone.gameObject.GetComponentsInChildren<Camera>(true)) {
+                    UnityEngine.Object.Destroy(camera);
+                }
+                // What components get deleted on mirror copies???
+            }
+        }
+        foreach (var smr in gameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true)) {
+            smr.updateWhenOffscreen = (AvatarSyncSource == this || IsMirrorClone);
+        }
+        int desiredLayer = 9;
+        if (AvatarSyncSource == this) {
+            desiredLayer = 10;
+        }
+        if (IsMirrorClone) {
+            desiredLayer = 18;
+        }
+        if (gameObject.layer != 12 || desiredLayer == 18) {
+            gameObject.layer = desiredLayer;
+        }
+        allTransforms = gameObject.GetComponentsInChildren<Transform>(true);
+        foreach (Transform t in allTransforms) {
+            if (t.gameObject.layer != 12 || desiredLayer == 18) {
+                t.gameObject.layer = desiredLayer;
+            }
+        }
         InitializeAnimator();
         if (addRuntimeDelegate != null) {
             addRuntimeDelegate(this);
+        }
+        if (AvatarSyncSource == this) {
+            CreateAv3MenuComponent();
         }
     }
 
@@ -710,7 +791,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         animator.avatar = animatorAvatar;
         animator.applyRootMotion = false;
         animator.updateMode = AnimatorUpdateMode.Normal;
-        animator.cullingMode = AnimatorCullingMode.CullCompletely;
+        animator.cullingMode = (this == AvatarSyncSource || IsMirrorClone) ? AnimatorCullingMode.AlwaysAnimate : AnimatorCullingMode.CullCompletely;
         animator.runtimeAnimatorController = null;
 
         avadesc = this.gameObject.GetComponent<VRCAvatarDescriptor>();
@@ -747,7 +828,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         //     }
         // }
         int i = 0;
-        if (AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base) {
+        if (AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base && !IsMirrorClone) {
             foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
                 if (AnimatorToDebug == cal.type) {
                     i++;
@@ -780,18 +861,25 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
         }
         int dupeOffset = i;
-        foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
-            if (cal.type == VRCAvatarDescriptor.AnimLayerType.Base || cal.type == VRCAvatarDescriptor.AnimLayerType.Additive) {
+        if (!IsMirrorClone) {
+            foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
+                if (cal.type == VRCAvatarDescriptor.AnimLayerType.Base || cal.type == VRCAvatarDescriptor.AnimLayerType.Additive) {
+                    i++;
+                    allLayers.Add(cal);
+                }
+            }
+            foreach (VRCAvatarDescriptor.CustomAnimLayer cal in speciallayers) {
                 i++;
                 allLayers.Add(cal);
             }
         }
-        foreach (VRCAvatarDescriptor.CustomAnimLayer cal in speciallayers) {
-            i++;
-            allLayers.Add(cal);
-        }
         foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
-            if (!(cal.type == VRCAvatarDescriptor.AnimLayerType.Base || cal.type == VRCAvatarDescriptor.AnimLayerType.Additive)) {
+            if (IsMirrorClone) {
+                if (cal.type == VRCAvatarDescriptor.AnimLayerType.FX) {
+                    i++;
+                    allLayers.Add(cal);
+                }
+            } else if (!(cal.type == VRCAvatarDescriptor.AnimLayerType.Base || cal.type == VRCAvatarDescriptor.AnimLayerType.Additive)) {
                 i++;
                 allLayers.Add(cal);
             }
@@ -862,7 +950,10 @@ public class LyumaAv3Runtime : MonoBehaviour
                     continue;
                 }
                 string stageName = stageParam.name + (stageParam.saved ? " (saved/SYNCED)" : " (SYNCED)"); //"Stage" + stageId;
-                float lastDefault = (stageParam.saved && KeepSavedParametersOnReset && stageNameToValue.ContainsKey(stageName) ? stageNameToValue[stageName] : stageParam.defaultValue);
+                float lastDefault = 0.0f;
+                if (AvatarSyncSource == this) {
+                    lastDefault = (stageParam.saved && KeepSavedParametersOnReset && stageNameToValue.ContainsKey(stageName) ? stageNameToValue[stageName] : stageParam.defaultValue);
+                }
                 StageParamterToBuiltin.Add(stageName, stageParam.name);
                 if ((int)stageParam.valueType == 0)
                 {
@@ -1096,12 +1187,74 @@ public class LyumaAv3Runtime : MonoBehaviour
     }
 
 
+    void CreateAv3MenuComponent() {
+        System.Type gestureManagerMenu = System.Type.GetType("GestureManagerAv3Menu");
+        if (gestureManagerMenu != null) {
+            foreach (var comp in avadesc.gameObject.GetComponents(gestureManagerMenu)) {
+                UnityEngine.Object.Destroy(comp);
+            }
+        }
+        foreach (var comp in avadesc.gameObject.GetComponents<LyumaAv3Menu>()) {
+            UnityEngine.Object.Destroy(comp);
+        }
+        if (gestureManagerMenu != null && !legacyMenuGUI) {
+            var mainMenu = avadesc.gameObject.AddComponent(gestureManagerMenu);
+            var runtimeField = gestureManagerMenu.GetField("Runtime");
+            var rootMenuField = gestureManagerMenu.GetField("RootMenu");
+            runtimeField.SetValue(mainMenu, this);
+            rootMenuField.SetValue(mainMenu, this.avadesc.expressionsMenu);
+        } else {
+            var mainMenu = avadesc.gameObject.AddComponent<LyumaAv3Menu>();
+            mainMenu.Runtime = this;
+            mainMenu.RootMenu = avadesc.expressionsMenu;
+        }
+    }
+
+
     private bool isResetting;
     private bool isResettingHold;
     private bool isResettingSel;
+    void LateUpdate()
+    {
+        if (MirrorClone != null) {
+            MirrorClone.gameObject.SetActive(true);
+            MirrorClone.transform.localRotation = transform.localRotation;
+            MirrorClone.transform.localScale = transform.localScale;
+            if (mirState != 2 && ViewBothRealAndMirror) {
+                mirState = 2;
+                MirrorClone.transform.position = transform.position + new Vector3(0.0f, -1.3f * avadesc.ViewPosition.y, 0.0f);
+                updateSceneLayersDelegate(-1);
+            } else if (mirState != 1 && ViewMirrorReflection && !ViewBothRealAndMirror) {
+                mirState = 1;
+                updateSceneLayersDelegate(~(1<<10));
+                MirrorClone.transform.position = transform.position;
+            } else if (mirState != 0 && !ViewMirrorReflection && !ViewBothRealAndMirror) {
+                mirState = 0;
+                updateSceneLayersDelegate(~(1<<18));
+                MirrorClone.transform.position = transform.position;
+            }
+            for(int i = 0; i < allTransforms.Length; i++) {
+                if (allTransforms[i] == this.transform) {
+                    continue;
+                }
+                allMirrorTransforms[i].localPosition = allTransforms[i].localPosition;
+                allMirrorTransforms[i].localRotation = allTransforms[i].localRotation;
+                allMirrorTransforms[i].localScale = allTransforms[i].localScale;
+                bool theirs = allTransforms[i].gameObject.activeSelf;
+                if (allMirrorTransforms[i].gameObject.activeSelf != theirs) {
+                    allMirrorTransforms[i].gameObject.SetActive(theirs);
+                }
+            }
+        }
+    }
     // Update is called once per frame
     void Update()
     {
+        if (lastLegacyMenuGUI != legacyMenuGUI && AvatarSyncSource == this) {
+            lastLegacyMenuGUI = legacyMenuGUI;
+            UnityEngine.Object.Destroy(av3MenuComponent);
+            CreateAv3MenuComponent();
+        }
         if (isResettingSel) {
             isResettingSel = false;
             if (updateSelectionDelegate != null) {
@@ -1152,12 +1305,23 @@ public class LyumaAv3Runtime : MonoBehaviour
         }
         if (CreateNonLocalClone) {
             CreateNonLocalClone = false;
-            GameObject go = GameObject.Instantiate(AvatarSyncSource.gameObject);
+            GameObject go = GameObject.Instantiate(OriginalSourceClone.gameObject);
+            go.hideFlags = 0;
             AvatarSyncSource.CloneCount++;
             go.name = go.name.Substring(0, go.name.Length - 7) + " (Non-Local " + AvatarSyncSource.CloneCount + ")";
             go.transform.position = go.transform.position + AvatarSyncSource.CloneCount * new Vector3(0.4f, 0.0f, 0.4f);
+            go.SetActive(true);
         }
-        if (AvatarSyncSource != this) {
+        if (IsMirrorClone) {
+            NonLocalSyncInterval = 0.0f;
+        } else {
+            NonLocalSyncInterval = AvatarSyncSource.NonLocalSyncInterval;
+        }
+        if (nextUpdateTime == 0.0f) {
+            nextUpdateTime = Time.time + NonLocalSyncInterval;
+        }
+        if (AvatarSyncSource != this && (Time.time >= nextUpdateTime || NonLocalSyncInterval <= 0.0f)) {
+            nextUpdateTime = Time.time + NonLocalSyncInterval;
             for (int i = 0; i < Ints.Count; i++) {
                 if (StageParamterToBuiltin.ContainsKey(Ints[i].stageName)) {
                     Ints[i].value = ClampByte(AvatarSyncSource.Ints[i].value);
@@ -1186,19 +1350,15 @@ public class LyumaAv3Runtime : MonoBehaviour
             Velocity = AvatarSyncSource.Velocity;
             AngularY = AvatarSyncSource.AngularY;
             Upright = AvatarSyncSource.Upright;
-            LocomotionMode = AvatarSyncSource.LocomotionMode;
-            GroundProximity = AvatarSyncSource.GroundProximity;
             Grounded = AvatarSyncSource.Grounded;
             Seated = AvatarSyncSource.Seated;
             AFK = AvatarSyncSource.AFK;
-            Supine = AvatarSyncSource.Supine;
             TrackingType = AvatarSyncSource.TrackingType;
             TrackingTypeIdx = AvatarSyncSource.TrackingTypeIdx;
             TrackingTypeIdxInt = AvatarSyncSource.TrackingTypeIdxInt;
             VRMode = AvatarSyncSource.VRMode;
             MuteSelf = AvatarSyncSource.MuteSelf;
             InStation = AvatarSyncSource.InStation;
-            FootstepDisable = AvatarSyncSource.FootstepDisable;
         }
         for (int i = 0; i < Floats.Count; i++) {
             if (StageParamterToBuiltin.ContainsKey(Floats[i].stageName)) {
@@ -1252,6 +1412,16 @@ public class LyumaAv3Runtime : MonoBehaviour
         if ((int)GestureRight != (int)GestureRightIdxInt) {
             GestureRightIdx = (int)GestureRight;
             GestureRightIdxInt = (char)GestureRightIdx;
+        }
+        if (GestureLeft == GestureIndex.Neutral) {
+            GestureLeftWeight = 0;
+        } else if (GestureLeft != GestureIndex.Fist) {
+            GestureLeftWeight = 1;
+        }
+        if (GestureRight == GestureIndex.Neutral) {
+            GestureRightWeight = 0;
+        } else if (GestureRight != GestureIndex.Fist) {
+            GestureRightWeight = 1;
         }
         if (TrackingTypeIdx != TrackingTypeIdxInt) {
             TrackingType = (TrackingTypeIndex)TrackingTypeIdx;
@@ -1452,22 +1622,6 @@ public class LyumaAv3Runtime : MonoBehaviour
                 playable.SetFloat(paramid, Upright);
                 paramterFloats[paramid] = Upright;
             }
-            if (parameterIndices.TryGetValue("GroundProximity", out paramid))
-            {
-                if (paramterFloats.TryGetValue(paramid, out fparam) && fparam != playable.GetFloat(paramid)) {
-                    GroundProximity = playable.GetFloat(paramid);
-                }
-                playable.SetFloat(paramid, GroundProximity);
-                paramterFloats[paramid] = GroundProximity;
-            }
-            if (parameterIndices.TryGetValue("LocomotionMode", out paramid))
-            {
-                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != playable.GetInteger(paramid)) {
-                    LocomotionMode = playable.GetInteger(paramid);
-                }
-                playable.SetInteger(paramid, LocomotionMode);
-                paramterInts[paramid] = LocomotionMode;
-            }
             if (parameterIndices.TryGetValue("IsLocal", out paramid))
             {
                 playable.SetBool(paramid, IsLocal);
@@ -1495,22 +1649,6 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
                 playable.SetBool(paramid, AFK);
                 paramterInts[paramid] = AFK ? 1 : 0;
-            }
-            if (parameterIndices.TryGetValue("Supine", out paramid))
-            {
-                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != (playable.GetBool(paramid) ? 1 : 0)) {
-                    Supine = playable.GetBool(paramid);
-                }
-                playable.SetBool(paramid, Supine);
-                paramterInts[paramid] = Supine ? 1 : 0;
-            }
-            if (parameterIndices.TryGetValue("FootstepDisable", out paramid))
-            {
-                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != (playable.GetBool(paramid) ? 1 : 0)) {
-                    FootstepDisable = playable.GetBool(paramid);
-                }
-                playable.SetBool(paramid, FootstepDisable);
-                paramterInts[paramid] = FootstepDisable ? 1 : 0;
             }
             if (parameterIndices.TryGetValue("TrackingType", out paramid))
             {

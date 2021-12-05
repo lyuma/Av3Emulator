@@ -2,9 +2,28 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
-**KNOWN ISSUE: Having a "Avatar 3.0 Emulator Control" object in your scene can cause uploads to fail. I have not yet determined the root cause of this, sorry. Please delete the Emulator Control from your scene before uploading an avatar.**
+### **New features in v 2.9.0 (3.0 beta):**
 
-### **New features in v 2.2.2:**
+**Release note**: Lyuma's Av3 Emulator now comes in two versions: lite/classic version with a basic menu; and the other which includes VRC-Gesture-Manager and the radial menu.
+
+<br clear="all"><img align="right" src="Screenshots/av3_radial_menu.png" width="30%">
+
+* New! Integration with the Avatar 3.0 Menu when [VRC Gesture Manager by BlackStartx](https://github.com/BlackStartx/VRC-Gesture-Manager) is installed.
+* Support for MirrorReflection duplicate with only FX playable (can choose which version to show/hide).
+* Attempt to emulate the uninitialized state for remote players.
+* Add a "update interval" to simulate network delay when sending parameters.
+
+* FIXED: Default layer weights were being ignored. Unity defaults layers to weight 0, and this should make such mistakes easier to catch.
+* FIXED: Add ParameterDriver was failing half the time.
+* FIXED: AngularY float range to match smooth turn in VR (by NotAKidOnSteam)
+* FIXED: GestureWeight is always 0 for neutral; always 1 for most gestures, and only varies from 0 to 1 for Fist.
+* FIXED: Local player bounds forced to update when offscreen; and animator culling turned off.
+
+Known issues: Edit Mode in radial menu does not work
+
+As always, watch out for mistakes with Write Defaults. Also, while animating your own avatar might work for you, it may break the avatar for remote players in game: this cannot be perfectly replicated in editor.
+
+### **New features in v 2.2.2:** <br clear="all">
 * Fix max value for random int, for example used in ragdoll system (Thanks, ksivl)
 * Fix crash when emulator is enabled and exiting play mode (Thanks, ksivl)
 * Made a further attempt to mitigate interfering with the upload process if a PipelineSaver component is present.
@@ -44,6 +63,7 @@ What is Avatars 3.0? Read the VRChat documentation here: https://docs.vrchat.com
 This is an emulator for Avatars 3.0 reimplemented in the unity editor on top the the unity [PlayableGraph](https://docs.unity3d.com/Manual/Playables-Graph.html) API, using the [AnimationControllerPlayable](https://docs.unity3d.com/2018.4/Documentation/ScriptReference/Animations.AnimatorControllerPlayable.html) and [AnimationLayerMixerPlayable](https://docs.unity3d.com/2018.4/Documentation/ScriptReference/Animations.AnimationLayerMixerPlayable.html) APIs.
 
 ## Av3 Emulator Overview:
+![Avatar 3.0 overview](Screenshots/a3_example.png)
 ![Avatar 3.0 explanation](Screenshots/avatar3emu_tutorial.png)
 [(Open the above full explanation image)](Screenshots/avatar3emu_tutorial.png)
 

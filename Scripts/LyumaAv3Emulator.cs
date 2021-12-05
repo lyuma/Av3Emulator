@@ -34,6 +34,9 @@ public class LyumaAv3Emulator : MonoBehaviour
     public int CreateNonLocalCloneCount;
     [Tooltip("Simulate behavior with sub-animator parameter drivers prior to the 2021.1.1 patch (19 Jan 2021)")]
     public bool legacySubAnimatorParameterDriverMode;
+    public bool legacyMenuGUI;
+    private bool lastLegacyMenuGUI;
+    public bool DisableMirrorClone;
 
     static public LyumaAv3Emulator emulatorInstance;
     static public RuntimeAnimatorController EmptyController;
@@ -60,10 +63,6 @@ public class LyumaAv3Emulator : MonoBehaviour
             var runtime = avadesc.gameObject.GetOrAddComponent<LyumaAv3Runtime>();
             runtime.emulator = this;
             runtimes.Add(runtime);
-
-            var mainMenu = avadesc.gameObject.AddComponent<LyumaAv3Menu>();
-            mainMenu.Runtime = runtime;
-            mainMenu.RootMenu = avadesc.expressionsMenu;
         }
     }
     private void OnDisable() {
@@ -94,6 +93,12 @@ public class LyumaAv3Emulator : MonoBehaviour
             RestartEmulator = false;
             OnDestroy();
             RestartingEmulator = true;
+        }
+        if (lastLegacyMenuGUI != legacyMenuGUI) {
+            lastLegacyMenuGUI = legacyMenuGUI;
+            foreach (var runtime in runtimes) {
+                runtime.legacyMenuGUI = legacyMenuGUI;
+            }
         }
         if (CreateNonLocalClone) {
             CreateNonLocalCloneCount -= 1;

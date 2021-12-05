@@ -55,19 +55,16 @@ public class LyumaAv3Menu : MonoBehaviour
     public LyumaAv3Runtime Runtime;
     public VRCExpressionsMenu RootMenu;
     public List<MenuConditional> MenuStack { get; } = new List<MenuConditional>();
-    public bool IsMenuOpen { get; private set; }
+    public bool IsMenuOpen { get; protected set; }
     private int? _activeControlIndex = null;
     private string _activeControlParameterName;
-
-    public delegate void AddRuntime(LyumaAv3Menu runtime);
-    public static AddRuntime addRuntimeDelegate;
 
     private void Awake()
     {
         IsMenuOpen = true;
 
-        if (addRuntimeDelegate != null) {
-            addRuntimeDelegate(this);
+        if (LyumaAv3Runtime.addRuntimeDelegate != null) {
+            LyumaAv3Runtime.addRuntimeDelegate(this);
         }
     }
 

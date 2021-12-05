@@ -100,11 +100,14 @@ public static class LyumaAv3EditorSupport
             // Highlighter.Highlight("Inspector", "Animator To Debug");
         };
 
+        LyumaAv3Runtime.updateSceneLayersDelegate = (layers) => {
+            Debug.Log("Setting selected layers: " + layers);
+            Tools.visibleLayers = layers;
+            // Highlighter.Highlight("Inspector", "Animator To Debug");
+        };
+
         LyumaAv3Runtime.addRuntimeDelegate = (runtime) => {
             MoveComponentToTop(runtime);
-        };
-        LyumaAv3Menu.addRuntimeDelegate = (menu) => {
-            MoveComponentToTop(menu);
         };
     }
 
