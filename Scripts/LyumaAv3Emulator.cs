@@ -38,6 +38,7 @@ public class LyumaAv3Emulator : MonoBehaviour
     private bool lastLegacyMenuGUI;
     public bool DisableMirrorClone;
     public bool DisableShadowClone;
+    public bool EnableHeadScaling;
 
     static public LyumaAv3Emulator emulatorInstance;
     static public RuntimeAnimatorController EmptyController;
