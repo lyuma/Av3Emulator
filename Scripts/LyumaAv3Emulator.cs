@@ -37,6 +37,7 @@ public class LyumaAv3Emulator : MonoBehaviour
     public bool legacyMenuGUI;
     private bool lastLegacyMenuGUI;
     public bool DisableMirrorClone;
+    public bool DisableShadowClone;
 
     static public LyumaAv3Emulator emulatorInstance;
     static public RuntimeAnimatorController EmptyController;
@@ -45,7 +46,7 @@ public class LyumaAv3Emulator : MonoBehaviour
 
     private void Awake()
     {
-	if (CreateNonLocalCloneCount == 0) {
+	    if (CreateNonLocalCloneCount == 0) {
         }
         Animator animator = gameObject.GetOrAddComponent<Animator>();
         animator.enabled = false;

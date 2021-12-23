@@ -62,6 +62,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     public bool ViewBothRealAndMirror;
     private int mirState = -1;
     private LyumaAv3Runtime MirrorClone;
+    private LyumaAv3Runtime ShadowClone;
     [HideInInspector] public VRCAvatarDescriptor avadesc;
     Avatar animatorAvatar;
     Animator animator;
@@ -69,6 +70,7 @@ public class LyumaAv3Runtime : MonoBehaviour
 
     private Transform[] allTransforms;
     private Transform[] allMirrorTransforms;
+    private Transform[] allShadowTransforms;
     private List<AnimatorControllerPlayable> playables = new List<AnimatorControllerPlayable>();
     private List<Dictionary<string, int>> playableParamterIds = new List<Dictionary<string, int>>();
     private List<Dictionary<int, float>> playableParamterFloats = new List<Dictionary<int, float>>();
@@ -132,6 +134,9 @@ public class LyumaAv3Runtime : MonoBehaviour
     public static readonly HashSet<Type> MirrorCloneComponentBlacklist = new HashSet<Type> {
         typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(DynamicBone), typeof(DynamicBoneCollider), typeof(Rigidbody), typeof(Joint)
     };
+    public static readonly HashSet<Type> ShadowCloneComponentBlacklist = new HashSet<Type> {
+        typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Light), typeof(ParticleSystemRenderer), typeof(DynamicBone), typeof(DynamicBoneCollider), typeof(Rigidbody), typeof(Joint)
+    };
     [Header("Built-in inputs / Viseme")]
     public VisemeIndex Viseme;
     [Range(0, 15)] public int VisemeIdx;
@@ -168,6 +173,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     [Header("Output State (Read-only)")]
     public bool IsLocal;
     public bool IsMirrorClone;
+    public bool IsShadowClone;
     public bool LocomotionIsDisabled;
     private Vector3 HeadRelativeViewPosition;
     public Vector3 ViewPosition;
@@ -311,7 +317,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 if (!getTopLevelRuntime("VRCAvatarParameterDriver", animator, out runtime)) {
                     return;
                 }
-                if (runtime.IsMirrorClone) {
+                if (runtime.IsMirrorClone || runtime.IsShadowClone) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -331,7 +337,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 HashSet<string> newParameterAdds = new HashSet<string>();
                 HashSet<string> deleteParameterAdds = new HashSet<string>();
                 foreach (var parameter in behaviour.parameters) {
-                    if (runtime.AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base && !runtime.IsMirrorClone && (parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add || parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random)) {
+                    if (runtime.AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base && !runtime.IsMirrorClone && !runtime.IsShadowClone && (parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add || parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random)) {
                         string dupeKey = parameter.value + ((parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add) ? "add " : "rand ") + parameter.name;
                         if (!runtime.duplicateParameterAdds.Contains(dupeKey)) {
                             newParameterAdds.Add(dupeKey);
@@ -462,7 +468,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 if (!getTopLevelRuntime("VRCPlayableLayerControl", animator, out runtime)) {
                     return;
                 }
-                if (runtime.IsMirrorClone) {
+                if (runtime.IsMirrorClone && runtime.IsShadowClone) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -503,7 +509,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 if (!getTopLevelRuntime("VRCAnimatorLayerControl", animator, out runtime)) {
                     return;
                 }
-                if (runtime.IsMirrorClone) {
+                if (runtime.IsMirrorClone && runtime.IsShadowClone) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -555,7 +561,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 if (!getTopLevelRuntime("VRCAnimatorLocomotionControl", animator, out runtime)) {
                     return;
                 }
-                if (runtime.IsMirrorClone) {
+                if (runtime.IsMirrorClone && runtime.IsShadowClone) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -577,7 +583,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 if (!getTopLevelRuntime("VRCAnimatorSetView", animator, out runtime)) {
                     return;
                 }
-                if (runtime.IsMirrorClone) {
+                if (runtime.IsMirrorClone && runtime.IsShadowClone) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -600,7 +606,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 if (!getTopLevelRuntime("VRCAnimatorTrackingControl", animator, out runtime)) {
                     return;
                 }
-                if (runtime.IsMirrorClone) {
+                if (runtime.IsMirrorClone && runtime.IsShadowClone) {
                     return;
                 }
                 if (behaviour.debugString != null && behaviour.debugString.Length > 0)
@@ -755,9 +761,34 @@ public class LyumaAv3Runtime : MonoBehaviour
                     }
                 }
             }
+            if (LyumaAv3Emulator.emulatorInstance != null && !LyumaAv3Emulator.emulatorInstance.DisableShadowClone) {
+                OriginalSourceClone.IsShadowClone = true;
+                ShadowClone = GameObject.Instantiate(cloned).GetComponent<LyumaAv3Runtime>();
+                ShadowClone.GetComponent<Animator>().avatar = null;
+                OriginalSourceClone.IsShadowClone = false;
+                GameObject o;
+                (o = ShadowClone.gameObject).SetActive(true);
+                o.name = gameObject.name + " (ShadowClone)";
+                allShadowTransforms = ShadowClone.gameObject.GetComponentsInChildren<Transform>(true);
+                foreach (Component component in ShadowClone.gameObject.GetComponentsInChildren<Component>(true)) {
+                    if (ShadowCloneComponentBlacklist.Contains(component.GetType())) {
+                       UnityEngine.Object.Destroy(component);
+                       continue;
+                    }
+                    if (component.GetType() == typeof(SkinnedMeshRenderer) || component.GetType() == typeof(MeshRenderer)) {
+                        Renderer renderer = component as Renderer;
+                        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly; // ShadowCastingMode.TwoSided isn't accounted for and does not work locally
+                    }
+                }
+            }            
         }
         foreach (var smr in gameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true)) {
-            smr.updateWhenOffscreen = (AvatarSyncSource == this || IsMirrorClone);
+            smr.updateWhenOffscreen = (AvatarSyncSource == this || IsMirrorClone || IsShadowClone);
+        }
+        if(!LyumaAv3Emulator.emulatorInstance.DisableShadowClone && !IsShadowClone && !IsMirrorClone) {
+            foreach (Renderer renderer in gameObject.GetComponentsInChildren<Renderer>(true)) {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; // ShadowCastingMode.TwoSided isn't accounted for and does not work locally
+            }
         }
         int desiredLayer = 9;
         if (AvatarSyncSource == this) {
@@ -765,6 +796,9 @@ public class LyumaAv3Runtime : MonoBehaviour
         }
         if (IsMirrorClone) {
             desiredLayer = 18;
+        }
+        if (IsShadowClone) {
+            desiredLayer = 9; // the Shadowclone is always on playerLocal and never on UI Menu
         }
         if (gameObject.layer != 12 || desiredLayer == 18) {
             gameObject.layer = desiredLayer;
@@ -793,7 +827,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         animator.avatar = animatorAvatar;
         animator.applyRootMotion = false;
         animator.updateMode = AnimatorUpdateMode.Normal;
-        animator.cullingMode = (this == AvatarSyncSource || IsMirrorClone) ? AnimatorCullingMode.AlwaysAnimate : AnimatorCullingMode.CullCompletely;
+        animator.cullingMode = (this == AvatarSyncSource || IsMirrorClone || IsShadowClone) ? AnimatorCullingMode.AlwaysAnimate : AnimatorCullingMode.CullCompletely;
         animator.runtimeAnimatorController = null;
 
         avadesc = this.gameObject.GetComponent<VRCAvatarDescriptor>();
@@ -830,7 +864,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         //     }
         // }
         int i = 0;
-        if (AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base && !IsMirrorClone) {
+        if (AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base && !IsMirrorClone && !IsShadowClone) {
             foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
                 if (AnimatorToDebug == cal.type) {
                     i++;
@@ -863,7 +897,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
         }
         int dupeOffset = i;
-        if (!IsMirrorClone) {
+        if (!IsMirrorClone && !IsShadowClone) {
             foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
                 if (cal.type == VRCAvatarDescriptor.AnimLayerType.Base || cal.type == VRCAvatarDescriptor.AnimLayerType.Additive) {
                     i++;
@@ -876,7 +910,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
         }
         foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
-            if (IsMirrorClone) {
+            if (IsMirrorClone || IsShadowClone) {
                 if (cal.type == VRCAvatarDescriptor.AnimLayerType.FX) {
                     i++;
                     allLayers.Add(cal);
@@ -1314,7 +1348,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             go.transform.position = go.transform.position + AvatarSyncSource.CloneCount * new Vector3(0.4f, 0.0f, 0.4f);
             go.SetActive(true);
         }
-        if (IsMirrorClone) {
+        if (IsMirrorClone || IsShadowClone) {
             NonLocalSyncInterval = 0.0f;
         } else {
             NonLocalSyncInterval = AvatarSyncSource.NonLocalSyncInterval;
