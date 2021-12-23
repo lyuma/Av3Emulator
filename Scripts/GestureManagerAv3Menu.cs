@@ -29,8 +29,8 @@ public class GestureManagerAv3Menu : LyumaAv3Menu
     // public LyumaAv3Runtime Runtime;
     // public VRCExpressionsMenu RootMenu;
     // public bool IsMenuOpen { get; private set; }
-    private int? _activeControlIndex = null;
-    private string _activeControlParameterName;
+    //private int? _activeControlIndex = null;
+    //private string _activeControlParameterName;
 
     private void Awake()
     {
