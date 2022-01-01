@@ -129,6 +129,9 @@ public class LyumaAv3Runtime : MonoBehaviour
     public static HashSet<string> BUILTIN_PARAMETERS = new HashSet<string> {
         "Viseme", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "Upright", "AngularY", "Grounded", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation"
     };
+    public static readonly HashSet<Type> MirrorCloneComponentBlacklist = new HashSet<Type> {
+        typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(DynamicBone), typeof(DynamicBoneCollider), typeof(Rigidbody), typeof(Joint)
+    };
     [Header("Built-in inputs / Viseme")]
     public VisemeIndex Viseme;
     [Range(0, 15)] public int VisemeIdx;
@@ -742,16 +745,15 @@ public class LyumaAv3Runtime : MonoBehaviour
                 MirrorClone = GameObject.Instantiate(cloned).GetComponent<LyumaAv3Runtime>();
                 MirrorClone.GetComponent<Animator>().avatar = null;
                 OriginalSourceClone.IsMirrorClone = false;
-                MirrorClone.gameObject.SetActive(true);
-                MirrorClone.gameObject.name = gameObject.name + " (MirrorReflection)";
+                GameObject o;
+                (o = MirrorClone.gameObject).SetActive(true);
+                o.name = gameObject.name + " (MirrorReflection)";
                 allMirrorTransforms = MirrorClone.gameObject.GetComponentsInChildren<Transform>(true);
-                foreach (var audio in MirrorClone.gameObject.GetComponentsInChildren<AudioSource>(true)) {
-                    UnityEngine.Object.Destroy(audio);
+                foreach (Component component in MirrorClone.gameObject.GetComponentsInChildren<Component>(true)) {
+                    if (MirrorCloneComponentBlacklist.Contains(component.GetType())) {
+                        UnityEngine.Object.Destroy(component);
+                    }
                 }
-                foreach (var camera in MirrorClone.gameObject.GetComponentsInChildren<Camera>(true)) {
-                    UnityEngine.Object.Destroy(camera);
-                }
-                // What components get deleted on mirror copies???
             }
         }
         foreach (var smr in gameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true)) {
