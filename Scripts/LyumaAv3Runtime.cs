@@ -839,6 +839,9 @@ public class LyumaAv3Runtime : MonoBehaviour
             Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
             if (head != null) {
                 HeadRelativeViewPosition = head.InverseTransformPoint(animator.transform.TransformPoint(ViewPosition));
+                if(LyumaAv3Emulator.emulatorInstance.EnableHeadScaling && this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
+                    head.localScale = new Vector3(0.0001f, 0.0001f, 0.0001f); // head bone is set to 0.0001 locally (not multiplied)
+                }
             }
         }
         expressionsMenu = avadesc.expressionsMenu;
