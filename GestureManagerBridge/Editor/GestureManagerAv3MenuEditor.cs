@@ -32,8 +32,14 @@ using VRC.SDK3.Avatars.ScriptableObjects;
 using GestureManager.Scripts.Editor.Modules.Vrc3;
 
 [CustomEditor(typeof(GestureManagerAv3Menu))]
-public class GestureManagerAv3MenuEditor : Editor
+public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
 {
+    private SerializedProperty useLegacyMenu;
+
+    public void OnEnable() {
+        useLegacyMenu = serializedObject.FindProperty("useLegacyMenu");
+    }
+
     private readonly Dictionary<Texture2D, Texture2D> _resizedIcons = new Dictionary<Texture2D, Texture2D>();
     private VRCExpressionsMenu _currentMenu;
 
@@ -256,6 +262,16 @@ public class GestureManagerAv3MenuEditor : Editor
     });
 
     private void ManagerGui () {
+        EditorGUILayout.PropertyField(useLegacyMenu, new GUIContent("Use Legacy Menu"));
+        serializedObject.ApplyModifiedPropertiesWithoutUndo();
+        if (useLegacyMenu.boolValue) {
+            RadialMenu tmpmenu;
+            if (av3Module.RadialMenus.TryGetValue(this as UnityEditor.Editor, out tmpmenu)) {
+                tmpmenu.style.display = DisplayStyle.None;
+            }
+            OnInspectorGUI();
+            return;
+        }
         var gmenu = (GestureManagerAv3Menu)target;
         GUILayout.BeginHorizontal();
         if (GUILayout.Button(gmenu.IsMenuOpen ? "Close menu" : "Open menu"))

@@ -60,6 +60,8 @@ public class LyumaAv3Runtime : MonoBehaviour
     public bool CreateNonLocalClone;
     public bool ViewMirrorReflection;
     public bool ViewBothRealAndMirror;
+    public bool DebugOffsetMirrorClone = true;
+    public bool EnableHeadScaling;
     private int mirState = -1;
     private LyumaAv3Runtime MirrorClone;
     private LyumaAv3Runtime ShadowClone;
@@ -168,7 +170,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     public bool MuteSelf;
     public bool InStation;
     [HideInInspector] public int AvatarVersion = 3;
-    private Component av3MenuComponent;
+    private LyumaAv3Menu av3MenuComponent;
 
     [Header("Output State (Read-only)")]
     public bool IsLocal;
@@ -666,18 +668,22 @@ public class LyumaAv3Runtime : MonoBehaviour
         if (this.playableGraph.IsValid()) {
             this.playableGraph.Destroy();
         }
-        foreach (var anim in attachedAnimators) {
-            LyumaAv3Runtime runtime;
-            if (animatorToTopLevelRuntime.TryGetValue(anim, out runtime) && runtime == this)
-            {
-                animatorToTopLevelRuntime.Remove(anim);
+        if (attachedAnimators != null) {
+            foreach (var anim in attachedAnimators) {
+                LyumaAv3Runtime runtime;
+                if (animatorToTopLevelRuntime.TryGetValue(anim, out runtime) && runtime == this)
+                {
+                    animatorToTopLevelRuntime.Remove(anim);
+                }
             }
         }
-        if (animator.playableGraph.IsValid())
-        {
-            animator.playableGraph.Destroy();
+        if (animator != null) {
+            if (animator.playableGraph.IsValid())
+            {
+                animator.playableGraph.Destroy();
+            }
+            animator.runtimeAnimatorController = origAnimatorController;
         }
-        animator.runtimeAnimatorController = origAnimatorController;
     }
 
     void Awake()
@@ -713,6 +719,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             this.TrackingType = LyumaAv3Emulator.emulatorInstance.DefaultTrackingType;
             this.InStation = LyumaAv3Emulator.emulatorInstance.DefaultTestInStation;
             this.AnimatorToDebug = LyumaAv3Emulator.emulatorInstance.DefaultAnimatorToDebug;
+            this.EnableHeadScaling = LyumaAv3Emulator.emulatorInstance.EnableHeadScaling;
         }
 
         animator = this.gameObject.GetOrAddComponent<Animator>();
@@ -839,9 +846,6 @@ public class LyumaAv3Runtime : MonoBehaviour
             Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
             if (head != null) {
                 HeadRelativeViewPosition = head.InverseTransformPoint(animator.transform.TransformPoint(ViewPosition));
-                if(LyumaAv3Emulator.emulatorInstance.EnableHeadScaling && this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
-                    head.localScale = new Vector3(0.0001f, 0.0001f, 0.0001f); // head bone is set to 0.0001 locally (not multiplied)
-                }
             }
         }
         expressionsMenu = avadesc.expressionsMenu;
@@ -1236,8 +1240,9 @@ public class LyumaAv3Runtime : MonoBehaviour
         foreach (var comp in avadesc.gameObject.GetComponents<LyumaAv3Menu>()) {
             UnityEngine.Object.Destroy(comp);
         }
-        if (gestureManagerMenu != null && !legacyMenuGUI) {
-            var mainMenu = avadesc.gameObject.AddComponent(gestureManagerMenu);
+        if (gestureManagerMenu != null) {
+            LyumaAv3Menu mainMenu = (LyumaAv3Menu)avadesc.gameObject.AddComponent(gestureManagerMenu);
+            mainMenu.useLegacyMenu = legacyMenuGUI;
             var runtimeField = gestureManagerMenu.GetField("Runtime");
             var rootMenuField = gestureManagerMenu.GetField("RootMenu");
             runtimeField.SetValue(mainMenu, this);
@@ -1253,35 +1258,49 @@ public class LyumaAv3Runtime : MonoBehaviour
     private bool isResetting;
     private bool isResettingHold;
     private bool isResettingSel;
-    void LateUpdate()
-    {
-        if (MirrorClone != null) {
-            MirrorClone.gameObject.SetActive(true);
-            MirrorClone.transform.localRotation = transform.localRotation;
-            MirrorClone.transform.localScale = transform.localScale;
-            if (mirState != 2 && ViewBothRealAndMirror) {
+    void LateUpdate() {
+        if(this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
+            if (MirrorClone != null) {
+                MirrorClone.gameObject.SetActive(true);
+                MirrorClone.transform.localRotation = transform.localRotation;
+                MirrorClone.transform.localScale = transform.localScale;
+                MirrorClone.transform.position = transform.position + (ViewBothRealAndMirror && DebugOffsetMirrorClone ? new Vector3(0.0f, 1.3f * avadesc.ViewPosition.y, 0.0f) : Vector3.zero);
+            }
+            if (ShadowClone != null) {
+                ShadowClone.gameObject.SetActive(true);
+                ShadowClone.transform.localRotation = transform.localRotation;
+                ShadowClone.transform.localScale = transform.localScale;
+                ShadowClone.transform.position = transform.position;
+            }
+            if (ViewBothRealAndMirror) {
                 mirState = 2;
-                MirrorClone.transform.position = transform.position + new Vector3(0.0f, -1.3f * avadesc.ViewPosition.y, 0.0f);
-                updateSceneLayersDelegate(-1);
-            } else if (mirState != 1 && ViewMirrorReflection && !ViewBothRealAndMirror) {
+                updateSceneLayersDelegate(~0);
+            } else if (ViewMirrorReflection && !ViewBothRealAndMirror) {
                 mirState = 1;
                 updateSceneLayersDelegate(~(1<<10));
-                MirrorClone.transform.position = transform.position;
-            } else if (mirState != 0 && !ViewMirrorReflection && !ViewBothRealAndMirror) {
+            } else if (!ViewMirrorReflection && !ViewBothRealAndMirror) {
                 mirState = 0;
                 updateSceneLayersDelegate(~(1<<18));
-                MirrorClone.transform.position = transform.position;
             }
-            for(int i = 0; i < allTransforms.Length; i++) {
-                if (allTransforms[i] == this.transform) {
-                    continue;
-                }
-                allMirrorTransforms[i].localPosition = allTransforms[i].localPosition;
-                allMirrorTransforms[i].localRotation = allTransforms[i].localRotation;
-                allMirrorTransforms[i].localScale = allTransforms[i].localScale;
-                bool theirs = allTransforms[i].gameObject.activeSelf;
-                if (allMirrorTransforms[i].gameObject.activeSelf != theirs) {
-                    allMirrorTransforms[i].gameObject.SetActive(theirs);
+            foreach (Transform[] allXTransforms in new Transform[][]{allMirrorTransforms, allShadowTransforms}) {
+                if (allXTransforms != null) {
+                    Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
+                    for(int i = 0; i < allTransforms.Length; i++) {
+                        if (allTransforms[i] == this.transform) {
+                            continue;
+                        }
+                        allXTransforms[i].localPosition = allTransforms[i].localPosition;
+                        allXTransforms[i].localRotation = allTransforms[i].localRotation;
+                        if(allTransforms[i] == head && EnableHeadScaling) {
+                            allXTransforms[i].localScale = new Vector3(1.0f, 1.0f, 1.0f);
+                        } else {
+                            allXTransforms[i].localScale = allTransforms[i].localScale;
+                        }
+                        bool theirs = allTransforms[i].gameObject.activeSelf;
+                        if (allXTransforms[i].gameObject.activeSelf != theirs) {
+                            allXTransforms[i].gameObject.SetActive(theirs);
+                        }
+                    }
                 }
             }
         }
@@ -1290,9 +1309,15 @@ public class LyumaAv3Runtime : MonoBehaviour
     void Update()
     {
         if (lastLegacyMenuGUI != legacyMenuGUI && AvatarSyncSource == this) {
-            lastLegacyMenuGUI = legacyMenuGUI;
-            UnityEngine.Object.Destroy(av3MenuComponent);
-            CreateAv3MenuComponent();
+            av3MenuComponent.useLegacyMenu = legacyMenuGUI;
+            // UnityEngine.Object.Destroy(av3MenuComponent);
+            // CreateAv3MenuComponent();
+        }
+        if(this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
+            Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
+            if (head != null) {
+                head.localScale = EnableHeadScaling ? new Vector3(0.0001f, 0.0001f, 0.0001f) : new Vector3(1.0f, 1.0f, 1.0f); // head bone is set to 0.0001 locally (not multiplied
+            }
         }
         if (isResettingSel) {
             isResettingSel = false;

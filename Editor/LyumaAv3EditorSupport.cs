@@ -103,6 +103,7 @@ public static class LyumaAv3EditorSupport
         LyumaAv3Runtime.updateSceneLayersDelegate = (layers) => {
             Debug.Log("Setting selected layers: " + layers);
             Tools.visibleLayers = layers;
+            Camera.main.cullingMask = layers;
             // Highlighter.Highlight("Inspector", "Animator To Debug");
         };
 
