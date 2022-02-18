@@ -103,12 +103,44 @@ public static class LyumaAv3EditorSupport
         LyumaAv3Runtime.updateSceneLayersDelegate = (layers) => {
             Debug.Log("Setting selected layers: " + layers);
             Tools.visibleLayers = layers;
-            Camera.main.cullingMask = layers;
+            Camera c = Camera.main;
+            if (c != null) {
+                c.cullingMask = layers;
+            }
             // Highlighter.Highlight("Inspector", "Animator To Debug");
         };
 
         LyumaAv3Runtime.addRuntimeDelegate = (runtime) => {
             MoveComponentToTop(runtime);
+        };
+
+        LyumaAv3Osc.DrawDebugRectDelegate = (Rect pos, Color col, Color outlineCol) => {
+            Color origColor = GUI.color;
+            GUI.color = col;
+            UnityEditor.Handles.BeginGUI();
+            UnityEditor.Handles.DrawSolidRectangleWithOutline(pos, col, outlineCol);
+            UnityEditor.Handles.EndGUI();
+            GUI.color = origColor;
+        };
+        LyumaAv3Osc.DrawDebugTextDelegate = (ref Vector3 pos, Color backgroundCol, Color outlineCol, Color textCol, string str) => {
+            Color origColor = GUI.color;
+            GUI.color = backgroundCol;
+            var view = UnityEditor.SceneView.currentDrawingSceneView;
+            Vector2 size = GUI.skin.label.CalcSize(new GUIContent(str));
+            Rect contentRect = new Rect(pos.x, pos.y, size.x, size.y);
+            UnityEditor.Handles.BeginGUI();
+            UnityEditor.Handles.DrawSolidRectangleWithOutline(contentRect, backgroundCol, outlineCol);
+            GUI.color = textCol;
+            contentRect.x += 1;
+            contentRect.y += 1;
+            GUI.Label(contentRect, str);
+            UnityEditor.Handles.EndGUI();
+            GUI.color = origColor;
+            pos.x += contentRect.width + 2;
+            if (pos.x + contentRect.width * 2 > view.position.width) {
+                pos.x = 0;
+            }
+            pos.y += contentRect.height + 2;
         };
     }
 
@@ -141,7 +173,14 @@ public static class LyumaAv3EditorSupport
 
     [MenuItem("Tools/Enable Avatars 3.0 Emulator")]
     public static void EnableAv3Testing() {
-        GameObject go = new GameObject("Avatars 3.0 Emulator Control");
-        go.AddComponent<LyumaAv3Emulator>();
+        GameObject go = GameObject.Find("/Avatars 3.0 Emulator Control");
+        if (go != null) {
+            go.SetActive(true);
+        } else {
+            go = new GameObject("Avatars 3.0 Emulator Control");
+        }
+        Selection.SetActiveObjectWithContext(go, go);
+        go.GetOrAddComponent<LyumaAv3Emulator>();
+        go.GetOrAddComponent<LyumaAv3Osc>();
     }
 }
