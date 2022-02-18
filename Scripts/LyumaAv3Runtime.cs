@@ -62,7 +62,6 @@ public class LyumaAv3Runtime : MonoBehaviour
     public bool ViewBothRealAndMirror;
     public bool DebugOffsetMirrorClone = true;
     public bool EnableHeadScaling;
-    private int mirState = -1;
     private LyumaAv3Runtime MirrorClone;
     private LyumaAv3Runtime ShadowClone;
     [HideInInspector] public VRCAvatarDescriptor avadesc;
@@ -745,8 +744,12 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
             }
         }
+        bool shouldClone = false;
         if (OriginalSourceClone == null) {
             OriginalSourceClone = this;
+            shouldClone = true;
+        }
+        if (shouldClone && GetComponent<PipelineSaver>() == null) {
             GameObject cloned = GameObject.Instantiate(gameObject);
             cloned.hideFlags = HideFlags.HideAndDontSave;
             cloned.SetActive(false);
@@ -1271,16 +1274,6 @@ public class LyumaAv3Runtime : MonoBehaviour
                 ShadowClone.transform.localRotation = transform.localRotation;
                 ShadowClone.transform.localScale = transform.localScale;
                 ShadowClone.transform.position = transform.position;
-            }
-            if (ViewBothRealAndMirror) {
-                mirState = 2;
-                updateSceneLayersDelegate(~0);
-            } else if (ViewMirrorReflection && !ViewBothRealAndMirror) {
-                mirState = 1;
-                updateSceneLayersDelegate(~(1<<10));
-            } else if (!ViewMirrorReflection && !ViewBothRealAndMirror) {
-                mirState = 0;
-                updateSceneLayersDelegate(~(1<<18));
             }
             foreach (Transform[] allXTransforms in new Transform[][]{allMirrorTransforms, allShadowTransforms}) {
                 if (allXTransforms != null) {

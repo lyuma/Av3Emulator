@@ -38,7 +38,10 @@ public class LyumaAv3Emulator : MonoBehaviour
     private bool lastLegacyMenuGUI;
     public bool DisableMirrorClone;
     public bool DisableShadowClone;
+    private bool lastHead;
     public bool EnableHeadScaling;
+    public bool ViewMirrorReflection;
+    public bool ViewBothRealAndMirror;
 
     static public LyumaAv3Emulator emulatorInstance;
     static public RuntimeAnimatorController EmptyController;
@@ -95,6 +98,19 @@ public class LyumaAv3Emulator : MonoBehaviour
             RestartEmulator = false;
             OnDestroy();
             RestartingEmulator = true;
+        }
+        if (ViewBothRealAndMirror) {
+            LyumaAv3Runtime.updateSceneLayersDelegate(~0);
+        } else if (ViewMirrorReflection && !ViewBothRealAndMirror) {
+            LyumaAv3Runtime.updateSceneLayersDelegate(~(1<<10));
+        } else if (!ViewMirrorReflection && !ViewBothRealAndMirror) {
+            LyumaAv3Runtime.updateSceneLayersDelegate(~(1<<18));
+        }
+        if (EnableHeadScaling != lastHead) {
+            lastHead = EnableHeadScaling;
+            foreach (var runtime in runtimes) {
+                runtime.EnableHeadScaling = EnableHeadScaling;
+            }
         }
         if (lastLegacyMenuGUI != legacyMenuGUI) {
             lastLegacyMenuGUI = legacyMenuGUI;
