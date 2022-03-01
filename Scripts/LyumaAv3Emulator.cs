@@ -59,6 +59,7 @@ public class LyumaAv3Emulator : MonoBehaviour
         foreach (var avadesc in avatars)
         {
             // Creates the playable director, and initializes animator.
+            bool alreadyHadComponent = avadesc.gameObject.GetComponent<LyumaAv3Runtime>() != null;
             var runtime = avadesc.gameObject.GetOrAddComponent<LyumaAv3Runtime>();
             runtime.emulator = this;
             runtime.VRMode = DefaultToVR;
@@ -67,8 +68,10 @@ public class LyumaAv3Emulator : MonoBehaviour
             runtime.AnimatorToDebug = DefaultAnimatorToDebug;
             runtime.EnableHeadScaling = EnableHeadScaling;
             runtimes.Add(runtime);
-            runtime.CreateShadowClone();
-            runtime.CreateMirrorClone();
+            if (!alreadyHadComponent) {
+                runtime.CreateShadowClone();
+                runtime.CreateMirrorClone();
+            }
         }
     }
 

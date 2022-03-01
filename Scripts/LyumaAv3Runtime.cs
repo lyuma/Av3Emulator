@@ -794,7 +794,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     }
 
     public void CreateMirrorClone() {
-        if (emulator != null && !emulator.DisableMirrorClone && AvatarSyncSource == this) {
+        if (emulator != null && !emulator.DisableMirrorClone && AvatarSyncSource == this && GetComponent<PipelineSaver>() == null) {
             OriginalSourceClone.IsMirrorClone = true;
             MirrorClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
             MirrorClone.GetComponent<Animator>().avatar = null;
@@ -812,7 +812,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     }
 
     public void CreateShadowClone() {
-        if (emulator != null && !emulator.DisableShadowClone && AvatarSyncSource == this) {
+        if (emulator != null && !emulator.DisableShadowClone && AvatarSyncSource == this && GetComponent<PipelineSaver>() == null) {
             OriginalSourceClone.IsShadowClone = true;
             ShadowClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
             ShadowClone.GetComponent<Animator>().avatar = null;
