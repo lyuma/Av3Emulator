@@ -62,7 +62,14 @@ public static class LyumaAv3EditorSupport
                 if (ac == null)
                 {
                     Debug.LogWarning("Failed to resolve animator controller " + kv.Value + " for " + kv.Key);
-                    ac = null;
+                    foreach (var guid in AssetDatabase.FindAssets(kv.Value))
+                    {
+                        string path = AssetDatabase.GUIDToAssetPath(guid);
+                        if (path.EndsWith("/" + kv.Value + ".controller")) {
+                            ac = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
+                            break;
+                        }
+                    }
                 }
                 LyumaAv3Runtime.animLayerToDefaultController[kv.Key] = ac;
             }
@@ -101,7 +108,7 @@ public static class LyumaAv3EditorSupport
         };
 
         LyumaAv3Runtime.updateSceneLayersDelegate = (layers) => {
-            Debug.Log("Setting selected layers: " + layers);
+            // Debug.Log("Setting selected layers: " + layers);
             Tools.visibleLayers = layers;
             Camera c = Camera.main;
             if (c != null) {
@@ -114,7 +121,11 @@ public static class LyumaAv3EditorSupport
             MoveComponentToTop(runtime);
         };
 
+        LyumaAv3Osc.GetEditorViewportDelegate = () => {
+            return UnityEditor.SceneView.currentDrawingSceneView.position;
+        };
         LyumaAv3Osc.DrawDebugRectDelegate = (Rect pos, Color col, Color outlineCol) => {
+            // Debug.Log("Debug raw rect " + pos);
             Color origColor = GUI.color;
             GUI.color = col;
             UnityEditor.Handles.BeginGUI();
@@ -122,25 +133,30 @@ public static class LyumaAv3EditorSupport
             UnityEditor.Handles.EndGUI();
             GUI.color = origColor;
         };
-        LyumaAv3Osc.DrawDebugTextDelegate = (ref Vector3 pos, Color backgroundCol, Color outlineCol, Color textCol, string str) => {
+        LyumaAv3Osc.DrawDebugTextDelegate = (Rect pos, Color backgroundCol, Color outlineCol, Color textCol, string str) => {
+            // Debug.Log("Debug raw text " + str + " at " + pos);
             Color origColor = GUI.color;
             GUI.color = backgroundCol;
             var view = UnityEditor.SceneView.currentDrawingSceneView;
-            Vector2 size = GUI.skin.label.CalcSize(new GUIContent(str));
-            Rect contentRect = new Rect(pos.x, pos.y, size.x, size.y);
+            // Vector2 size = GUI.skin.label.CalcSize(new GUIContent(str));
+            // Rect pos = new Rect(location.x, location.y, size.x, size.y);
             UnityEditor.Handles.BeginGUI();
-            UnityEditor.Handles.DrawSolidRectangleWithOutline(contentRect, backgroundCol, outlineCol);
+            UnityEditor.Handles.DrawSolidRectangleWithOutline(pos, backgroundCol, outlineCol);
+            GUI.color = new Color(1.0f, 1.0f, 1.0f, textCol.a * 0.5f);
+            pos.y += 2;
+            GUI.Label(pos, str);
+            pos.x += 2;
+            GUI.Label(pos, str);
+            pos.y -= 2;
+            GUI.Label(pos, str);
+            pos.x -= 2;
+            GUI.Label(pos, str);
+            pos.x += 1;
+            pos.y += 1;
             GUI.color = textCol;
-            contentRect.x += 1;
-            contentRect.y += 1;
-            GUI.Label(contentRect, str);
+            GUI.Label(pos, str);
             UnityEditor.Handles.EndGUI();
             GUI.color = origColor;
-            pos.x += contentRect.width + 2;
-            if (pos.x + contentRect.width * 2 > view.position.width) {
-                pos.x = 0;
-            }
-            pos.y += contentRect.height + 2;
         };
     }
 
@@ -182,5 +198,6 @@ public static class LyumaAv3EditorSupport
         Selection.SetActiveObjectWithContext(go, go);
         go.GetOrAddComponent<LyumaAv3Emulator>();
         go.GetOrAddComponent<LyumaAv3Osc>();
+        EditorGUIUtility.PingObject(go);
     }
 }

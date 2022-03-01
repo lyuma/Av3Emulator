@@ -25,7 +25,7 @@ using VRC.SDK3.Avatars.ScriptableObjects;
 
 public class LyumaAv3Menu : MonoBehaviour
 {
-    public bool useLegacyMenu;
+    public bool useLegacyMenu = true;
     [Serializable]
     public class MenuConditional
     {

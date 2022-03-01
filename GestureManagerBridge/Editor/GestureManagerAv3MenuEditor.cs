@@ -34,12 +34,6 @@ using GestureManager.Scripts.Editor.Modules.Vrc3;
 [CustomEditor(typeof(GestureManagerAv3Menu))]
 public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
 {
-    private SerializedProperty useLegacyMenu;
-
-    public void OnEnable() {
-        useLegacyMenu = serializedObject.FindProperty("useLegacyMenu");
-    }
-
     private readonly Dictionary<Texture2D, Texture2D> _resizedIcons = new Dictionary<Texture2D, Texture2D>();
     private VRCExpressionsMenu _currentMenu;
 
@@ -134,7 +128,7 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
 
         public override void Update()
         {
-            UnityEngine.Debug.Log("Updating " + Params.Keys);
+            // UnityEngine.Debug.Log("Updating " + Params.Keys);
             // if (_dummyMode != DummyMode.None && (!DummyAvatar || Avatar.activeSelf)) DisableDummy();
             // foreach (var weightController in _weightControllers) weightController.Update();
             foreach (var param in Params.Values) {
@@ -159,6 +153,14 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
             }
         }
 
+        public void addParam(string builtinprop, string gestureProp) {
+            var property = _runtime.GetType().GetField(builtinprop, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Default);
+            if (property == null) {
+                UnityEngine.Debug.Log("Failed to find property " + builtinprop + " for " + _runtime);
+            } else {
+                Params.Add(gestureProp, new ReflectedVrcParam(gestureProp, _runtime, property));
+            }
+        }
         public override void InitForAvatar()
         {
             if (Params.Count > 0) {
@@ -174,14 +176,12 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
                 } else if (builtinprop == "VelocityZ") {
                     Params.Add(builtinprop, new VelocityParam(builtinprop, _runtime, 2, 8));
                 } else {
-                    var property = _runtime.GetType().GetField(builtinprop, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Default);
-                    if (property == null) {
-                        UnityEngine.Debug.Log("Failed to find property " + builtinprop + " for " + _runtime);
-                    } else {
-                        Params.Add(builtinprop, new ReflectedVrcParam(builtinprop, _runtime, property));
-                    }
+                    addParam(builtinprop, builtinprop);
                 }
             }
+            addParam("IKPoseCalibration", "PoseIK");
+            addParam("TPoseCalibration", "PoseT");
+            addParam("Jump", "Av3 Emu Jump");
             foreach (var xbool in _runtime.Bools) {
                 Params.Add(xbool.name, new StubVrcBoolParam(xbool.name, xbool));
             }
@@ -191,7 +191,7 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
             foreach (var xfloat in _runtime.Floats) {
                 Params.Add(xfloat.name, new StubVrcFloatParam(xfloat.name, xfloat));
             }
-            UnityEngine.Debug.Log("Initing params " + Params.Keys);
+            // UnityEngine.Debug.Log("Initing params " + Params.Keys);
         }
 
         // public override AnimationClip GetFinalGestureByIndex(GestureHand hand, int gestureIndex)
@@ -237,7 +237,7 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
     public override VisualElement CreateInspectorGUI()
     {
 
-        UnityEngine.Debug.Log("Create Inspector GUI");
+        // UnityEngine.Debug.Log("Create Inspector GUI");
         VRCAvatarDescriptor avadesc = ((Component)target).GetComponent<VRCAvatarDescriptor>();
         av3Module = new StubAv3Module(((Component)target).GetComponent<LyumaAv3Runtime>(), avadesc);
         _root = new VisualElement();
@@ -262,16 +262,6 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
     });
 
     private void ManagerGui () {
-        EditorGUILayout.PropertyField(useLegacyMenu, new GUIContent("Use Legacy Menu"));
-        serializedObject.ApplyModifiedPropertiesWithoutUndo();
-        if (useLegacyMenu.boolValue) {
-            RadialMenu tmpmenu;
-            if (av3Module.RadialMenus.TryGetValue(this as UnityEditor.Editor, out tmpmenu)) {
-                tmpmenu.style.display = DisplayStyle.None;
-            }
-            OnInspectorGUI();
-            return;
-        }
         var gmenu = (GestureManagerAv3Menu)target;
         GUILayout.BeginHorizontal();
         if (GUILayout.Button(gmenu.IsMenuOpen ? "Close menu" : "Open menu"))
@@ -286,8 +276,28 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
                 OpenMenuForTwoHandedSupport(gmenu);
             }
         }
-
+        var rect = EditorGUILayout.GetControlRect(false, 1, GUILayout.Width(120));
         GUILayout.EndHorizontal();
+        if (gmenu.IsMenuOpen) {
+            rect.height = 55;
+            gmenu.useLegacyMenu = !GUI.Toggle(rect, !gmenu.useLegacyMenu, "GestureManager\nRadial Menu", "Button");
+            GUILayout.BeginVertical(GUILayout.Height(RadialMenu.Size + 100));
+            EditorGUILayout.Space(24);
+        }
+        if (gmenu.useLegacyMenu) {
+            RadialMenu tmpmenu;
+            if (av3Module.RadialMenus.TryGetValue(this as UnityEditor.Editor, out tmpmenu)) {
+                tmpmenu.style.display = DisplayStyle.None;
+            }
+            RenderButtonMenu();
+
+            if (gmenu.IsMenuOpen) {
+                // ensure these are matched with above (Same condition).
+                GUILayout.FlexibleSpace();
+                GUILayout.EndVertical();
+            }
+            return;
+        }
 
         var menu = GetOrCreateRadial(this as UnityEditor.Editor);
         if (!gmenu.IsMenuOpen) {
@@ -296,11 +306,12 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
                 (gmenu.IsMenuOpen ? "" : " [Menu is closed]"),
                 EditorStyles.boldLabel);
             menu.style.display = DisplayStyle.None;
+            // No EndVertical() because we didn't do BeginVertical() if not IsMenuOpen.
             return;
         }
 
-        GUILayout.Space(4);
-        var rect = EditorGUILayout.GetControlRect(false, 1);
+        GUILayout.Space(14);
+        rect = EditorGUILayout.GetControlRect(false, 0);
         rect.height = 1;
         EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 1));
         GUILayout.Label("Radial Menu", GuiHandTitle);
@@ -310,10 +321,13 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
             if (!(Event.current.type == EventType.Layout || Event.current.type == EventType.Used)) {
                 menu.Rect = GUILayoutUtility.GetLastRect();
             }
-            float extraSize = menu.Render(_root, menu.Rect) - RadialMenu.Size;
+            menu.Render(_root, menu.Rect);
+            // float extraSize = RadialMenu.Size;
             menu.style.display = DisplayStyle.Flex;
-            if (extraSize > 0) GUILayout.Label("", GUILayout.ExpandWidth(true), GUILayout.Height(extraSize));
+            // if (extraSize > 0) GUILayout.Label("", GUILayout.ExpandWidth(true), GUILayout.Height(extraSize));
         }
+        GUILayout.FlexibleSpace();
+        GUILayout.EndVertical();
     }
 
     private static void OpenMenuForTwoHandedSupport(GestureManagerAv3Menu menu)

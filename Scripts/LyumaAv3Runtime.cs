@@ -48,20 +48,23 @@ public class LyumaAv3Runtime : MonoBehaviour
     public bool KeepSavedParametersOnReset = true;
     [Tooltip("In VRChat, 8-bit float quantization only happens remotely. Check this to test your robustness to quantization locally, too. (example: 0.5 -> 0.503")]
     public bool locally8bitQuantizedFloats = false;
-    public bool legacyMenuGUI;
-    private bool lastLegacyMenuGUI;
+    [HideInInspector] public bool legacyMenuGUI = true;
+    private bool lastLegacyMenuGUI = true;
     [Tooltip("Selects the playable layer to be visible in Unity's Animator window. Unless this is set to Base, creates duplicate playable layers with weight 0. It hopefully works the same.")] public VRCAvatarDescriptor.AnimLayerType AnimatorToDebug;
     private char PrevAnimatorToDebug;
     [HideInInspector] public string SourceObjectPath;
-    [Header("Assign to non-local duplicate")]public LyumaAv3Runtime AvatarSyncSource;
-    [Range(0.0f, 2.0f)] public float NonLocalSyncInterval = 0.1f;
+    [Header("Sync, OSC and Mirror clone")]public LyumaAv3Runtime AvatarSyncSource;
+    [Range(0.0f, 2.0f)] public float NonLocalSyncInterval = 0.2f;
     private float nextUpdateTime = 0.0f;
+    public bool EnableAvatarOSC = false;
     private int CloneCount;
     public bool CreateNonLocalClone;
-    public bool ViewMirrorReflection;
-    public bool ViewBothRealAndMirror;
-    public bool DebugOffsetMirrorClone = true;
+    public bool DebugOffsetMirrorClone = false;
     public bool EnableHeadScaling;
+    public bool ViewMirrorReflection;
+    private bool LastViewMirrorReflection;
+    public bool ViewBothRealAndMirror;
+    private bool LastViewBothRealAndMirror;
     private LyumaAv3Runtime MirrorClone;
     private LyumaAv3Runtime ShadowClone;
     [HideInInspector] public VRCAvatarDescriptor avadesc;
@@ -147,15 +150,23 @@ public class LyumaAv3Runtime : MonoBehaviour
     [Range(0, 9)] public int GestureLeftIdx;
     private char GestureLeftIdxInt;
     [Range(0, 1)] public float GestureLeftWeight;
+    private float OldGestureLeftWeight;
     public GestureIndex GestureRight;
     [Range(0, 9)] public int GestureRightIdx;
     private char GestureRightIdxInt;
     [Range(0, 1)] public float GestureRightWeight;
+    private float OldGestureRightWeight;
     [Header("Built-in inputs / Locomotion")]
     public Vector3 Velocity;
     [Range(-400, 400)] public float AngularY;
     [Range(0, 1)] public float Upright;
     public bool Grounded;
+    public bool Jump;
+    public float JumpPower = 5;
+    public float RunSpeed = 0.0f;
+    private bool WasJump;
+    private Vector3 JumpingHeight;
+    protected Vector3 JumpingVelocity;
     private bool PrevSeated, PrevTPoseCalibration, PrevIKPoseCalibration;
     public bool Seated;
     public bool AFK;
@@ -167,9 +178,9 @@ public class LyumaAv3Runtime : MonoBehaviour
     private char TrackingTypeIdxInt;
     public bool VRMode;
     public bool MuteSelf;
+    private bool MuteTogglerOn;
     public bool InStation;
     [HideInInspector] public int AvatarVersion = 3;
-    private LyumaAv3Menu av3MenuComponent;
 
     [Header("Output State (Read-only)")]
     public bool IsLocal;
@@ -711,18 +722,12 @@ public class LyumaAv3Runtime : MonoBehaviour
 
         AnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base;
 
-        if (LyumaAv3Emulator.emulatorInstance == null) {
-            Debug.LogError("LyumaAv3Runtime awoken without an LyumaAv3Emulator instance!", this);
-        } else {
-            this.VRMode = LyumaAv3Emulator.emulatorInstance.DefaultToVR;
-            this.TrackingType = LyumaAv3Emulator.emulatorInstance.DefaultTrackingType;
-            this.InStation = LyumaAv3Emulator.emulatorInstance.DefaultTestInStation;
-            this.AnimatorToDebug = LyumaAv3Emulator.emulatorInstance.DefaultAnimatorToDebug;
-            this.EnableHeadScaling = LyumaAv3Emulator.emulatorInstance.EnableHeadScaling;
-        }
-
         animator = this.gameObject.GetOrAddComponent<Animator>();
-        animatorAvatar = animator.avatar;
+        if (animatorAvatar != null && animator.avatar == null) {
+            animator.avatar = animatorAvatar;
+        } else {
+            animatorAvatar = animator.avatar;
+        }
         // Default values.
         Grounded = true;
         Upright = 1.0f;
@@ -756,49 +761,9 @@ public class LyumaAv3Runtime : MonoBehaviour
             OriginalSourceClone = cloned.GetComponent<LyumaAv3Runtime>();
             Debug.Log("ORIGINAL SOURCE CLONE IS " + OriginalSourceClone, this);
             OriginalSourceClone.OriginalSourceClone = OriginalSourceClone;
-            if (LyumaAv3Emulator.emulatorInstance != null && !LyumaAv3Emulator.emulatorInstance.DisableMirrorClone) {
-                OriginalSourceClone.IsMirrorClone = true;
-                MirrorClone = GameObject.Instantiate(cloned).GetComponent<LyumaAv3Runtime>();
-                MirrorClone.GetComponent<Animator>().avatar = null;
-                OriginalSourceClone.IsMirrorClone = false;
-                GameObject o;
-                (o = MirrorClone.gameObject).SetActive(true);
-                o.name = gameObject.name + " (MirrorReflection)";
-                allMirrorTransforms = MirrorClone.gameObject.GetComponentsInChildren<Transform>(true);
-                foreach (Component component in MirrorClone.gameObject.GetComponentsInChildren<Component>(true)) {
-                    if (MirrorCloneComponentBlacklist.Contains(component.GetType())) {
-                        UnityEngine.Object.Destroy(component);
-                    }
-                }
-            }
-            if (LyumaAv3Emulator.emulatorInstance != null && !LyumaAv3Emulator.emulatorInstance.DisableShadowClone) {
-                OriginalSourceClone.IsShadowClone = true;
-                ShadowClone = GameObject.Instantiate(cloned).GetComponent<LyumaAv3Runtime>();
-                ShadowClone.GetComponent<Animator>().avatar = null;
-                OriginalSourceClone.IsShadowClone = false;
-                GameObject o;
-                (o = ShadowClone.gameObject).SetActive(true);
-                o.name = gameObject.name + " (ShadowClone)";
-                allShadowTransforms = ShadowClone.gameObject.GetComponentsInChildren<Transform>(true);
-                foreach (Component component in ShadowClone.gameObject.GetComponentsInChildren<Component>(true)) {
-                    if (ShadowCloneComponentBlacklist.Contains(component.GetType())) {
-                        UnityEngine.Object.Destroy(component);
-                        continue;
-                    }
-                    if (component.GetType() == typeof(SkinnedMeshRenderer) || component.GetType() == typeof(MeshRenderer)) {
-                        Renderer renderer = component as Renderer;
-                        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly; // ShadowCastingMode.TwoSided isn't accounted for and does not work locally
-                    }
-                }
-            }
         }
         foreach (var smr in gameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true)) {
             smr.updateWhenOffscreen = (AvatarSyncSource == this || IsMirrorClone || IsShadowClone);
-        }
-        if(!LyumaAv3Emulator.emulatorInstance.DisableShadowClone && !IsShadowClone && !IsMirrorClone) {
-            foreach (Renderer renderer in gameObject.GetComponentsInChildren<Renderer>(true)) {
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; // ShadowCastingMode.TwoSided isn't accounted for and does not work locally
-            }
         }
         int desiredLayer = 9;
         if (AvatarSyncSource == this) {
@@ -825,6 +790,50 @@ public class LyumaAv3Runtime : MonoBehaviour
         }
         if (AvatarSyncSource == this) {
             CreateAv3MenuComponent();
+        }
+    }
+
+    public void CreateMirrorClone() {
+        if (emulator != null && !emulator.DisableMirrorClone && AvatarSyncSource == this) {
+            OriginalSourceClone.IsMirrorClone = true;
+            MirrorClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
+            MirrorClone.GetComponent<Animator>().avatar = null;
+            OriginalSourceClone.IsMirrorClone = false;
+            GameObject o;
+            (o = MirrorClone.gameObject).SetActive(true);
+            o.name = gameObject.name + " (MirrorReflection)";
+            allMirrorTransforms = MirrorClone.gameObject.GetComponentsInChildren<Transform>(true);
+            foreach (Component component in MirrorClone.gameObject.GetComponentsInChildren<Component>(true)) {
+                if (MirrorCloneComponentBlacklist.Contains(component.GetType())) {
+                    UnityEngine.Object.Destroy(component);
+                }
+            }
+        }
+    }
+
+    public void CreateShadowClone() {
+        if (emulator != null && !emulator.DisableShadowClone && AvatarSyncSource == this) {
+            OriginalSourceClone.IsShadowClone = true;
+            ShadowClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
+            ShadowClone.GetComponent<Animator>().avatar = null;
+            OriginalSourceClone.IsShadowClone = false;
+            GameObject o;
+            (o = ShadowClone.gameObject).SetActive(true);
+            o.name = gameObject.name + " (ShadowClone)";
+            allShadowTransforms = ShadowClone.gameObject.GetComponentsInChildren<Transform>(true);
+            foreach (Component component in ShadowClone.gameObject.GetComponentsInChildren<Component>(true)) {
+                if (ShadowCloneComponentBlacklist.Contains(component.GetType())) {
+                    UnityEngine.Object.Destroy(component);
+                    continue;
+                }
+                if (component.GetType() == typeof(SkinnedMeshRenderer) || component.GetType() == typeof(MeshRenderer)) {
+                    Renderer renderer = component as Renderer;
+                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly; // ShadowCastingMode.TwoSided isn't accounted for and does not work locally
+                }
+            }
+            foreach (Renderer renderer in gameObject.GetComponentsInChildren<Renderer>(true)) {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; // ShadowCastingMode.TwoSided isn't accounted for and does not work locally
+            }
         }
     }
 
@@ -1072,7 +1081,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
             }
             if (ac == null) {
-                // i is not incremented.
+                // i was incremented, but one of the playableMixer inputs is left unconnected.
                 continue;
             }
             AnimatorControllerPlayable humanAnimatorPlayable = AnimatorControllerPlayable.Create(playableGraph, ac);
@@ -1232,7 +1241,6 @@ public class LyumaAv3Runtime : MonoBehaviour
         Debug.Log(this.gameObject.name + " : Playing.");
     }
 
-
     void CreateAv3MenuComponent() {
         System.Type gestureManagerMenu = System.Type.GetType("GestureManagerAv3Menu");
         if (gestureManagerMenu != null) {
@@ -1262,12 +1270,16 @@ public class LyumaAv3Runtime : MonoBehaviour
     private bool isResettingHold;
     private bool isResettingSel;
     void LateUpdate() {
-        if(this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
+        if (IsMirrorClone || IsShadowClone) {
+            // Experimental. Attempt to reproduce the 1-frame desync in some cases between normal and mirror copy.
+            NormalUpdate();
+        }
+        if(animator != null && this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
             if (MirrorClone != null) {
                 MirrorClone.gameObject.SetActive(true);
                 MirrorClone.transform.localRotation = transform.localRotation;
                 MirrorClone.transform.localScale = transform.localScale;
-                MirrorClone.transform.position = transform.position + (ViewBothRealAndMirror && DebugOffsetMirrorClone ? new Vector3(0.0f, 1.3f * avadesc.ViewPosition.y, 0.0f) : Vector3.zero);
+                MirrorClone.transform.position = transform.position + (DebugOffsetMirrorClone ? new Vector3(0.0f, 1.3f * avadesc.ViewPosition.y, 0.0f) : Vector3.zero);
             }
             if (ShadowClone != null) {
                 ShadowClone.gameObject.SetActive(true);
@@ -1278,9 +1290,16 @@ public class LyumaAv3Runtime : MonoBehaviour
             foreach (Transform[] allXTransforms in new Transform[][]{allMirrorTransforms, allShadowTransforms}) {
                 if (allXTransforms != null) {
                     Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
-                    for(int i = 0; i < allTransforms.Length; i++) {
-                        if (allTransforms[i] == this.transform) {
+                    for(int i = 0; i < allTransforms.Length && i < allXTransforms.Length; i++) {
+                        if (allXTransforms[i] == null || allTransforms[i] == this.transform) {
                             continue;
+                        }
+                        MeshRenderer mr = allTransforms[i].GetComponent<MeshRenderer>();
+                        MeshRenderer xmr = allXTransforms[i].GetComponent<MeshRenderer>();
+                        if (mr != null && xmr != null) {
+                            for (int mri = 0; mri < mr.sharedMaterials.Length && mri < xmr.sharedMaterials.Length; mri++) {
+                                xmr.sharedMaterials[mri] = mr.sharedMaterials[mri];
+                            }
                         }
                         allXTransforms[i].localPosition = allTransforms[i].localPosition;
                         allXTransforms[i].localRotation = allTransforms[i].localRotation;
@@ -1298,31 +1317,55 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
         }
     }
+
+    void FixedUpdate() {
+        if (Jump && !WasJump && Grounded) {
+            JumpingVelocity = new Vector3(0.0f, JumpPower, 0.0f);
+            JumpingHeight += JumpingVelocity;
+            Grounded = false;
+        }
+        WasJump = Jump;
+        if (JumpingHeight != Vector3.zero) {
+            JumpingHeight += JumpingVelocity;
+            JumpingVelocity += Physics.gravity * Time.fixedDeltaTime;
+            if (JumpingHeight.y <= 0.0f) {
+                JumpingHeight = Vector3.zero;
+                JumpingVelocity = Vector3.zero;
+                Grounded = true;
+                Jump = false;
+                WasJump = false;
+            }
+            Velocity.y = JumpingVelocity.y;
+ 
+        }
+    }
+
+    void Update() {
+        if (!IsMirrorClone && !IsShadowClone) {
+            NormalUpdate();
+        }
+    }
+
     // Update is called once per frame
-    void Update()
+    void NormalUpdate()
     {
         if (lastLegacyMenuGUI != legacyMenuGUI && AvatarSyncSource == this) {
-            av3MenuComponent.useLegacyMenu = legacyMenuGUI;
-            // UnityEngine.Object.Destroy(av3MenuComponent);
-            // CreateAv3MenuComponent();
-        }
-        if(this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
-            Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
-            if (head != null) {
-                head.localScale = EnableHeadScaling ? new Vector3(0.0001f, 0.0001f, 0.0001f) : new Vector3(1.0f, 1.0f, 1.0f); // head bone is set to 0.0001 locally (not multiplied
+            lastLegacyMenuGUI = legacyMenuGUI;
+            foreach (var av3MenuComponent in GetComponents<LyumaAv3Menu>()) {
+                av3MenuComponent.useLegacyMenu = legacyMenuGUI;
             }
         }
         if (isResettingSel) {
             isResettingSel = false;
-            if (updateSelectionDelegate != null) {
+            if (updateSelectionDelegate != null && AvatarSyncSource == this) {
                 updateSelectionDelegate(this.gameObject);
             }
         }
         if (isResettingHold && (!ResetAvatar || !ResetAndHold)) {
             ResetAndHold = ResetAvatar = false;
             isResettingSel = true;
-            if (updateSelectionDelegate != null) {
-                updateSelectionDelegate(null);
+            if (updateSelectionDelegate != null && AvatarSyncSource == this) {
+                updateSelectionDelegate(this.emulator != null ? this.emulator.gameObject : null);
             }
         }
         if (ResetAvatar && ResetAndHold) {
@@ -1333,11 +1376,20 @@ public class LyumaAv3Runtime : MonoBehaviour
             isResettingHold = true;
         }
         if (isResetting && !ResetAndHold) {
-            InitializeAnimator();
+            if (attachedAnimators == null) {
+                if (AvatarSyncSource == this) {
+                    AvatarSyncSource = null;
+                }
+                Awake();
+                return;
+            } else {
+                InitializeAnimator();
+            }
             isResetting = false;
             isResettingHold = false;
         }
-        if (PrevAnimatorToDebug != (char)(int)AnimatorToDebug || ResetAvatar) {
+
+        if (PrevAnimatorToDebug != (char)(int)AnimatorToDebug || ResetAvatar || attachedAnimators == null) {
             actionIndex = fxIndex = gestureIndex = additiveIndex = sittingIndex = ikposeIndex = tposeIndex = -1;
             altActionIndex = altFXIndex = altGestureIndex = altAdditiveIndex = -1;
             // animator.runtimeAnimatorController = null;
@@ -1353,13 +1405,45 @@ public class LyumaAv3Runtime : MonoBehaviour
             animator.StopPlayback();
             GameObject.DestroyImmediate(animator);
             // animator.runtimeAnimatorController = EmptyController;
-            if (updateSelectionDelegate != null) {
-                updateSelectionDelegate(null);
+            if (updateSelectionDelegate != null && AvatarSyncSource == this) {
+                updateSelectionDelegate(this.emulator != null ? this.emulator.gameObject : null);
             }
             isResetting = true;
             isResettingSel = true;
             return;
         }
+        if(this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
+            Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
+            if (head != null) {
+                head.localScale = EnableHeadScaling ? new Vector3(0.0001f, 0.0001f, 0.0001f) : new Vector3(1.0f, 1.0f, 1.0f); // head bone is set to 0.0001 locally (not multiplied
+            }
+        }
+        if (emulator != null) {
+            if (LastViewMirrorReflection != ViewMirrorReflection) {
+                emulator.ViewMirrorReflection = ViewMirrorReflection;
+            } else {
+                ViewMirrorReflection = emulator.ViewMirrorReflection;
+            }
+            LastViewMirrorReflection = ViewMirrorReflection;
+            if (LastViewBothRealAndMirror != ViewBothRealAndMirror) {
+                emulator.ViewBothRealAndMirror = ViewBothRealAndMirror;
+            } else {
+                ViewBothRealAndMirror = emulator.ViewBothRealAndMirror;
+            }
+            LastViewBothRealAndMirror = ViewBothRealAndMirror;
+            var osc = emulator.GetComponent<LyumaAv3Osc>();
+            bool lastOSC = (osc.avatarDescriptor == avadesc && osc.enabled && osc.openSocket);
+            if (lastOSC && !EnableAvatarOSC) {
+                osc.openSocket = false;
+            }
+            if (!lastOSC && EnableAvatarOSC) {
+                osc.openSocket = true;
+                osc.avatarDescriptor = avadesc;
+                osc.enabled = true;
+                updateSelectionDelegate(osc.gameObject);
+            }
+        }
+
         if (CreateNonLocalClone) {
             CreateNonLocalClone = false;
             GameObject go = GameObject.Instantiate(OriginalSourceClone.gameObject);
@@ -1394,6 +1478,10 @@ public class LyumaAv3Runtime : MonoBehaviour
                     Bools[i].value = AvatarSyncSource.Bools[i].value;
                 }
             }
+            // Todo: Simulate IK sync of open gesture parameter.
+        }
+        if (AvatarSyncSource != this) {
+            // Simulate more continuous "IK sync" of these parameters.
             VisemeInt = VisemeIdx = AvatarSyncSource.VisemeInt;
             Viseme = (VisemeIndex)VisemeInt;
             GestureLeft = AvatarSyncSource.GestureLeft;
@@ -1431,16 +1519,16 @@ public class LyumaAv3Runtime : MonoBehaviour
                 Ints[i].value = ClampByte(Ints[i].value);
             }
         }
-        if (Seated != PrevSeated && sittingIndex >= 0)
+        if (Seated != PrevSeated && sittingIndex >= 0 && playableBlendingStates[sittingIndex] != null)
         {
             playableBlendingStates[sittingIndex].StartBlend(playableMixer.GetInputWeight(sittingIndex + 1), Seated ? 1f : 0f, 0.25f);
             PrevSeated = Seated;
         }
-        if (TPoseCalibration != PrevTPoseCalibration) {
+        if (TPoseCalibration != PrevTPoseCalibration && tposeIndex >= 0 && playableBlendingStates[tposeIndex] != null) {
             playableBlendingStates[tposeIndex].StartBlend(playableMixer.GetInputWeight(tposeIndex + 1), TPoseCalibration ? 1f : 0f, 0.0f);
             PrevTPoseCalibration = TPoseCalibration;
         }
-        if (IKPoseCalibration != PrevIKPoseCalibration) {
+        if (IKPoseCalibration != PrevIKPoseCalibration && ikposeIndex >= 0 && playableBlendingStates[ikposeIndex] != null) {
             playableBlendingStates[ikposeIndex].StartBlend(playableMixer.GetInputWeight(ikposeIndex + 1), IKPoseCalibration ? 1f : 0f, 0.0f);
             PrevIKPoseCalibration = IKPoseCalibration;
         }
@@ -1451,6 +1539,24 @@ public class LyumaAv3Runtime : MonoBehaviour
         if ((int)Viseme != VisemeInt) {
             VisemeInt = (int)Viseme;
             VisemeIdx = VisemeInt;
+        }
+        if (GestureLeftWeight != OldGestureLeftWeight) {
+            OldGestureLeftWeight = GestureLeftWeight;
+            if (GestureLeftWeight < 0.01f) {
+                GestureLeftIdx = 0;
+            }
+            if (GestureLeftWeight > 0.01f && (GestureLeftIdx == 0 || GestureLeftWeight < 0.99f)) {
+                GestureLeftIdx = 1;
+            } 
+        }
+        if (GestureRightWeight != OldGestureRightWeight) {
+            OldGestureRightWeight = GestureRightWeight;
+            if (GestureRightWeight < 0.01f) {
+                GestureRightIdx = 0;
+            }
+            if (GestureRightWeight > 0.01f && (GestureRightIdx == 0 || GestureRightWeight < 0.99f)) {
+                GestureRightIdx = 1;
+            } 
         }
         if (GestureLeftIdx != GestureLeftIdxInt) {
             GestureLeft = (GestureIndex)GestureLeftIdx;
@@ -1496,6 +1602,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         foreach (AnimatorControllerPlayable playable in playables)
         {
             if (!playable.IsValid()) {
+                whichcontroller++;
                 continue;
             }
             // Debug.Log("Index " + whichcontroller + " len " + playables.Count);
@@ -1547,6 +1654,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         foreach (AnimatorControllerPlayable playable in playables)
         {
             if (!playable.IsValid()) {
+                whichcontroller++;
                 continue;
             }
             // Debug.Log("Index " + whichcontroller + " len " + playables.Count);
@@ -1749,6 +1857,9 @@ public class LyumaAv3Runtime : MonoBehaviour
         }
         for (int i = 0; i < playableBlendingStates.Count; i++) {
             var pbs = playableBlendingStates[i];
+            if (pbs == null) {
+                continue;
+            }
             if (pbs.blending) {
                 float newWeight = pbs.UpdateBlending();
                 playableMixer.SetInputWeight(i + 1, newWeight);
@@ -1778,6 +1889,178 @@ public class LyumaAv3Runtime : MonoBehaviour
             for (int i = 0; i < visemeBlendShapeIdxs.Length; i++) {
                 if (visemeBlendShapeIdxs[i] != -1) {
                     avadesc.VisemeSkinnedMesh.SetBlendShapeWeight(visemeBlendShapeIdxs[i], (i == VisemeIdx ? 100.0f : 0.0f));
+                }
+            }
+        }
+    }
+
+    float getObjectFloat(object o) {
+        switch (o) {
+            // case bool b:
+            //     return b ? 1.0f : 0.0f;
+            // case int i:
+            //     return (float)i;
+            // case long l:
+            //     return (float)l;
+            case float f:
+                return f;
+            // case double d:
+            //     return (float)d;
+        }
+        return 0.0f;
+    }
+    int getObjectInt(object o) {
+        switch (o) {
+            // case bool b:
+            //     return b ? 1 : 0;
+            case int i:
+                return i;
+            // case long l:
+            //     return (int)l;
+            // case float f:
+            //     return (int)f;
+            // case double d:
+            //     return (int)d;
+        }
+        return 0;
+    }
+    bool isObjectTrue(object o) {
+        switch (o) {
+            case bool b:
+                return b;
+            case int i:
+                return i == 1;
+            // case long l:
+            //     return l == 1;
+            // case float f:
+            //     return f == 1.0f;
+            // case double d:
+            //     return d == 1.0;
+        }
+        return false;
+    }
+
+    public void GetOSCDataInto(List<A3ESimpleOSC.OSCMessage> messages) {
+        foreach (var b in Bools) {
+            messages.Add(new A3ESimpleOSC.OSCMessage {
+                arguments = new object[1] {(object)(int)((bool)b.value ? 1 : 0)},
+                path = "/avatar/parameters/" + b.name,
+                time = new Vector2Int(-1,-1),
+            });
+        }
+        foreach (var i in Ints) {
+            messages.Add(new A3ESimpleOSC.OSCMessage {
+                arguments = new object[1] {(object)(int)i.value},
+                path = "/avatar/parameters/" + i.name,
+                time = new Vector2Int(-1,-1),
+            });
+        }
+        foreach (var f in Floats) {
+            messages.Add(new A3ESimpleOSC.OSCMessage {
+                arguments = new object[1] {(object)(float)f.value},
+                path = "/avatar/parameters/" + f.name,
+                time = new Vector2Int(-1,-1),
+            });
+        }
+    }
+    public void HandleOSCMessage(A3ESimpleOSC.OSCMessage msg) {
+        string msgPath = msg.path;
+        object[] arguments = msg.arguments;
+        if (AvatarSyncSource != this || !IsLocal || IsMirrorClone || IsShadowClone) {
+            return;
+        }
+        float argFloat = getObjectFloat(arguments[0]);
+        int argInt = getObjectInt(arguments[0]);
+        bool argBool = isObjectTrue(arguments[0]);
+        if (msgPath.StartsWith("/input/")) {
+
+            string ParamName = msgPath.Split(new char[]{'/'}, 3)[2];
+            switch (ParamName) {
+            case "Vertical":
+                Velocity.z = (3.0f + RunSpeed) * argFloat;
+                break;
+            case "Horizontal":
+                Velocity.x = (3.0f + RunSpeed) * (float)arguments[0];
+                break;
+            case "LookHorizontal":
+                AngularY = argFloat;
+                break;
+            case "UseAxisRight":
+            case "GrabAxisRight":
+            case "MoveHoldFB":
+            case "SpinHoldCwCcw":
+            case "SpinHoldUD":
+            case "SpinHoldLR":
+                break;
+            case "MoveForward":
+                Velocity.z = argBool ? 5.0f : 0.0f;
+                break;
+            case "MoveBackward":
+                Velocity.z = argBool ? -5.0f : 0.0f;
+                break;
+            case "MoveLeft":
+                Velocity.x = argBool ? -5.0f : 0.0f;
+                break;
+            case "MoveRight":
+                Velocity.x = argBool ? 5.0f : 0.0f;
+                break;
+            case "LookLeft":
+                AngularY = argBool ? -1.0f : 0.0f;
+                break;
+            case "LookRight":
+                AngularY = argBool ? 1.0f : 0.0f;
+                break;
+            case "Jump":
+                Jump = argBool;
+                break;
+            case "Run":
+                RunSpeed = argBool ? 3.0f : 0.0f;
+                break;
+            case "ComfortLeft":
+            case "ComfortRight":
+            case "DropRight":
+            case "UseRight":
+            case "GrabRight":
+            case "DropLeft":
+            case "UseLeft":
+            case "GrabLeft":
+            case "PanicButton":
+            case "QuickMenuToggleLeft":
+            case "QuickMenuToggleRight":
+                break;
+            case "Voice":
+                if (argBool && !MuteTogglerOn) {
+                    MuteSelf = !MuteSelf;
+                }
+                MuteTogglerOn = argBool;
+                break;
+            default:
+                Debug.LogWarning("Unrecognized OSC input command " + msgPath);
+                break;
+            }
+        }
+        if (msgPath.StartsWith("/avatar/parameters/")) {
+            string ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
+            // TODO: I do not know if VRChat supports OSC bool.
+            if (arguments.Length > 0 && arguments[0].GetType() == typeof(bool)) {
+                int idx;
+                if (BoolToIndex.TryGetValue(ParamName, out idx)) {
+                    Bools[idx].value = (bool)(arguments[0]);
+                }
+            }
+            if (arguments.Length > 0 && arguments[0].GetType() == typeof(int)) {
+                int idx;
+                if (BoolToIndex.TryGetValue(ParamName, out idx)) {
+                    Bools[idx].value = ((int)(arguments[0])) != 0;
+                }
+                if (IntToIndex.TryGetValue(ParamName, out idx)) {
+                    Ints[idx].value = (int)(arguments[0]);
+                }
+            }
+            if (arguments.Length > 0 && arguments[0].GetType() == typeof(float)) {
+                int idx;
+                if (FloatToIndex.TryGetValue(ParamName, out idx)) {
+                    Floats[idx].value = (float)(arguments[0]);
                 }
             }
         }

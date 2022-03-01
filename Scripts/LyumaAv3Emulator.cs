@@ -34,8 +34,8 @@ public class LyumaAv3Emulator : MonoBehaviour
     public int CreateNonLocalCloneCount;
     [Tooltip("Simulate behavior with sub-animator parameter drivers prior to the 2021.1.1 patch (19 Jan 2021)")]
     public bool legacySubAnimatorParameterDriverMode;
-    public bool legacyMenuGUI;
-    private bool lastLegacyMenuGUI;
+    public bool legacyMenuGUI = true;
+    private bool lastLegacyMenuGUI = true;
     public bool DisableMirrorClone;
     public bool DisableShadowClone;
     private bool lastHead;
@@ -50,16 +50,10 @@ public class LyumaAv3Emulator : MonoBehaviour
 
     private void Awake()
     {
-	if (CreateNonLocalCloneCount == 0) {
-        }
         Animator animator = gameObject.GetOrAddComponent<Animator>();
         animator.enabled = false;
         animator.runtimeAnimatorController = EmptyController;
         emulatorInstance = this;
-    }
-
-    private void Start()
-    {
         VRCAvatarDescriptor[] avatars = FindObjectsOfType<VRCAvatarDescriptor>();
         Debug.Log("drv len "+avatars.Length);
         foreach (var avadesc in avatars)
@@ -67,8 +61,19 @@ public class LyumaAv3Emulator : MonoBehaviour
             // Creates the playable director, and initializes animator.
             var runtime = avadesc.gameObject.GetOrAddComponent<LyumaAv3Runtime>();
             runtime.emulator = this;
+            runtime.VRMode = DefaultToVR;
+            runtime.TrackingType = DefaultTrackingType;
+            runtime.InStation = DefaultTestInStation;
+            runtime.AnimatorToDebug = DefaultAnimatorToDebug;
+            runtime.EnableHeadScaling = EnableHeadScaling;
             runtimes.Add(runtime);
+            runtime.CreateShadowClone();
+            runtime.CreateMirrorClone();
         }
+    }
+
+    private void Start()
+    {
     }
     private void OnDisable() {
         foreach (var runtime in runtimes) {

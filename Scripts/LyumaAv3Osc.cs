@@ -21,59 +21,108 @@ using UnityEngine;
 using System.Collections.Generic;
 
 public class LyumaAv3Osc : MonoBehaviour {
+    public delegate Rect GetEditorViewport();
+    public static GetEditorViewport GetEditorViewportDelegate;
+
     public delegate void DrawDebugRect(Rect pos, Color col, Color outlineCol);
     public static DrawDebugRect DrawDebugRectDelegate;
-    public delegate void DrawDebugText(ref Vector3 pos, Color backgroundCol, Color outlineCol, Color textCol, string str);
+    public delegate void DrawDebugText(Rect contentRect, Color backgroundCol, Color outlineCol, Color textCol, string str);
     public static DrawDebugText DrawDebugTextDelegate;
 
-    SimpleOSCReceiver receiver;
-    public bool enabled = false;
-    public int port = 9000;
-    public bool alwaysShowDebug;
-    public Dictionary<string, SimpleOSCReceiver.OSCMessage> knownPaths = new Dictionary<string, SimpleOSCReceiver.OSCMessage>();
-    private List<SimpleOSCReceiver.OSCMessage> messages = new List<SimpleOSCReceiver.OSCMessage>();
+    private LyumaAv3Emulator emulator;
+    A3ESimpleOSC receiver;
+    [Header("OSC Connection")]
+    public bool openSocket = false;
+    byte[] oscBuffer = new byte[65535];
+    public int udpPort = 9000;
+    public string outgoingUdpIp = "127.0.0.1";
+    public int outgoingUdpPort = 9001;
+    [SerializeField] private string commandLine = "";
+    private int oldPort = 9000;
+    [Header("OSC Status")]
+    [SerializeField] private int localPort;
+    [SerializeField] private string localIp;
+    [SerializeField] private int numberOfOSCMessages;
+    [Header("Target Avatar")]
+    public VRC.SDK3.Avatars.Components.VRCAvatarDescriptor avatarDescriptor;
+    public bool forwardToAllAvatarsInScene;
+    [Header("Debug options")]
+    public bool showOSCWithSceneGizmos = true;
+    public bool sendLoopbackOSCReplies;
+    public bool debugPrintReceivedMessages;
+    public Dictionary<string, A3ESimpleOSC.OSCMessage> knownPaths = new Dictionary<string, A3ESimpleOSC.OSCMessage>();
+    private List<A3ESimpleOSC.OSCMessage> messages = new List<A3ESimpleOSC.OSCMessage>();
 
-    public void Update() {
-        if (enabled && receiver == null) {
-            receiver = new SimpleOSCReceiver();
-            receiver.OpenClient(port);
+    public void Start() {
+        LyumaAv3Emulator[] emulators = FindObjectsOfType<LyumaAv3Emulator>();
+        if (emulators == null || emulators.Length == 0) {
+            return;
         }
-        if (!enabled && receiver != null) {
+        emulator = emulators[0];
+        if (emulator != null && emulator.runtimes != null) {
+            if (emulator.runtimes.Count > 0) {
+                avatarDescriptor = emulator.runtimes[0].GetComponent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>();
+            }
+        }
+    }
+    public void Update() {
+        LyumaAv3Runtime runtime = avatarDescriptor != null ?avatarDescriptor.GetComponent<LyumaAv3Runtime>() : null;
+        commandLine = "--osc=" + udpPort + ":" + outgoingUdpIp + ":" + outgoingUdpPort;
+        if (openSocket && receiver != null && oldPort != udpPort) {
             receiver.StopClient();
+        }
+        if (openSocket && receiver == null) {
+            oldPort = udpPort;
+            receiver = new A3ESimpleOSC();
+            var localEndpoint = receiver.OpenClient(udpPort);
+            localIp = localEndpoint.Address.ToString();
+            localPort = localEndpoint.Port;
+            if (localEndpoint.Port != udpPort && udpPort != 0) {
+                openSocket = false;
+            }
+        }
+        if (!openSocket && receiver != null) {
+            receiver.StopClient();
+            receiver = null;
         }
         messages.Clear();
         if (receiver != null) {
             receiver.GetIncomingOSC(messages);
-            foreach (var msg in messages) {
-                Debug.Log("Got OSC message: " + msg.path + " args " + msg.typeTag);
-                knownPaths[msg.path] = msg;
-                foreach (var runtime in LyumaAv3Emulator.emulatorInstance.runtimes) {
-                    if (msg.path.StartsWith("/avatar/parameters/")) {
-                        string ParamName = msg.path.Split(new char[]{'/'}, 4)[3];
-                        // TODO: I do not know if VRChat supports OSC bool.
-                        if (msg.arguments.Length > 0 && msg.arguments[0].GetType() == typeof(bool)) {
-                            int idx;
-                            if (runtime.BoolToIndex.TryGetValue(ParamName, out idx)) {
-                                runtime.Bools[idx].value = (bool)(msg.arguments[0]);
-                            }
-                        }
-                        if (msg.arguments.Length > 0 && msg.arguments[0].GetType() == typeof(int)) {
-                            int idx;
-                            if (runtime.BoolToIndex.TryGetValue(ParamName, out idx)) {
-                                runtime.Bools[idx].value = ((int)(msg.arguments[0])) != 0;
-                            }
-                            if (runtime.IntToIndex.TryGetValue(ParamName, out idx)) {
-                                runtime.Ints[idx].value = (int)(msg.arguments[0]);
-                            }
-                        }
-                        if (msg.arguments.Length > 0 && msg.arguments[0].GetType() == typeof(float)) {
-                            int idx;
-                            if (runtime.FloatToIndex.TryGetValue(ParamName, out idx)) {
-                                runtime.Floats[idx].value = (float)(msg.arguments[0]);
-                            }
-                        }
+            if (sendLoopbackOSCReplies && messages.Count > 0) {
+                receiver.SetUnconnectedEndpoint(messages[0].sender);
+                var tt = new A3ESimpleOSC.TimeTag();
+                for (int i = 0; i < messages.Count; i++) {
+                    if (messages[i].bundleId != 0) {
+                        tt = messages[i].time;
+                        break;
                     }
                 }
+                receiver.SendOSCBundle(messages, tt);
+            }
+            foreach (var msg in messages) {
+                numberOfOSCMessages += 1;
+                if (debugPrintReceivedMessages) {
+                    Debug.Log("Got OSC message: " + msg.ToString());
+                }
+                knownPaths[msg.path] = msg;
+                if (forwardToAllAvatarsInScene) {
+                    if (emulator == null || emulator.runtimes == null) {
+                        continue;
+                    }
+                    foreach (var instRuntime in emulator.runtimes) {
+                        instRuntime.HandleOSCMessage(msg);
+                    }
+                } else if (runtime != null) {
+                    runtime.HandleOSCMessage(msg);
+                }
+            }
+        }
+        if (runtime != null && receiver != null) {
+            messages.Clear();
+            runtime.GetOSCDataInto(messages);
+            if (messages.Count > 0) {
+                receiver.SetUnconnectedEndpoint(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(outgoingUdpIp), outgoingUdpPort));
+                receiver.SendOSCBundle(messages, new A3ESimpleOSC.TimeTag { secs=-1, nsecs=-1 }, oscBuffer);
             }
         }
         if (!enabled && receiver != null) {
@@ -98,47 +147,147 @@ public class LyumaAv3Osc : MonoBehaviour {
         return new Rect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
     }
     void OnDrawGizmos() {
-        if (alwaysShowDebug) {
+        if (showOSCWithSceneGizmos) {
             OnDrawGizmosSelected();
         }
     }
+    static Color BACKGROUND_COLOR = new Color(0.8f,0.6f,0.7f,0.3f);
+    static Color OUTLINE_COLOR = new Color(0.8f,0.3f,1.0f,0.7f);
+    static Color TEXT_COLOR = Color.black; //new Color(0.2f,1.0f,0.5f,1.0f);
+    static float BG_ALPHA = 0.5f;
+    void RenderBoxType(Rect r, Vector2 v2) {
+        Rect r2 = (Rect)r;
+        float f = v2.x;
+        float g = v2.y;
+        float bgAlpha = BG_ALPHA;
+        float widOffset = r.width * Mathf.Clamp01(v2.x * 0.5f + 0.5f);
+        float heiOffset = r.height * Mathf.Clamp01(0.5f - v2.y * 0.5f);
+        r.y += heiOffset;
+        r.height -= heiOffset;
+        DrawDebugRectDelegate(r, new Color(1.0f,1.0f,1.0f,bgAlpha), new Color(1.0f,1.0f,1.0f,bgAlpha));
+        r2.width = widOffset;
+        DrawDebugRectDelegate(r2, new Color(1.0f,1.0f,1.0f,bgAlpha), new Color(1.0f,1.0f,1.0f,bgAlpha));
+    }
+    void RenderBoxType(Rect r, float f2) {
+        float bgAlpha = BG_ALPHA;
+        float widOffset = r.width * Mathf.Clamp01(0.5f - f2 * 0.5f);
+        r.width -= widOffset;
+        DrawDebugRectDelegate(r, new Color(1.0f,1.0f,1.0f,bgAlpha), new Color(1.0f,1.0f,1.0f,bgAlpha));
+    }
+    void RenderBoxType(Rect r, int i2) {
+        float bgAlpha = BG_ALPHA * (i2 == 0 ? 0.3f : 1.0f);
+        float heiOffset = r.height * Mathf.Clamp01((255 - i2) / 255.0f);
+        r.y += heiOffset;
+        r.height -= heiOffset;
+        DrawDebugRectDelegate(r, new Color(1.0f,1.0f,1.0f,bgAlpha), new Color(1.0f,1.0f,1.0f,bgAlpha));
+    }
+    void RenderBoxType(Rect r, bool b2) {
+        float bgAlpha = BG_ALPHA;
+        if (b2) {
+            DrawDebugRectDelegate(r, new Color(1.0f,1.0f,1.0f,bgAlpha), new Color(1.0f,1.0f,1.0f,bgAlpha));
+        }
+    }
+
+    
+    HashSet<string> usedPartners = new HashSet<string>();
+    Dictionary<string, string> replacePairs = new Dictionary<string, string> {
+        {"Vertical", "Horizontal"},
+        {"Z", "X"},
+        {"Y", "X"},
+        {"z", "x"},
+        {"y", "x"},
+    };
     void OnDrawGizmosSelected() {
         Camera camera = Camera.current;
         Matrix4x4 origMatrix = Gizmos.matrix;
         Gizmos.matrix = camera.projectionMatrix * camera.transform.localToWorldMatrix;
-        Vector3 pos = new Vector3(5,5,0);
-        float maxy = 0;
+        Rect pos = new Rect(5,5,190,190);
+        Rect viewportSize = GetEditorViewportDelegate();
+        usedPartners.Clear();
+        // float maxy = 0;
+        int numBoxes = 0;
         foreach (var pathPair in knownPaths) {
-            var msg = pathPair.Value;
-            string str = " " + msg.path + "  \n\n";
-            int idx = 0;
-            foreach (var arg in msg.arguments) {
-                str += " [Arg" + idx + msg.typeTag.Substring(idx, 1) + "] = " + arg + "\n";
+            if (usedPartners.Contains(pathPair.Key)) {
+                // Already got output
+                continue;
             }
-            float bgAlpha = 0.3f;
-            float r1 = 0.8f, r2 = 1.0f, b1=0.7f, b2 = 0.3f;
-            if (msg.arguments.Length >= 1 && msg.arguments[0].GetType() == typeof(float)) {
-                bgAlpha += (float)(msg.arguments[0]) * 0.2f;
-            } else if (msg.arguments.Length >= 1 && msg.arguments[0].GetType() == typeof(int)) {
-                bgAlpha += (int)(msg.arguments[0]) > 0 ? 0.6f : 0.0f;
-                b1 = 0.8f;
-                b2 = 1.0f;
-                r1=0.7f;
-                r2 = 0.3f;
-            } else {
-                b1 = r1;
-                b2 = r2;
+            A3ESimpleOSC.OSCMessage msg;
+            foreach (var replacePair in replacePairs) {
+                if (pathPair.Key.EndsWith(replacePair.Key)) {
+                    if (pathPair.Value.arguments.Length >= 1 && pathPair.Value.arguments[0].GetType() == typeof(float)) {
+                        string key = pathPair.Key.Substring(0, pathPair.Key.Length - replacePair.Key.Length) + replacePair.Value;
+                        if (knownPaths.TryGetValue(key, out msg) && msg.arguments.Length >= 1 && msg.arguments[0].GetType() == typeof(float)) {
+                            usedPartners.Add(key);
+                            break;
+                        }
+                    }
+                }
             }
-            // Rect fullRect = new Rect(pos.x, pos.y, 100, 100);
-            float oldy = pos.y;
-            DrawDebugTextDelegate(ref pos, new Color(r1,0.6f,b1,bgAlpha), new Color(r2,0.3f,b2,0.7f), new Color(1.0f,1.0f,1.0f,1.0f), str);
-            maxy = pos.y > maxy ? pos.y : maxy;
-            if (pos.x == 0) {
-                pos.y = maxy + 5;
-            } else {
-                pos.y = oldy;
+            numBoxes++;
+            pos.x += pos.width + 10;
+            if (pos.x + pos.width > viewportSize.width) {
+                pos.x = 5;
+                pos.y += pos.height + 10;
             }
-            pos.x += 5;
+        }
+        if (pos.y + pos.height > viewportSize.height) {
+            pos = new Rect(5,5,190,pos.height * viewportSize.height / (pos.y + pos.height + 100));
+        } else {
+            pos = new Rect(5,5,190,190);
+        }
+        foreach (var pathPair in knownPaths) {
+            A3ESimpleOSC.OSCMessage msg;
+            bool isVec2 = false;
+            Vector2 vecVal = new Vector2();
+            if (usedPartners.Contains(pathPair.Key)) {
+                // Already got output
+                continue;
+            }
+            msg = pathPair.Value;
+            System.Text.StringBuilder str = new System.Text.StringBuilder();
+            msg.DebugInto(str, false);
+            foreach (var replacePair in replacePairs) {
+                if (pathPair.Key.EndsWith(replacePair.Key)) {
+                    if (pathPair.Value.arguments.Length >= 1 && pathPair.Value.arguments[0].GetType() == typeof(float)) {
+                        string key = pathPair.Key.Substring(0, pathPair.Key.Length - replacePair.Key.Length) + replacePair.Value;
+                        if (knownPaths.TryGetValue(key, out msg) && msg.arguments.Length >= 1 && msg.arguments[0].GetType() == typeof(float)) {
+                            msg.DebugInto(str, false);
+                            vecVal.x = (float)msg.arguments[0];
+                            vecVal.y = (float)pathPair.Value.arguments[0];
+                            isVec2 = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            Rect subPos = new Rect(pos);
+
+            Color bgc = (Color)(BACKGROUND_COLOR);
+            if (isVec2) {
+                RenderBoxType(subPos, vecVal);
+            } else if (msg.arguments != null && msg.arguments.Length >= 1) {
+                switch (msg.arguments[0]) {
+                    case float f:
+                        RenderBoxType(subPos, f);
+                        break;
+                    case int i:
+                        bgc.a *= (i == 0 ? 0.3f : 1.0f);
+                        RenderBoxType(subPos, i);
+                        break;
+                    case bool b:
+                        bgc.a *= (b ? 1.0f : 0.3f);
+                        // RenderBoxType(subPos, b);
+                        break;
+                }
+            }
+            // Color c0 = new Color(OUTLINE_COLOR);
+            DrawDebugRectDelegate(pos, bgc, OUTLINE_COLOR);
+            DrawDebugTextDelegate(pos, new Color(0.0f,0.0f,1.0f,0.02f), OUTLINE_COLOR, TEXT_COLOR, str.ToString().Replace("; ", "\n"));
+            pos.x += pos.width + 10;
+            if (pos.x + pos.width > viewportSize.width) {
+                pos.x = 5;
+                pos.y += pos.height + 10;
+            }
             // pos = new Vector3(pos.x + 105, pos.y, pos.z);
         }
         Gizmos.matrix = origMatrix;

@@ -2,6 +2,28 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
+## Planned features for 3.0:
+
+* Package support
+* Basic Avatar Dynamics support
+
+### **New features in v 2.9.1 (3.0 beta2):**
+
+**OSC Now works in the emulator (opt-in)**: Supports sending and receiving OSC messages for your avatar. Off by default. Simply tick "**Enable Avatar OSC**" to turn it on.
+
+Avatar switch messages not implemented yet. Messages are sent using bundles. I have not verified the accuracy of frequency and message type compared to VRC.
+
+Other features:
+
+* Checks for PipelineSaver component: No longer should block upload.
+* GestureManager menu is now off by default, and easy to switch on and off as needed.
+* No longer crashes when some animators are set to null or VRCSDK is installed in the wrong place.
+* Try to reduce inspector bouncing while navigating menu.
+* Added new Jump box to simulate a jump (grounded, up velocity, down velocity). Also supported from OSC.
+* Improved a bunch of bugs with Mirror and Shadow clones thanks to 3. They can be disabled by clicking the boxes in the main Emulator Control.
+* Merged in contribution by 3 to support head scaling.
+* Many more bugfixes.
+
 ### **New features in v 2.9.0 (3.0 beta):**
 
 **Release note**: Lyuma's Av3 Emulator now comes in two versions: lite/classic version with a basic menu; and the other which includes VRC-Gesture-Manager and the radial menu.

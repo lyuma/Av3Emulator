@@ -28,20 +28,11 @@ using VRC.SDK3.Avatars.ScriptableObjects;
 [CustomEditor(typeof(LyumaAv3Menu), true)]
 public class LyumaAv3MenuEditor : Editor
 {
-    private readonly Dictionary<Texture2D, Texture2D> _resizedIcons = new Dictionary<Texture2D, Texture2D>();
     private VRCExpressionsMenu _currentMenu;
 
     public override void OnInspectorGUI()
     {
         var menu = (LyumaAv3Menu)target;
-        if (menu.Runtime == null) return;
-        if (menu.RootMenu == null)
-        {
-            menu.RootMenu = (VRCExpressionsMenu)EditorGUILayout.ObjectField(new GUIContent("Expressions Menu"), null, typeof(VRCExpressionsMenu), false);
-            return;
-        }
-
-        var isInRootMenu = menu.MenuStack.Count == 0;
         GUILayout.BeginHorizontal();
         if (GUILayout.Button(menu.IsMenuOpen ? "Close menu" : "Open menu"))
         {
@@ -57,6 +48,21 @@ public class LyumaAv3MenuEditor : Editor
         }
 
         GUILayout.EndHorizontal();
+
+        RenderButtonMenu();
+    }
+
+    protected void RenderButtonMenu() {
+
+        var menu = (LyumaAv3Menu)target;
+        if (menu.Runtime == null) return;
+        if (menu.RootMenu == null)
+        {
+            menu.RootMenu = (VRCExpressionsMenu)EditorGUILayout.ObjectField(new GUIContent("Expressions Menu"), null, typeof(VRCExpressionsMenu), false);
+            return;
+        }
+
+        var isInRootMenu = menu.MenuStack.Count == 0;
 
         GUILayout.Label(
             (isInRootMenu ? "Expressions" : LabelizeMenu()) +
@@ -300,32 +306,7 @@ public class LyumaAv3MenuEditor : Editor
     private bool ParameterizedButton(VRCExpressionsMenu.Control control, string parameterName, float wantedValue)
     {
         var hasParameter = IsValidParameterName(parameterName);
-        return GUILayout.Button(new GUIContent(control.name + (hasParameter ? " (" + parameterName + " = " + wantedValue + ")" : ""), ResizedIcon(control.icon)));
-    }
-
-    private Texture2D ResizedIcon(Texture2D originalIcon)
-    {
-        if (_resizedIcons.ContainsKey(originalIcon))
-        {
-            return _resizedIcons[originalIcon];
-        }
-
-        var resizedIcon = GenerateResizedIcon(originalIcon, 32);
-        _resizedIcons[originalIcon] = resizedIcon;
-        return resizedIcon;
-    }
-
-    private static Texture2D GenerateResizedIcon(Texture2D originalIcon, int width)
-    {
-        var render = new RenderTexture(width, width, 24);
-        RenderTexture.active = render;
-        Graphics.Blit(originalIcon, render);
-
-        var resizedIcon = new Texture2D(width, width);
-        resizedIcon.ReadPixels(new Rect(0, 0, width, width), 0, 0);
-        resizedIcon.Apply();
-
-        return resizedIcon;
+        return GUILayout.Button(new GUIContent(control.name + (hasParameter ? " (" + parameterName + " = " + wantedValue + ")" : ""), control.icon), GUILayout.Height(36),GUILayout.MinWidth(40));
     }
 
     private static T GreenBackground<T>(bool isActive, Func<T> inside)
