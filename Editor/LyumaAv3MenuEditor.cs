@@ -85,6 +85,10 @@ public class LyumaAv3MenuEditor : Editor
             menu.UserBack();
         }
         EditorGUI.EndDisabledGroup();
+        if (_currentMenu == null) {
+            EditorGUILayout.LabelField("(This submenu is null)");
+            return;
+        }
         for (var controlIndex = 0; controlIndex < _currentMenu.controls.Count; controlIndex++)
         {
             var control = _currentMenu.controls[controlIndex];
@@ -122,6 +126,7 @@ public class LyumaAv3MenuEditor : Editor
     private static void OpenMenuForTwoHandedSupport(LyumaAv3Menu menu)
     {
         var mainMenu = menu.Runtime.gameObject.AddComponent<LyumaAv3Menu>();
+        mainMenu.useLegacyMenu = menu.useLegacyMenu;
         mainMenu.Runtime = menu.Runtime;
         mainMenu.RootMenu = menu.RootMenu;
     }
@@ -133,6 +138,9 @@ public class LyumaAv3MenuEditor : Editor
         var lastMenu = menu.MenuStack.Last();
         if (lastMenu.MandatedParam == null)
         {
+            if (lastMenu.ExpressionsMenu == null) {
+                return "SubMenu linked to null menu!";
+            }
             return lastMenu.ExpressionsMenu.name;
         }
 
@@ -306,7 +314,7 @@ public class LyumaAv3MenuEditor : Editor
     private bool ParameterizedButton(VRCExpressionsMenu.Control control, string parameterName, float wantedValue)
     {
         var hasParameter = IsValidParameterName(parameterName);
-        return GUILayout.Button(new GUIContent(control.name + (hasParameter ? " (" + parameterName + " = " + wantedValue + ")" : ""), control.icon), GUILayout.Height(36),GUILayout.MinWidth(40));
+        return GUILayout.Button(new GUIContent(control.name + (hasParameter ? " (" + parameterName + " = " + wantedValue + ")" : ""), control.icon), GUILayout.MinHeight(36),GUILayout.MinWidth(40),GUILayout.ExpandHeight(true));
     }
 
     private static T GreenBackground<T>(bool isActive, Func<T> inside)

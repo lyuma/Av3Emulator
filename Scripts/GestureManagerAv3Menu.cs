@@ -31,6 +31,7 @@ public class GestureManagerAv3Menu : LyumaAv3Menu
     // public bool IsMenuOpen { get; private set; }
     // private int? _activeControlIndex = null;
     // private string _activeControlParameterName;
+    public bool compact = true;
 
     private void Awake()
     {

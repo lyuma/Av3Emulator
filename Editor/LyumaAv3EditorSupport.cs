@@ -97,22 +97,28 @@ public static class LyumaAv3EditorSupport
             LyumaAv3Emulator.EmptyController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(AssetDatabase.GUIDToAssetPath(guid));
         }
 
-        LyumaAv3Runtime.updateSelectionDelegate = (go) => {
-            if (go == null && LyumaAv3Emulator.emulatorInstance != null) {
-                Debug.Log("Resetting selected object: " + LyumaAv3Emulator.emulatorInstance);
-                go = LyumaAv3Emulator.emulatorInstance.gameObject;
+        LyumaAv3Runtime.updateSelectionDelegate = (obj) => {
+            if (obj == null && LyumaAv3Emulator.emulatorInstance != null) {
+                // Debug.Log("Resetting selected object: " + LyumaAv3Emulator.emulatorInstance);
+                obj = LyumaAv3Emulator.emulatorInstance.gameObject;
             }
-            Debug.Log("Setting selected object: " + go);
-            Selection.SetActiveObjectWithContext(go, go);
+            // Debug.Log("Setting selected object: " + go);
+            Selection.SetActiveObjectWithContext(obj, obj);
             // Highlighter.Highlight("Inspector", "Animator To Debug");
         };
 
         LyumaAv3Runtime.updateSceneLayersDelegate = (layers) => {
+            if (Tools.visibleLayers == layers) {
+                return;
+            }
             // Debug.Log("Setting selected layers: " + layers);
             Tools.visibleLayers = layers;
-            Camera c = Camera.main;
-            if (c != null) {
-                c.cullingMask = layers;
+            Camera[] cameras = new Camera[255];
+            Camera.GetAllCameras(cameras);
+            foreach (Camera c in cameras) {
+                if (c != null && c.targetTexture == null && c.GetComponentInParent<LyumaAv3Runtime>() == null && c.gameObject.activeInHierarchy && c.isActiveAndEnabled) {
+                    c.cullingMask = layers;
+                }
             }
             // Highlighter.Highlight("Inspector", "Animator To Debug");
         };
@@ -122,7 +128,17 @@ public static class LyumaAv3EditorSupport
         };
 
         LyumaAv3Osc.GetEditorViewportDelegate = () => {
-            return UnityEditor.SceneView.currentDrawingSceneView.position;
+            try {
+                Rect ret = UnityEditor.SceneView.currentDrawingSceneView.position;
+                // Gizmos are relative to the active window in terms of x and y.
+                ret.x = 1.0f;
+                ret.y = 1.0f;
+                ret.height -= 7.0f;
+                return ret;
+            } catch {
+                Vector2 gvsize = Handles.GetMainGameViewSize();
+                return new Rect(0, -18, gvsize.x, gvsize.y);
+            }
         };
         LyumaAv3Osc.DrawDebugRectDelegate = (Rect pos, Color col, Color outlineCol) => {
             // Debug.Log("Debug raw rect " + pos);
@@ -133,7 +149,7 @@ public static class LyumaAv3EditorSupport
             UnityEditor.Handles.EndGUI();
             GUI.color = origColor;
         };
-        LyumaAv3Osc.DrawDebugTextDelegate = (Rect pos, Color backgroundCol, Color outlineCol, Color textCol, string str) => {
+        LyumaAv3Osc.DrawDebugTextDelegate = (Rect pos, Color backgroundCol, Color outlineCol, Color textCol, string str, TextAnchor alignment) => {
             // Debug.Log("Debug raw text " + str + " at " + pos);
             Color origColor = GUI.color;
             GUI.color = backgroundCol;
@@ -142,19 +158,24 @@ public static class LyumaAv3EditorSupport
             // Rect pos = new Rect(location.x, location.y, size.x, size.y);
             UnityEditor.Handles.BeginGUI();
             UnityEditor.Handles.DrawSolidRectangleWithOutline(pos, backgroundCol, outlineCol);
-            GUI.color = new Color(1.0f, 1.0f, 1.0f, textCol.a * 0.5f);
-            pos.y += 2;
-            GUI.Label(pos, str);
-            pos.x += 2;
-            GUI.Label(pos, str);
-            pos.y -= 2;
-            GUI.Label(pos, str);
-            pos.x -= 2;
-            GUI.Label(pos, str);
-            pos.x += 1;
+            GUI.color = textCol.r + textCol.b + textCol.g > 0.5f ? new Color(0,0,0,textCol.a * 0.5f) : new Color(1,1,1,textCol.a * 0.5f);//new Color(1.0f, 1.0f, 1.0f, textCol.a * 0.25f);
+            var style = new GUIStyle();
+            style.fontStyle = FontStyle.Bold;
+            style.alignment = alignment;
+            style.normal.textColor = GUI.color;
             pos.y += 1;
+            GUI.Label(pos, str, style);
+            pos.x += 1;
+            GUI.Label(pos, str, style);
+            pos.y -= 1;
+            GUI.Label(pos, str, style);
+            pos.x -= 1;
+            GUI.Label(pos, str, style);
+            pos.x += 0.5f;
+            pos.y += 0.5f;
             GUI.color = textCol;
-            GUI.Label(pos, str);
+            style.normal.textColor = GUI.color;
+            GUI.Label(pos, str, style);
             UnityEditor.Handles.EndGUI();
             GUI.color = origColor;
         };

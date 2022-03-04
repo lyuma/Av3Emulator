@@ -65,13 +65,16 @@ public class LyumaAv3Emulator : MonoBehaviour
             runtime.VRMode = DefaultToVR;
             runtime.TrackingType = DefaultTrackingType;
             runtime.InStation = DefaultTestInStation;
-            runtime.AnimatorToDebug = DefaultAnimatorToDebug;
+            runtime.DebugDuplicateAnimator = DefaultAnimatorToDebug;
             runtime.EnableHeadScaling = EnableHeadScaling;
             runtimes.Add(runtime);
-            if (!alreadyHadComponent) {
+            if (!alreadyHadComponent && !DisableShadowClone) {
                 runtime.CreateShadowClone();
+            }
+            if (!alreadyHadComponent && !DisableMirrorClone) {
                 runtime.CreateMirrorClone();
             }
+            runtime.DisableMirrorAndShadowClones = DisableShadowClone && DisableMirrorClone;
         }
     }
 
@@ -96,6 +99,7 @@ public class LyumaAv3Emulator : MonoBehaviour
             Destroy(runtime);
         }
         runtimes.Clear();
+        LyumaAv3Runtime.updateSceneLayersDelegate(~0);
     }
 
     private void Update() {

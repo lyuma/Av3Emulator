@@ -214,4 +214,20 @@ public class LyumaAv3Menu : MonoBehaviour
     {
         return _activeControlIndex == controlIndex;
     }
+    public bool IsControlIKSynced(string ParamName) {
+        if (_activeControlIndex == null || !_activeControlIndex.HasValue) {
+            return false;
+        }
+        int idx = _activeControlIndex.Value;
+        var lastStack = MenuStack.Count == 0 ? RootMenu : MenuStack[MenuStack.Count - 1].ExpressionsMenu;
+        if (lastStack != null && lastStack.controls != null && idx < lastStack.controls.Count) {
+            var control = lastStack.controls[idx];
+            foreach (var subp in control.subParameters) {
+                if (subp.name == ParamName) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }

@@ -35,7 +35,6 @@ using GestureManager.Scripts.Editor.Modules.Vrc3;
 public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
 {
     private readonly Dictionary<Texture2D, Texture2D> _resizedIcons = new Dictionary<Texture2D, Texture2D>();
-    private VRCExpressionsMenu _currentMenu;
 
     class StubAv3Module : GestureManager.Scripts.Editor.Modules.Vrc3.ModuleVrc3 {
         class VelocityParam : GestureManager.Scripts.Editor.Modules.Vrc3.Params.Vrc3Param {
@@ -266,6 +265,7 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
         GUILayout.BeginHorizontal();
         if (GUILayout.Button(gmenu.IsMenuOpen ? "Close menu" : "Open menu"))
         {
+            gmenu.compact = true;
             gmenu.ToggleMenu();
         }
 
@@ -279,12 +279,16 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
         var rect = EditorGUILayout.GetControlRect(false, 1, GUILayout.Width(120));
         GUILayout.EndHorizontal();
         if (gmenu.IsMenuOpen) {
-            rect.height = 55;
+            rect.height = 48;
             gmenu.useLegacyMenu = !GUI.Toggle(rect, !gmenu.useLegacyMenu, "GestureManager\nRadial Menu", "Button");
-            GUILayout.BeginVertical(GUILayout.Height(RadialMenu.Size + 100));
-            EditorGUILayout.Space(24);
+            GUILayout.BeginVertical(GUILayout.Height(gmenu.compact && gmenu.useLegacyMenu ? 10 : RadialMenu.Size + 100));
         }
         if (gmenu.useLegacyMenu) {
+            gmenu.compact = EditorGUILayout.Toggle("Compact Options", gmenu.compact);
+            EditorGUILayout.Space(4);
+            rect = EditorGUILayout.GetControlRect(false, 0);
+            rect.height = 1;
+            EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 1));
             RadialMenu tmpmenu;
             if (av3Module.RadialMenus.TryGetValue(this as UnityEditor.Editor, out tmpmenu)) {
                 tmpmenu.style.display = DisplayStyle.None;
@@ -293,11 +297,13 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
 
             if (gmenu.IsMenuOpen) {
                 // ensure these are matched with above (Same condition).
-                GUILayout.FlexibleSpace();
+                // GUILayout.FlexibleSpace();
                 GUILayout.EndVertical();
             }
             return;
         }
+        EditorGUILayout.Space(10);
+        gmenu.compact = false;
 
         var menu = GetOrCreateRadial(this as UnityEditor.Editor);
         if (!gmenu.IsMenuOpen) {
@@ -333,6 +339,7 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
     private static void OpenMenuForTwoHandedSupport(GestureManagerAv3Menu menu)
     {
         var mainMenu = menu.Runtime.gameObject.AddComponent<GestureManagerAv3Menu>();
+        mainMenu.useLegacyMenu = menu.useLegacyMenu;
         mainMenu.Runtime = menu.Runtime;
         mainMenu.RootMenu = menu.RootMenu;
     }

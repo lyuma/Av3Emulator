@@ -31,7 +31,7 @@ public class LyumaAv3Runtime : MonoBehaviour
 {
     static public Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController> animLayerToDefaultController = new Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController>();
     static public Dictionary<VRCAvatarDescriptor.AnimLayerType, AvatarMask> animLayerToDefaultAvaMask = new Dictionary<VRCAvatarDescriptor.AnimLayerType, AvatarMask>();
-    public delegate void UpdateSelectionFunc(GameObject obj);
+    public delegate void UpdateSelectionFunc(UnityEngine.Object obj);
     public static UpdateSelectionFunc updateSelectionDelegate;
     public delegate void AddRuntime(Component runtime);
     public static AddRuntime addRuntimeDelegate;
@@ -44,33 +44,49 @@ public class LyumaAv3Runtime : MonoBehaviour
     public bool ResetAvatar;
     [Tooltip("Resets avatar state machine and waits until you uncheck this to start")]
     public bool ResetAndHold;
+    [Tooltip("Click if you modified your menu or parameter list")]
+    public bool RefreshExpressionParams;
     [Tooltip("Simulates saving and reloading the avatar")]
     public bool KeepSavedParametersOnReset = true;
-    [Tooltip("In VRChat, 8-bit float quantization only happens remotely. Check this to test your robustness to quantization locally, too. (example: 0.5 -> 0.503")]
-    public bool locally8bitQuantizedFloats = false;
     [HideInInspector] public bool legacyMenuGUI = true;
     private bool lastLegacyMenuGUI = true;
-    [Tooltip("Selects the playable layer to be visible in Unity's Animator window. Unless this is set to Base, creates duplicate playable layers with weight 0. It hopefully works the same.")] public VRCAvatarDescriptor.AnimLayerType AnimatorToDebug;
+    [Header("View other playable layers. Unity is glitchy when not 'Base'.")]
+    [Tooltip("Selects the playable layer to be visible in Unity's Animator window. Unless this is set to Base, creates duplicate playable layers with weight 0. It hopefully works the same.")]
+    public VRCAvatarDescriptor.AnimLayerType DebugDuplicateAnimator;
     private char PrevAnimatorToDebug;
+    [Tooltip("Selects the playable layer to be visible in Unity's Animator window. Does not reset avatar. Unless this is set to Base, will cause 'Invalid Layer Index' logspam; layers will show wrong weight and parameters will all be 0.")]
+    public VRCAvatarDescriptor.AnimLayerType ViewAnimatorOnlyNoParams;
+    private char PrevAnimatorToViewLiteParamsShow0;
     [HideInInspector] public string SourceObjectPath;
-    [Header("Sync, OSC and Mirror clone")]public LyumaAv3Runtime AvatarSyncSource;
-    [Range(0.0f, 2.0f)] public float NonLocalSyncInterval = 0.2f;
+    [HideInInspector] public LyumaAv3Runtime AvatarSyncSource;
     private float nextUpdateTime = 0.0f;
+    [Header("OSC (double click OSC Controller for debug and port settings)")]
     public bool EnableAvatarOSC = false;
-    private int CloneCount;
+    public LyumaAv3Osc OSCController = null;
+    public A3EOSCConfiguration OSCConfigurationFile = new A3EOSCConfiguration();
+
+    [Header("Network Clones and Sync")]
     public bool CreateNonLocalClone;
-    public bool DebugOffsetMirrorClone = false;
+    [Tooltip("In VRChat, 8-bit float quantization only happens remotely. Check this to test your robustness to quantization locally, too. (example: 0.5 -> 0.503")]
+    public bool locally8bitQuantizedFloats = false;
+    private int CloneCount;
+    [Range(0.0f, 2.0f)] public float NonLocalSyncInterval = 0.2f;
+    [Tooltip("Parameters visible in the radial menu will IK sync")] public bool IKSyncRadialMenu = true;
+    [Header("PlayerLocal and MirrorReflection")]
     public bool EnableHeadScaling;
+    public bool DisableMirrorAndShadowClones;
+    [HideInInspector] public LyumaAv3Runtime MirrorClone;
+    [HideInInspector] public LyumaAv3Runtime ShadowClone;
+    [Tooltip("To view both copies at once")] public bool DebugOffsetMirrorClone = false;
     public bool ViewMirrorReflection;
     private bool LastViewMirrorReflection;
     public bool ViewBothRealAndMirror;
     private bool LastViewBothRealAndMirror;
-    private LyumaAv3Runtime MirrorClone;
-    private LyumaAv3Runtime ShadowClone;
     [HideInInspector] public VRCAvatarDescriptor avadesc;
     Avatar animatorAvatar;
     Animator animator;
     private RuntimeAnimatorController origAnimatorController;
+    public Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController> allControllers = new Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController>();
 
     private Transform[] allTransforms;
     private Transform[] allMirrorTransforms;
@@ -145,6 +161,8 @@ public class LyumaAv3Runtime : MonoBehaviour
     public VisemeIndex Viseme;
     [Range(0, 15)] public int VisemeIdx;
     private int VisemeInt;
+    [Tooltip("Voice amount from 0.0f to 1.0f for the current viseme")]
+    [Range(0,1)] public float Voice;
     [Header("Built-in inputs / Hand Gestures")]
     public GestureIndex GestureLeft;
     [Range(0, 9)] public int GestureLeftIdx;
@@ -166,7 +184,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     public float RunSpeed = 0.0f;
     private bool WasJump;
     private Vector3 JumpingHeight;
-    protected Vector3 JumpingVelocity;
+    private Vector3 JumpingVelocity;
     private bool PrevSeated, PrevTPoseCalibration, PrevIKPoseCalibration;
     public bool Seated;
     public bool AFK;
@@ -184,22 +202,27 @@ public class LyumaAv3Runtime : MonoBehaviour
 
     [Header("Output State (Read-only)")]
     public bool IsLocal;
-    public bool IsMirrorClone;
-    public bool IsShadowClone;
+    [HideInInspector] public bool IsMirrorClone;
+    [HideInInspector] public bool IsShadowClone;
     public bool LocomotionIsDisabled;
-    private Vector3 HeadRelativeViewPosition;
-    public Vector3 ViewPosition;
-    float AvatarScaleFactor;
-    public VRCAnimatorTrackingControl.TrackingType trackingHead;
-    public VRCAnimatorTrackingControl.TrackingType trackingLeftHand;
-    public VRCAnimatorTrackingControl.TrackingType trackingRightHand;
-    public VRCAnimatorTrackingControl.TrackingType trackingHip;
-    public VRCAnimatorTrackingControl.TrackingType trackingLeftFoot;
-    public VRCAnimatorTrackingControl.TrackingType trackingRightFoot;
-    public VRCAnimatorTrackingControl.TrackingType trackingLeftFingers;
-    public VRCAnimatorTrackingControl.TrackingType trackingRightFingers;
-    public VRCAnimatorTrackingControl.TrackingType trackingEyesAndEyelids;
-    public VRCAnimatorTrackingControl.TrackingType trackingMouthAndJaw;
+
+    [Serializable]
+    public struct IKTrackingOutput {
+        public Vector3 HeadRelativeViewPosition;
+        public Vector3 ViewPosition;
+        public float AvatarScaleFactorGuess;
+        public VRCAnimatorTrackingControl.TrackingType trackingHead;
+        public VRCAnimatorTrackingControl.TrackingType trackingLeftHand;
+        public VRCAnimatorTrackingControl.TrackingType trackingRightHand;
+        public VRCAnimatorTrackingControl.TrackingType trackingHip;
+        public VRCAnimatorTrackingControl.TrackingType trackingLeftFoot;
+        public VRCAnimatorTrackingControl.TrackingType trackingRightFoot;
+        public VRCAnimatorTrackingControl.TrackingType trackingLeftFingers;
+        public VRCAnimatorTrackingControl.TrackingType trackingRightFingers;
+        public VRCAnimatorTrackingControl.TrackingType trackingEyesAndEyelids;
+        public VRCAnimatorTrackingControl.TrackingType trackingMouthAndJaw;
+    }
+    public IKTrackingOutput IKTrackingOutputData;
 
     [Serializable]
     public class FloatParam
@@ -243,7 +266,7 @@ public class LyumaAv3Runtime : MonoBehaviour
 
     public Dictionary<string, string> StageParamterToBuiltin = new Dictionary<string, string>();
 
-    public LyumaAv3Emulator emulator;
+    [HideInInspector] public LyumaAv3Emulator emulator;
 
     static public Dictionary<Animator, LyumaAv3Runtime> animatorToTopLevelRuntime = new Dictionary<Animator, LyumaAv3Runtime>();
     private HashSet<Animator> attachedAnimators;
@@ -256,10 +279,10 @@ public class LyumaAv3Runtime : MonoBehaviour
         if (setView) {
             Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
             if (head != null) {
-                ViewPosition = animator.transform.InverseTransformPoint(head.TransformPoint(HeadRelativeViewPosition));
+                IKTrackingOutputData.ViewPosition = animator.transform.InverseTransformPoint(head.TransformPoint(IKTrackingOutputData.HeadRelativeViewPosition));
             }
         } else {
-            ViewPosition = avadesc.ViewPosition;
+            IKTrackingOutputData.ViewPosition = avadesc.ViewPosition;
         }
     }
 
@@ -349,7 +372,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 HashSet<string> newParameterAdds = new HashSet<string>();
                 HashSet<string> deleteParameterAdds = new HashSet<string>();
                 foreach (var parameter in behaviour.parameters) {
-                    if (runtime.AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base && !runtime.IsMirrorClone && !runtime.IsShadowClone && (parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add || parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random)) {
+                    if (runtime.DebugDuplicateAnimator != VRCAvatarDescriptor.AnimLayerType.Base && !runtime.IsMirrorClone && !runtime.IsShadowClone && (parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add || parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random)) {
                         string dupeKey = parameter.value + ((parameter.type == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add) ? "add " : "rand ") + parameter.name;
                         if (!runtime.duplicateParameterAdds.Contains(dupeKey)) {
                             newParameterAdds.Add(dupeKey);
@@ -632,43 +655,43 @@ public class LyumaAv3Runtime : MonoBehaviour
 
                 if (behaviour.trackingMouth != VRCAnimatorTrackingControl.TrackingType.NoChange)
                 {
-                    runtime.trackingMouthAndJaw = behaviour.trackingMouth;
+                    runtime.IKTrackingOutputData.trackingMouthAndJaw = behaviour.trackingMouth;
                 }
                 if (behaviour.trackingHead != VRCAnimatorTrackingControl.TrackingType.NoChange)
                 {
-                    runtime.trackingHead = behaviour.trackingHead;
+                    runtime.IKTrackingOutputData.trackingHead = behaviour.trackingHead;
                 }
                 if (behaviour.trackingRightFingers != VRCAnimatorTrackingControl.TrackingType.NoChange)
                 {
-                    runtime.trackingRightFingers = behaviour.trackingRightFingers;
+                    runtime.IKTrackingOutputData.trackingRightFingers = behaviour.trackingRightFingers;
                 }
                 if (behaviour.trackingEyes != VRCAnimatorTrackingControl.TrackingType.NoChange)
                 {
-                    runtime.trackingEyesAndEyelids = behaviour.trackingEyes;
+                    runtime.IKTrackingOutputData.trackingEyesAndEyelids = behaviour.trackingEyes;
                 }
                 if (behaviour.trackingLeftFingers != VRCAnimatorTrackingControl.TrackingType.NoChange)
                 {
-                    runtime.trackingLeftFingers = behaviour.trackingLeftFingers;
+                    runtime.IKTrackingOutputData.trackingLeftFingers = behaviour.trackingLeftFingers;
                 }
                 if (behaviour.trackingLeftFoot != VRCAnimatorTrackingControl.TrackingType.NoChange)
                 {
-                    runtime.trackingLeftFoot = behaviour.trackingLeftFoot;
+                    runtime.IKTrackingOutputData.trackingLeftFoot = behaviour.trackingLeftFoot;
                 }
                 if (behaviour.trackingHip != VRCAnimatorTrackingControl.TrackingType.NoChange)
                 {
-                    runtime.trackingHip = behaviour.trackingHip;
+                    runtime.IKTrackingOutputData.trackingHip = behaviour.trackingHip;
                 }
                 if (behaviour.trackingRightHand != VRCAnimatorTrackingControl.TrackingType.NoChange)
                 {
-                    runtime.trackingRightHand = behaviour.trackingRightHand;
+                    runtime.IKTrackingOutputData.trackingRightHand = behaviour.trackingRightHand;
                 }
                 if (behaviour.trackingLeftHand != VRCAnimatorTrackingControl.TrackingType.NoChange)
                 {
-                    runtime.trackingLeftHand = behaviour.trackingLeftHand;
+                    runtime.IKTrackingOutputData.trackingLeftHand = behaviour.trackingLeftHand;
                 }
                 if (behaviour.trackingRightFoot != VRCAnimatorTrackingControl.TrackingType.NoChange)
                 {
-                    runtime.trackingRightFoot = behaviour.trackingRightFoot;
+                    runtime.IKTrackingOutputData.trackingRightFoot = behaviour.trackingRightFoot;
                 }
             };
         };
@@ -706,7 +729,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             Debug.Log("Deduplicating Awake() call if we already got awoken by our children.", this);
             return;
         }
-        Debug.Log("AWOKEN " + gameObject.name, this);
+        // Debug.Log("AWOKEN " + gameObject.name, this);
         attachedAnimators = new HashSet<Animator>();
         if (AvatarSyncSource == null) {
             Transform transform = this.transform;
@@ -720,7 +743,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             AvatarSyncSource = GameObject.Find(SourceObjectPath).GetComponent<LyumaAv3Runtime>();
         }
 
-        AnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base;
+        DebugDuplicateAnimator = VRCAvatarDescriptor.AnimLayerType.Base;
 
         animator = this.gameObject.GetOrAddComponent<Animator>();
         if (animatorAvatar != null && animator.avatar == null) {
@@ -791,10 +814,15 @@ public class LyumaAv3Runtime : MonoBehaviour
         if (AvatarSyncSource == this) {
             CreateAv3MenuComponent();
         }
+        if (!IsMirrorClone && !IsShadowClone && AvatarSyncSource == this) {
+            var pipelineManager = avadesc.GetComponent<VRC.Core.PipelineManager>();
+            string avatarid = pipelineManager != null ? pipelineManager.blueprintId : null;
+           OSCConfigurationFile.EnsureOSCJSONConfig(avadesc.expressionParameters, avatarid, this.gameObject.name);
+        }
     }
 
     public void CreateMirrorClone() {
-        if (emulator != null && !emulator.DisableMirrorClone && AvatarSyncSource == this && GetComponent<PipelineSaver>() == null) {
+        if (AvatarSyncSource == this && GetComponent<PipelineSaver>() == null) {
             OriginalSourceClone.IsMirrorClone = true;
             MirrorClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
             MirrorClone.GetComponent<Animator>().avatar = null;
@@ -812,7 +840,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     }
 
     public void CreateShadowClone() {
-        if (emulator != null && !emulator.DisableShadowClone && AvatarSyncSource == this && GetComponent<PipelineSaver>() == null) {
+        if (AvatarSyncSource == this && GetComponent<PipelineSaver>() == null) {
             OriginalSourceClone.IsShadowClone = true;
             ShadowClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
             ShadowClone.GetComponent<Animator>().avatar = null;
@@ -840,7 +868,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     private void InitializeAnimator()
     {
         ResetAvatar = false;
-        PrevAnimatorToDebug = (char)(int)AnimatorToDebug;
+        PrevAnimatorToDebug = (char)(int)DebugDuplicateAnimator;
 
         animator = this.gameObject.GetOrAddComponent<Animator>();
         animator.avatar = animatorAvatar;
@@ -850,21 +878,18 @@ public class LyumaAv3Runtime : MonoBehaviour
         animator.runtimeAnimatorController = null;
 
         avadesc = this.gameObject.GetComponent<VRCAvatarDescriptor>();
-        ViewPosition = avadesc.ViewPosition;
-        AvatarScaleFactor = ViewPosition.magnitude / BASE_HEIGHT; // mostly guessing...
-        HeadRelativeViewPosition = ViewPosition;
+        IKTrackingOutputData.ViewPosition = avadesc.ViewPosition;
+        IKTrackingOutputData.AvatarScaleFactorGuess = IKTrackingOutputData.ViewPosition.magnitude / BASE_HEIGHT; // mostly guessing...
+        IKTrackingOutputData.HeadRelativeViewPosition = IKTrackingOutputData.ViewPosition;
         if (animator.avatar != null)
         {
             Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
             if (head != null) {
-                HeadRelativeViewPosition = head.InverseTransformPoint(animator.transform.TransformPoint(ViewPosition));
+                IKTrackingOutputData.HeadRelativeViewPosition = head.InverseTransformPoint(animator.transform.TransformPoint(IKTrackingOutputData.ViewPosition));
             }
         }
         expressionsMenu = avadesc.expressionsMenu;
-        if (expressionsMenu != null)
-        {
-            stageParameters = avadesc.expressionParameters;
-        }
+        stageParameters = avadesc.expressionParameters;
         if (origAnimatorController != null) {
             origAnimatorController = animator.runtimeAnimatorController;
         }
@@ -883,16 +908,16 @@ public class LyumaAv3Runtime : MonoBehaviour
         //     }
         // }
         int i = 0;
-        if (AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base && !IsMirrorClone && !IsShadowClone) {
+        if (DebugDuplicateAnimator != VRCAvatarDescriptor.AnimLayerType.Base && !IsMirrorClone && !IsShadowClone) {
             foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
-                if (AnimatorToDebug == cal.type) {
+                if (DebugDuplicateAnimator == cal.type) {
                     i++;
                     allLayers.Add(cal);
                     break;
                 }
             }
             foreach (VRCAvatarDescriptor.CustomAnimLayer cal in speciallayers) {
-                if (AnimatorToDebug == cal.type) {
+                if (DebugDuplicateAnimator == cal.type) {
                     i++;
                     allLayers.Add(cal);
                     break;
@@ -903,13 +928,13 @@ public class LyumaAv3Runtime : MonoBehaviour
             // To solve this, we ignore every other invocation.
             // Therefore, we must add all layers twice, not just the one we are debugging...???
             foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
-                if (AnimatorToDebug != cal.type) {
+                if (DebugDuplicateAnimator != cal.type) {
                     i++;
                     allLayers.Add(cal);
                 }
             }
             foreach (VRCAvatarDescriptor.CustomAnimLayer cal in speciallayers) {
-                if (AnimatorToDebug != cal.type) {
+                if (DebugDuplicateAnimator != cal.type) {
                     i++;
                     allLayers.Add(cal);
                 }
@@ -963,93 +988,13 @@ public class LyumaAv3Runtime : MonoBehaviour
         }
         attachedAnimators.Clear();
         Animator[] animators = this.gameObject.GetComponentsInChildren<Animator>(true);
-        Debug.Log("anim len "+animators.Length);
         foreach (Animator anim in animators)
         {
             attachedAnimators.Add(anim);
             animatorToTopLevelRuntime.Add(anim, this);
         }
 
-        Dictionary<string, float> stageNameToValue = new Dictionary<string, float>();
-        if (IsLocal) {
-            foreach (var val in Ints) {
-                stageNameToValue[val.stageName] = val.value;
-            }
-            foreach (var val in Floats) {
-                stageNameToValue[val.stageName] = val.value;
-            }
-            foreach (var val in Bools) {
-                stageNameToValue[val.stageName] = val.value ? 1.0f : 0.0f;
-            }
-        }
-        Ints.Clear();
-        Bools.Clear();
-        Floats.Clear();
-        StageParamterToBuiltin.Clear();
-        IntToIndex.Clear();
-        FloatToIndex.Clear();
-        BoolToIndex.Clear();
-        playableParamterFloats.Clear();
-        playableParamterIds.Clear();
-        playableParamterInts.Clear();
-        playableParamterBools.Clear();
-        HashSet<string> usedparams = new HashSet<string>(BUILTIN_PARAMETERS);
-        i = 0;
-        if (stageParameters != null)
-        {
-            int stageId = 0;
-            foreach (var stageParam in stageParameters.parameters)
-            {
-                stageId++; // one-indexed
-                if (stageParam.name == null || stageParam.name.Length == 0) {
-                    continue;
-                }
-                string stageName = stageParam.name + (stageParam.saved ? " (saved/SYNCED)" : " (SYNCED)"); //"Stage" + stageId;
-                float lastDefault = 0.0f;
-                if (AvatarSyncSource == this) {
-                    lastDefault = (stageParam.saved && KeepSavedParametersOnReset && stageNameToValue.ContainsKey(stageName) ? stageNameToValue[stageName] : stageParam.defaultValue);
-                }
-                StageParamterToBuiltin.Add(stageName, stageParam.name);
-                if ((int)stageParam.valueType == 0)
-                {
-                    IntParam param = new IntParam();
-                    param.stageName = stageName;
-                    param.synced = true;
-                    param.name = stageParam.name;
-                    param.value = (int)lastDefault;
-                    param.lastValue = 0;
-                    IntToIndex[param.name] = Ints.Count;
-                    Ints.Add(param);
-                }
-                else if ((int)stageParam.valueType == 1)
-                {
-                    FloatParam param = new FloatParam();
-                    param.stageName = stageName;
-                    param.synced = true;
-                    param.name = stageParam.name;
-                    param.value = lastDefault;
-                    param.lastValue = 0;
-                    FloatToIndex[param.name] = Floats.Count;
-                    Floats.Add(param);
-                }
-                else if ((int)stageParam.valueType == 2)
-                {
-                    BoolParam param = new BoolParam();
-                    param.stageName = stageName;
-                    param.synced = true;
-                    param.name = stageParam.name;
-                    param.value = lastDefault != 0.0;
-                    param.lastValue = false;
-                    param.hasBool = new bool[playables.Count];
-                    param.hasTrigger = new bool[playables.Count];
-                    BoolToIndex[param.name] = Bools.Count;
-                    Bools.Add(param);
-                }
-                usedparams.Add(stageParam.name);
-                i++;
-            }
-        }
-
+        Dictionary<string, float> stageNameToValue = EarlyRefreshExpressionParameters();
         if (animator.playableGraph.IsValid())
         {
             animator.playableGraph.Destroy();
@@ -1081,9 +1026,11 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
             }
             if (ac == null) {
+                Debug.Log(vrcAnimLayer.type + " controller is null: continue.");
                 // i was incremented, but one of the playableMixer inputs is left unconnected.
                 continue;
             }
+            allControllers[vrcAnimLayer.type] = ac;
             AnimatorControllerPlayable humanAnimatorPlayable = AnimatorControllerPlayable.Create(playableGraph, ac);
             PlayableBlendingState pbs = new PlayableBlendingState();
             for (int j = 0; j < humanAnimatorPlayable.GetLayerCount(); j++)
@@ -1168,6 +1115,114 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
         }
 
+        LateRefreshExpressionParameters(stageNameToValue);
+
+        // Plays the Graph.
+        playableGraph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+        Debug.Log(this.name + " : " + GetType() + " awoken and ready to Play.");
+        playableGraph.Play();
+    }
+
+    Dictionary<string, float> EarlyRefreshExpressionParameters() {
+        Dictionary<string, float> stageNameToValue = new Dictionary<string, float>();
+        if (IsLocal) {
+            foreach (var val in Ints) {
+                stageNameToValue[val.stageName] = val.value;
+            }
+            foreach (var val in Floats) {
+                stageNameToValue[val.stageName] = val.value;
+            }
+            foreach (var val in Bools) {
+                stageNameToValue[val.stageName] = val.value ? 1.0f : 0.0f;
+            }
+        }
+        Ints.Clear();
+        Bools.Clear();
+        Floats.Clear();
+        StageParamterToBuiltin.Clear();
+        IntToIndex.Clear();
+        FloatToIndex.Clear();
+        BoolToIndex.Clear();
+        playableParamterFloats.Clear();
+        playableParamterIds.Clear();
+        playableParamterInts.Clear();
+        playableParamterBools.Clear();
+        return stageNameToValue;
+    }
+    void LateRefreshExpressionParameters(Dictionary<string, float> stageNameToValue) {
+        HashSet<string> usedparams = new HashSet<string>(BUILTIN_PARAMETERS);
+        int i = 0;
+        if (stageParameters != null)
+        {
+            int stageId = 0;
+            foreach (var stageParam in stageParameters.parameters)
+            {
+                stageId++; // one-indexed
+                if (stageParam.name == null || stageParam.name.Length == 0) {
+                    continue;
+                }
+                string stageName = stageParam.name + (stageParam.saved ? " (saved/SYNCED)" : " (SYNCED)"); //"Stage" + stageId;
+                float lastDefault = 0.0f;
+                if (AvatarSyncSource == this) {
+                    lastDefault = (stageParam.saved && KeepSavedParametersOnReset && stageNameToValue.ContainsKey(stageName) ? stageNameToValue[stageName] : stageParam.defaultValue);
+                }
+                StageParamterToBuiltin.Add(stageName, stageParam.name);
+                if ((int)stageParam.valueType == 0)
+                {
+                    IntParam param = new IntParam();
+                    param.stageName = stageName;
+                    param.synced = true;
+                    param.name = stageParam.name;
+                    param.value = (int)lastDefault;
+                    param.lastValue = 0;
+                    IntToIndex[param.name] = Ints.Count;
+                    Ints.Add(param);
+                }
+                else if ((int)stageParam.valueType == 1)
+                {
+                    FloatParam param = new FloatParam();
+                    param.stageName = stageName;
+                    param.synced = true;
+                    param.name = stageParam.name;
+                    param.value = lastDefault;
+                    param.lastValue = 0;
+                    FloatToIndex[param.name] = Floats.Count;
+                    Floats.Add(param);
+                }
+                else if ((int)stageParam.valueType == 2)
+                {
+                    BoolParam param = new BoolParam();
+                    param.stageName = stageName;
+                    param.synced = true;
+                    param.name = stageParam.name;
+                    param.value = lastDefault != 0.0;
+                    param.lastValue = false;
+                    param.hasBool = new bool[playables.Count];
+                    param.hasTrigger = new bool[playables.Count];
+                    BoolToIndex[param.name] = Bools.Count;
+                    Bools.Add(param);
+                }
+                usedparams.Add(stageParam.name);
+                i++;
+            }
+        } else {
+            IntParam param = new IntParam();
+            param.stageName = "VRCEmote";
+            param.synced = true;
+            param.name = "VRCEmote";
+            Ints.Add(param);
+            FloatParam fparam = new FloatParam();
+            fparam.stageName = "VRCFaceBlendH";
+            fparam.synced = true;
+            fparam.name = "VRCFaceBlendH";
+            Floats.Add(fparam);
+            fparam = new FloatParam();
+            fparam.stageName = "VRCFaceBlendV";
+            fparam.synced = true;
+            fparam.name = "VRCFaceBlendV";
+            Floats.Add(fparam);
+        }
+
         //playableParamterIds
         int whichcontroller = 0;
         playableParamterIds.Clear();
@@ -1233,12 +1288,6 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
             whichcontroller++;
         }
-
-        // Plays the Graph.
-        playableGraph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
-        Debug.Log(this.gameObject.name + " : Awoken and ready to Play.");
-        playableGraph.Play();
-        Debug.Log(this.gameObject.name + " : Playing.");
     }
 
     void CreateAv3MenuComponent() {
@@ -1251,18 +1300,15 @@ public class LyumaAv3Runtime : MonoBehaviour
         foreach (var comp in avadesc.gameObject.GetComponents<LyumaAv3Menu>()) {
             UnityEngine.Object.Destroy(comp);
         }
+        LyumaAv3Menu mainMenu;
         if (gestureManagerMenu != null) {
-            LyumaAv3Menu mainMenu = (LyumaAv3Menu)avadesc.gameObject.AddComponent(gestureManagerMenu);
+            mainMenu = (LyumaAv3Menu)avadesc.gameObject.AddComponent(gestureManagerMenu);
             mainMenu.useLegacyMenu = legacyMenuGUI;
-            var runtimeField = gestureManagerMenu.GetField("Runtime");
-            var rootMenuField = gestureManagerMenu.GetField("RootMenu");
-            runtimeField.SetValue(mainMenu, this);
-            rootMenuField.SetValue(mainMenu, this.avadesc.expressionsMenu);
         } else {
-            var mainMenu = avadesc.gameObject.AddComponent<LyumaAv3Menu>();
-            mainMenu.Runtime = this;
-            mainMenu.RootMenu = avadesc.expressionsMenu;
+            mainMenu = avadesc.gameObject.AddComponent<LyumaAv3Menu>();
         }
+        mainMenu.Runtime = this;
+        mainMenu.RootMenu = avadesc.expressionsMenu;
     }
 
 
@@ -1270,6 +1316,9 @@ public class LyumaAv3Runtime : MonoBehaviour
     private bool isResettingHold;
     private bool isResettingSel;
     void LateUpdate() {
+        if (ResetAndHold) {
+            return;
+        }
         if (IsMirrorClone || IsShadowClone) {
             // Experimental. Attempt to reproduce the 1-frame desync in some cases between normal and mirror copy.
             NormalUpdate();
@@ -1349,6 +1398,27 @@ public class LyumaAv3Runtime : MonoBehaviour
     // Update is called once per frame
     void NormalUpdate()
     {
+        if (OSCConfigurationFile.OSCAvatarID == null) {
+            OSCConfigurationFile.OSCAvatarID = A3EOSCConfiguration.AVTR_EMULATOR_PREFIX + "Default";
+        }
+        if ((OSCConfigurationFile.UseRealPipelineIdJSONFile && OSCConfigurationFile.OSCAvatarID.StartsWith(A3EOSCConfiguration.AVTR_EMULATOR_PREFIX)) ||
+                (!OSCConfigurationFile.UseRealPipelineIdJSONFile && !OSCConfigurationFile.OSCAvatarID.StartsWith(A3EOSCConfiguration.AVTR_EMULATOR_PREFIX))) {
+            var pipelineManager = avadesc.GetComponent<VRC.Core.PipelineManager>();
+            string avatarid = pipelineManager != null ? pipelineManager.blueprintId : null;
+            OSCConfigurationFile.EnsureOSCJSONConfig(avadesc.expressionParameters, avatarid, this.gameObject.name);
+        }
+        if (OSCConfigurationFile.SaveOSCConfig) {
+            OSCConfigurationFile.SaveOSCConfig = false;
+            A3EOSCConfiguration.WriteJSON(OSCConfigurationFile.OSCFilePath, OSCConfigurationFile.OSCJsonConfig);
+        }
+        if (OSCConfigurationFile.LoadOSCConfig) {
+            OSCConfigurationFile.LoadOSCConfig = false;
+            OSCConfigurationFile.OSCJsonConfig = A3EOSCConfiguration.ReadJSON(OSCConfigurationFile.OSCFilePath);
+        }
+        if (OSCConfigurationFile.GenerateOSCConfig) {
+            OSCConfigurationFile.GenerateOSCConfig = false;
+            OSCConfigurationFile.OSCJsonConfig = A3EOSCConfiguration.GenerateOuterJSON(avadesc.expressionParameters, OSCConfigurationFile.OSCAvatarID, this.gameObject.name);
+        }
         if (lastLegacyMenuGUI != legacyMenuGUI && AvatarSyncSource == this) {
             lastLegacyMenuGUI = legacyMenuGUI;
             foreach (var av3MenuComponent in GetComponents<LyumaAv3Menu>()) {
@@ -1381,6 +1451,8 @@ public class LyumaAv3Runtime : MonoBehaviour
                     AvatarSyncSource = null;
                 }
                 Awake();
+                isResetting = false;
+                isResettingHold = false;
                 return;
             } else {
                 InitializeAnimator();
@@ -1388,8 +1460,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             isResetting = false;
             isResettingHold = false;
         }
-
-        if (PrevAnimatorToDebug != (char)(int)AnimatorToDebug || ResetAvatar || attachedAnimators == null) {
+        if (PrevAnimatorToDebug != (char)(int)DebugDuplicateAnimator || ResetAvatar || attachedAnimators == null) {
             actionIndex = fxIndex = gestureIndex = additiveIndex = sittingIndex = ikposeIndex = tposeIndex = -1;
             altActionIndex = altFXIndex = altGestureIndex = altAdditiveIndex = -1;
             // animator.runtimeAnimatorController = null;
@@ -1412,11 +1483,38 @@ public class LyumaAv3Runtime : MonoBehaviour
             isResettingSel = true;
             return;
         }
+        if (PrevAnimatorToViewLiteParamsShow0 == (char)127) {
+            updateSelectionDelegate(this);
+            PrevAnimatorToViewLiteParamsShow0 = (char)(int)ViewAnimatorOnlyNoParams;
+        }
+        if ((char)(int)ViewAnimatorOnlyNoParams != PrevAnimatorToViewLiteParamsShow0) {
+            PrevAnimatorToViewLiteParamsShow0 = (char)127;
+            RuntimeAnimatorController rac = null;
+            allControllers.TryGetValue(ViewAnimatorOnlyNoParams, out rac);
+            updateSelectionDelegate(rac == null ? (UnityEngine.Object)this.emulator : (UnityEngine.Object)rac);
+        }
+        if (RefreshExpressionParams) {
+            RefreshExpressionParams = false;
+            Dictionary<string, float> stageNameToValue = EarlyRefreshExpressionParameters();
+            LateRefreshExpressionParameters(stageNameToValue);
+        }
         if(this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
             Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
             if (head != null) {
                 head.localScale = EnableHeadScaling ? new Vector3(0.0001f, 0.0001f, 0.0001f) : new Vector3(1.0f, 1.0f, 1.0f); // head bone is set to 0.0001 locally (not multiplied
             }
+        }
+        if (DisableMirrorAndShadowClones && (MirrorClone != null || ShadowClone != null)) {
+            allMirrorTransforms = null;
+            allShadowTransforms = null;
+            GameObject.Destroy(MirrorClone.gameObject);
+            MirrorClone = null;
+            GameObject.Destroy(ShadowClone.gameObject);
+            ShadowClone = null;
+        }
+        if (!DisableMirrorAndShadowClones && MirrorClone == null && ShadowClone == null) {
+            CreateMirrorClone();
+            CreateShadowClone();
         }
         if (emulator != null) {
             if (LastViewMirrorReflection != ViewMirrorReflection) {
@@ -1432,15 +1530,20 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
             LastViewBothRealAndMirror = ViewBothRealAndMirror;
             var osc = emulator.GetComponent<LyumaAv3Osc>();
-            bool lastOSC = (osc.avatarDescriptor == avadesc && osc.enabled && osc.openSocket);
-            if (lastOSC && !EnableAvatarOSC) {
-                osc.openSocket = false;
+            if (OSCController != null && EnableAvatarOSC && (!osc.openSocket || osc.avatarDescriptor != avadesc)) {
+                EnableAvatarOSC = false;
+                OSCController = null;
             }
-            if (!lastOSC && EnableAvatarOSC) {
+            if (OSCController != null && !EnableAvatarOSC) {
+                osc.openSocket = false;
+                OSCController = null;
+            }
+            if (OSCController == null && EnableAvatarOSC) {
                 osc.openSocket = true;
                 osc.avatarDescriptor = avadesc;
                 osc.enabled = true;
-                updateSelectionDelegate(osc.gameObject);
+                OSCController = osc;
+                // updateSelectionDelegate(osc.gameObject);
             }
         }
 
@@ -1461,24 +1564,38 @@ public class LyumaAv3Runtime : MonoBehaviour
         if (nextUpdateTime == 0.0f) {
             nextUpdateTime = Time.time + NonLocalSyncInterval;
         }
-        if (AvatarSyncSource != this && (Time.time >= nextUpdateTime || NonLocalSyncInterval <= 0.0f)) {
-            nextUpdateTime = Time.time + NonLocalSyncInterval;
+        bool ShouldSyncThisFrame = (AvatarSyncSource != this && (Time.time >= nextUpdateTime || NonLocalSyncInterval <= 0.0f));
+        if (AvatarSyncSource != this) {
+            IKSyncRadialMenu = AvatarSyncSource.IKSyncRadialMenu;
+            LyumaAv3Menu[] menus = AvatarSyncSource.GetComponents<LyumaAv3Menu>();
             for (int i = 0; i < Ints.Count; i++) {
                 if (StageParamterToBuiltin.ContainsKey(Ints[i].stageName)) {
-                    Ints[i].value = ClampByte(AvatarSyncSource.Ints[i].value);
+                    // Simulate IK sync of open gesture parameter.
+                    if (ShouldSyncThisFrame || (IKSyncRadialMenu && menus.Length >= 1 && menus[0].IsControlIKSynced(Ints[i].name))
+                            || (IKSyncRadialMenu && menus.Length >= 2 && menus[1].IsControlIKSynced(Ints[i].name))) {
+                        Ints[i].value = ClampByte(AvatarSyncSource.Ints[i].value);
+                    }
                 }
             }
             for (int i = 0; i < Floats.Count; i++) {
                 if (StageParamterToBuiltin.ContainsKey(Floats[i].stageName)) {
-                    Floats[i].value = ClampAndQuantizeFloat(AvatarSyncSource.Floats[i].value);
+                    // Simulate IK sync of open gesture parameter.
+                    if (ShouldSyncThisFrame || (IKSyncRadialMenu && menus.Length >= 1 && menus[0].IsControlIKSynced(Floats[i].name))
+                            || (IKSyncRadialMenu && menus.Length >= 2 && menus[1].IsControlIKSynced(Floats[i].name))) {
+                        Floats[i].value = ClampAndQuantizeFloat(AvatarSyncSource.Floats[i].value);
+                    }
                 }
             }
             for (int i = 0; i < Bools.Count; i++) {
                 if (StageParamterToBuiltin.ContainsKey(Bools[i].stageName)) {
-                    Bools[i].value = AvatarSyncSource.Bools[i].value;
+                    if (ShouldSyncThisFrame) {
+                        Bools[i].value = AvatarSyncSource.Bools[i].value;
+                    }
                 }
             }
-            // Todo: Simulate IK sync of open gesture parameter.
+            if (ShouldSyncThisFrame) {
+                nextUpdateTime = Time.time + NonLocalSyncInterval;
+            }
         }
         if (AvatarSyncSource != this) {
             // Simulate more continuous "IK sync" of these parameters.
@@ -1941,126 +2058,287 @@ public class LyumaAv3Runtime : MonoBehaviour
     }
 
     public void GetOSCDataInto(List<A3ESimpleOSC.OSCMessage> messages) {
-        foreach (var b in Bools) {
-            messages.Add(new A3ESimpleOSC.OSCMessage {
-                arguments = new object[1] {(object)(int)((bool)b.value ? 1 : 0)},
-                path = "/avatar/parameters/" + b.name,
-                time = new Vector2Int(-1,-1),
-            });
-        }
-        foreach (var i in Ints) {
-            messages.Add(new A3ESimpleOSC.OSCMessage {
-                arguments = new object[1] {(object)(int)i.value},
-                path = "/avatar/parameters/" + i.name,
-                time = new Vector2Int(-1,-1),
-            });
-        }
-        foreach (var f in Floats) {
-            messages.Add(new A3ESimpleOSC.OSCMessage {
-                arguments = new object[1] {(object)(float)f.value},
-                path = "/avatar/parameters/" + f.name,
-                time = new Vector2Int(-1,-1),
-            });
+        messages.Add(new A3ESimpleOSC.OSCMessage {
+            arguments = new object[1] {(object)OSCConfigurationFile.OSCAvatarID},
+            path="/avatar/change",
+            time = new Vector2Int(-1,-1),
+        });
+        if (OSCConfigurationFile.SendRecvAllParamsNotInJSON) {
+            foreach (var b in Bools) {
+                if (b.synced) {
+                    messages.Add(new A3ESimpleOSC.OSCMessage {
+                        arguments = new object[1] {(object)(int)((bool)b.value ? 1 : 0)},
+                        path = "/avatar/parameters/" + b.name,
+                        time = new Vector2Int(-1,-1),
+                    });
+                }
+            }
+            foreach (var i in Ints) {
+                if (i.synced) {
+                    messages.Add(new A3ESimpleOSC.OSCMessage {
+                        arguments = new object[1] {(object)(int)i.value},
+                        path = "/avatar/parameters/" + i.name,
+                        time = new Vector2Int(-1,-1),
+                    });
+                }
+            }
+            foreach (var f in Floats) {
+                if (f.synced) {
+                    messages.Add(new A3ESimpleOSC.OSCMessage {
+                        arguments = new object[1] {(object)(float)f.value},
+                        path = "/avatar/parameters/" + f.name,
+                        time = new Vector2Int(-1,-1),
+                    });
+                }
+            }
+        } else {
+            foreach (var prop in OSCConfigurationFile.OSCJsonConfig.parameters) {
+                if (prop.name != null && prop.name.Length > 0 && prop.output.address != null && prop.output.address.Length > 0) {
+                    string addr = prop.output.address;
+                    float outputf = 0.0f;
+                    string typ = "?";
+                    if (BoolToIndex.TryGetValue(prop.name, out var bidx)) {
+                        if (!Bools[bidx].synced) {
+                            continue;
+                        }
+                        outputf = Bools[bidx].value ? 1.0f : 0.0f;
+                        typ = "bool";
+                    } else if (IntToIndex.TryGetValue(prop.name, out var iidx)) {
+                        if (!Ints[iidx].synced) {
+                            continue;
+                        }
+                        outputf = (float)Ints[iidx].value;
+                        typ = "int";
+                    } else if (FloatToIndex.TryGetValue(prop.name, out var fidx)) {
+                        if (!Floats[fidx].synced) {
+                            continue;
+                        }
+                        outputf = Floats[fidx].value;
+                        typ = "float";
+                    } else {
+                        switch (prop.name) {
+                            case "VelocityZ":
+                                outputf = Velocity.z;
+                                break;
+                            case "VelocityY":
+                                outputf = Velocity.y;
+                                break;
+                            case "VelocityX":
+                                outputf = Velocity.x;
+                                break;
+                            case "InStation":
+                                outputf = InStation ? 1.0f : 0.0f;
+                                break;
+                            case "Seated":
+                                outputf = Seated ? 1.0f : 0.0f;
+                                break;
+                            case "AFK":
+                                outputf = AFK ? 1.0f : 0.0f;
+                                break;
+                            case "Upright":
+                                outputf = Upright;
+                                break;
+                            case "AngularY":
+                                outputf = AngularY;
+                                break;
+                            case "Grounded":
+                                outputf = Grounded ? 1.0f : 0.0f;
+                                break;
+                            case "MuteSelf":
+                                outputf = MuteSelf ? 1.0f : 0.0f;
+                                break;
+                            case "VRMode":
+                                outputf = VRMode ? 1.0f : 0.0f;
+                                break;
+                            case "TrackingType":
+                                outputf = TrackingTypeIdxInt;
+                                break;
+                            case "GestureRightWeight":
+                                outputf = GestureRightWeight;
+                                break;
+                            case "GestureRight":
+                                outputf = GestureRightIdxInt;
+                                break;
+                            case "GestureLeftWeight":
+                                outputf = GestureLeftWeight;
+                                break;
+                            case "GestureLeft":
+                                outputf = GestureLeftIdxInt;
+                                break;
+                            case "Voice":
+                                outputf = Voice;
+                                break;
+                            case "Viseme":
+                                outputf = VisemeInt;
+                                break;
+                            default:
+                                Debug.LogWarning("Unrecognized built in param");
+                                break;
+                        }
+                    }
+                    object output;
+                    switch (prop.output.type) {
+                        case "Float":
+                            output = (object)(float)outputf;
+                            break;
+                        case "Int":
+                            output = (object)(int)outputf;
+                            break;
+                        case "Bool":
+                            output = (object)(outputf != 0.0f);
+                            break;
+                        default:
+                            Debug.LogError("Unrecognized JSON type " + prop.input.type + " for address " + addr + " for output " + typ + " parameter " +
+                            prop.name + ". Should be \"Float\", \"Int\" or \"Bool\".");
+                            continue;
+                    }
+                    messages.Add(new A3ESimpleOSC.OSCMessage {
+                        arguments = new object[1] {(object)output},
+                        path = addr,
+                        time = new Vector2Int(-1,-1),
+                    });
+                }
+            }
         }
     }
-    public void HandleOSCMessage(A3ESimpleOSC.OSCMessage msg) {
-        string msgPath = msg.path;
-        object[] arguments = msg.arguments;
-        if (AvatarSyncSource != this || !IsLocal || IsMirrorClone || IsShadowClone) {
-            return;
+    public void processOSCInputMessage(string ParamName, object arg0) {
+        float argFloat = getObjectFloat(arg0);
+        int argInt = getObjectInt(arg0);
+        bool argBool = isObjectTrue(arg0);
+        switch (ParamName) {
+        case "Vertical":
+            Velocity.z = (3.0f + RunSpeed) * argFloat;
+            break;
+        case "Horizontal":
+            Velocity.x = (3.0f + RunSpeed) * (float)arg0;
+            break;
+        case "LookHorizontal":
+            AngularY = argFloat;
+            break;
+        case "UseAxisRight":
+        case "GrabAxisRight":
+        case "MoveHoldFB":
+        case "SpinHoldCwCcw":
+        case "SpinHoldUD":
+        case "SpinHoldLR":
+            break;
+        case "MoveForward":
+            Velocity.z = argBool ? 5.0f : 0.0f;
+            break;
+        case "MoveBackward":
+            Velocity.z = argBool ? -5.0f : 0.0f;
+            break;
+        case "MoveLeft":
+            Velocity.x = argBool ? -5.0f : 0.0f;
+            break;
+        case "MoveRight":
+            Velocity.x = argBool ? 5.0f : 0.0f;
+            break;
+        case "LookLeft":
+            AngularY = argBool ? -1.0f : 0.0f;
+            break;
+        case "LookRight":
+            AngularY = argBool ? 1.0f : 0.0f;
+            break;
+        case "Jump":
+            Jump = argBool;
+            break;
+        case "Run":
+            RunSpeed = argBool ? 3.0f : 0.0f;
+            break;
+        case "ComfortLeft":
+        case "ComfortRight":
+        case "DropRight":
+        case "UseRight":
+        case "GrabRight":
+        case "DropLeft":
+        case "UseLeft":
+        case "GrabLeft":
+        case "PanicButton":
+        case "QuickMenuToggleLeft":
+        case "QuickMenuToggleRight":
+            break;
+        case "Voice":
+            if (argBool && !MuteTogglerOn) {
+                MuteSelf = !MuteSelf;
+            }
+            MuteTogglerOn = argBool;
+            break;
+        default:
+            Debug.LogWarning("Unrecognized OSC input command " + ParamName);
+            break;
         }
-        float argFloat = getObjectFloat(arguments[0]);
-        int argInt = getObjectInt(arguments[0]);
-        bool argBool = isObjectTrue(arguments[0]);
-        if (msgPath.StartsWith("/input/")) {
-
-            string ParamName = msgPath.Split(new char[]{'/'}, 3)[2];
-            switch (ParamName) {
-            case "Vertical":
-                Velocity.z = (3.0f + RunSpeed) * argFloat;
-                break;
-            case "Horizontal":
-                Velocity.x = (3.0f + RunSpeed) * (float)arguments[0];
-                break;
-            case "LookHorizontal":
-                AngularY = argFloat;
-                break;
-            case "UseAxisRight":
-            case "GrabAxisRight":
-            case "MoveHoldFB":
-            case "SpinHoldCwCcw":
-            case "SpinHoldUD":
-            case "SpinHoldLR":
-                break;
-            case "MoveForward":
-                Velocity.z = argBool ? 5.0f : 0.0f;
-                break;
-            case "MoveBackward":
-                Velocity.z = argBool ? -5.0f : 0.0f;
-                break;
-            case "MoveLeft":
-                Velocity.x = argBool ? -5.0f : 0.0f;
-                break;
-            case "MoveRight":
-                Velocity.x = argBool ? 5.0f : 0.0f;
-                break;
-            case "LookLeft":
-                AngularY = argBool ? -1.0f : 0.0f;
-                break;
-            case "LookRight":
-                AngularY = argBool ? 1.0f : 0.0f;
-                break;
-            case "Jump":
-                Jump = argBool;
-                break;
-            case "Run":
-                RunSpeed = argBool ? 3.0f : 0.0f;
-                break;
-            case "ComfortLeft":
-            case "ComfortRight":
-            case "DropRight":
-            case "UseRight":
-            case "GrabRight":
-            case "DropLeft":
-            case "UseLeft":
-            case "GrabLeft":
-            case "PanicButton":
-            case "QuickMenuToggleLeft":
-            case "QuickMenuToggleRight":
-                break;
-            case "Voice":
-                if (argBool && !MuteTogglerOn) {
-                    MuteSelf = !MuteSelf;
-                }
-                MuteTogglerOn = argBool;
-                break;
-            default:
-                Debug.LogWarning("Unrecognized OSC input command " + msgPath);
-                break;
+    }
+    public void HandleOSCMessages(List<A3ESimpleOSC.OSCMessage> messages) {
+        var innerProperties = new Dictionary<string, A3EOSCConfiguration.InnerJson>();
+        foreach (var ij in OSCConfigurationFile.OSCJsonConfig.parameters) {
+            if (ij.input.address != null && ij.input.address.Length > 0) {
+                innerProperties[ij.input.address] = ij;
             }
         }
-        if (msgPath.StartsWith("/avatar/parameters/")) {
-            string ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
-            // TODO: I do not know if VRChat supports OSC bool.
-            if (arguments.Length > 0 && arguments[0].GetType() == typeof(bool)) {
-                int idx;
-                if (BoolToIndex.TryGetValue(ParamName, out idx)) {
-                    Bools[idx].value = (bool)(arguments[0]);
-                }
+        foreach (var msg in messages) {
+            string msgPath = msg.path;
+            object[] arguments = msg.arguments;
+            if (AvatarSyncSource != this || !IsLocal || IsMirrorClone || IsShadowClone) {
+                return;
             }
-            if (arguments.Length > 0 && arguments[0].GetType() == typeof(int)) {
-                int idx;
-                if (BoolToIndex.TryGetValue(ParamName, out idx)) {
-                    Bools[idx].value = ((int)(arguments[0])) != 0;
+            float argFloat = getObjectFloat(arguments[0]);
+            int argInt = getObjectInt(arguments[0]);
+            bool argBool = isObjectTrue(arguments[0]);
+            if (msgPath.StartsWith("/input/")) {
+                string ParamName = msgPath.Split(new char[]{'/'}, 3)[2];
+                processOSCInputMessage(ParamName, arguments[0]);
+            } else {
+                string ParamName;
+                if (OSCConfigurationFile.SendRecvAllParamsNotInJSON) {
+                    ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
+                } else if (innerProperties.ContainsKey(msgPath)) {
+                    ParamName = innerProperties[msgPath].name;
+                    if (innerProperties[msgPath].input.type == "Float") {
+                        if (arguments[0].GetType() != typeof(float)) {
+                            Debug.LogWarning("Address " + msgPath + " for parameter " + ParamName + " expected float in JSON but received " + arguments[0].GetType());
+                            continue;
+                        }
+                    } else if (innerProperties[msgPath].input.type == "Int" || innerProperties[msgPath].input.type == "Bool") {
+                        if (arguments[0].GetType() != typeof(int) && arguments[0].GetType() != typeof(bool)) {
+                            Debug.LogWarning("Address " + msgPath + " for parameter " + ParamName + " expected int/bool in JSON but received " + arguments[0].GetType());
+                            continue;
+                        }
+                    } else {
+                        Debug.LogError("Unrecognized JSON type " + innerProperties[msgPath].input.type + " for address " + msgPath + " for inupt parameter " +
+                                ParamName + " but received " + arguments[0].GetType() + ". Should be \"Float\", \"Int\" or \"Bool\".");
+                        continue;
+                    }
+                } else {
+                    Debug.LogWarning("Address " + msgPath + " not found for input in JSON.");
+                    continue;
                 }
-                if (IntToIndex.TryGetValue(ParamName, out idx)) {
-                    Ints[idx].value = (int)(arguments[0]);
+                if (OSCController != null && OSCController.debugPrintReceivedMessages) {
+                    Debug.Log("Recvd "+ParamName + ": " + msg);
                 }
-            }
-            if (arguments.Length > 0 && arguments[0].GetType() == typeof(float)) {
-                int idx;
-                if (FloatToIndex.TryGetValue(ParamName, out idx)) {
-                    Floats[idx].value = (float)(arguments[0]);
+                if (arguments.Length > 0 && arguments[0].GetType() == typeof(bool)) {
+                    int idx;
+                    if (BoolToIndex.TryGetValue(ParamName, out idx)) {
+                        Bools[idx].value = (bool)(arguments[0]);
+                    }
+                    if (IntToIndex.TryGetValue(ParamName, out idx)) {
+                        Ints[idx].value = (int)(arguments[0]);
+                    }
+                }
+                if (arguments.Length > 0 && arguments[0].GetType() == typeof(int)) {
+                    int idx;
+                    if (BoolToIndex.TryGetValue(ParamName, out idx)) {
+                        Bools[idx].value = ((int)(arguments[0])) != 0;
+                    }
+                    if (IntToIndex.TryGetValue(ParamName, out idx)) {
+                        Ints[idx].value = (int)(arguments[0]);
+                    }
+                }
+                if (arguments.Length > 0 && arguments[0].GetType() == typeof(float)) {
+                    int idx;
+                    if (FloatToIndex.TryGetValue(ParamName, out idx)) {
+                        Floats[idx].value = (float)(arguments[0]);
+                    }
                 }
             }
         }

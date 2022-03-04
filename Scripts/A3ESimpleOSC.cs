@@ -87,18 +87,19 @@ public class A3ESimpleOSC
             return ret.ToString();
         }
         public void DebugInto(System.Text.StringBuilder ret, bool dispIPTime=true) {
-            if (dispIPTime && sender != null) {
-                ret.Append("from ");
-                ret.Append(sender.ToString());
-                ret.Append(" ");
-            }
             ret.Append(path);
+            if (dispIPTime && sender != null) {
+                ret.Append("; from ");
+                ret.Append(sender.ToString());
+            }
             if (dispIPTime && (time.secs != 0 || time.nsecs != 0)) {
                 ret.Append(" @");
                 ret.Append(time);
             }
-            ret.Append("; type ");
-            ret.Append(typeTag);
+            if (dispIPTime) {
+                ret.Append("; type ");
+                ret.Append(typeTag);
+            }
             ret.Append(":\n");
             DebugObjectArrayInto(ret, "  ", arguments);
         }
@@ -142,6 +143,15 @@ public class A3ESimpleOSC
                         sb.Append((int)b);
                     }
                     sb.Append("}");
+                    break;
+                case float f:
+                    sb.Append(f.ToString("F4"));
+                    break;
+                case int i:
+                    sb.Append(i.ToString());
+                    break;
+                case bool b:
+                    sb.Append(b.ToString());
                     break;
                 default:
                     sb.Append("(");
