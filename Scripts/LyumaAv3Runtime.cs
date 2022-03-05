@@ -23,8 +23,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
+// using VRC.PhysBone;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
+using System.Reflection.Emit;
+using System.Reflection;
 
 // [RequireComponent(typeof(Animator))]
 public class LyumaAv3Runtime : MonoBehaviour
@@ -108,6 +111,189 @@ public class LyumaAv3Runtime : MonoBehaviour
 
     private int mouthOpenBlendShapeIdx;
     private int[] visemeBlendShapeIdxs;
+
+    [NonSerialized] public List<MonoBehaviour> AvDynamicsPhysBones = new List<MonoBehaviour>();
+    [NonSerialized] public List<MonoBehaviour> AvDynamicsContactReceivers = new List<MonoBehaviour>();
+    class WrappedComponent {
+        public System.Type type;
+    }
+    class PhysBoneState : WrappedComponent {
+        public System.Reflection.FieldInfo parameter, param_Angle, param_AngleValue;
+        public System.Reflection.FieldInfo param_IsGrabbed, param_IsGrabbedValue;
+        public System.Reflection.FieldInfo param_Stretch, param_StretchValue;
+        public const string PARAM_ISGRABBED = "_IsGrabbed";
+        public const string PARAM_ANGLE = "_Angle";
+        public const string PARAM_STRETCH = "_Stretch";
+    }
+    PhysBoneState physBoneState = new PhysBoneState();
+    class ContactReceiverState : WrappedComponent {
+        public System.Reflection.FieldInfo parameter, paramValue, value;
+        public System.Reflection.FieldInfo paramAccess;
+    }
+    ContactReceiverState contactReceiverState = new ContactReceiverState();
+
+    // Vtable must match VRC.SDKBase.IAnimParameterAccess:
+    private interface IAnimParameterAccessX
+    {
+        bool boolVal { get; set; }
+        int intVal { get; set; }
+        float floatVal { get; set; }
+    }
+
+    public class Av3EmuParameterAccessBase : IAnimParameterAccessX{
+        public LyumaAv3Runtime runtime;
+        public string paramName;
+        public bool boolVal {
+            get {
+                // Debug.Log(paramName + " GETb");
+                int idx;
+                if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return runtime.Ints[idx].value != 0;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx))return runtime.Floats[idx].value != 0.0f;
+                if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value;
+                return false;
+            }
+            set {
+                // Debug.Log(paramName + " SETb " + value);
+                int idx;
+                if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = value ? 1 : 0;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = value ? 1.0f : 0.0f;
+                if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value;
+            }
+        }
+        public int intVal {
+            get {
+                int idx;
+                // Debug.Log(paramName + " GETi");
+                if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return runtime.Ints[idx].value;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) return (int)runtime.Floats[idx].value;
+                if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value ? 1 : 0;
+                return 0;
+            }
+            set {
+                // Debug.Log(paramName + " SETi " + value);
+                int idx;
+                if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = value;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = (float)value;
+                if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value != 0;
+            }
+        }
+        public float floatVal {
+            get {
+                // Debug.Log(paramName + " GETf");
+                int idx;
+                if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return (float)runtime.Ints[idx].value;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) return runtime.Floats[idx].value;
+                if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value ? 1.0f : 0.0f;
+                return 0.0f;
+            }
+            set {
+                // Debug.Log(paramName + " SETf " + value);
+                int idx;
+                if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = (int)value;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = value;
+                if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value != 0.0f;
+            }
+        }
+    }
+    System.Type CreateAccessClass(System.Type accessIface) {
+        Type baseType = typeof(Av3EmuParameterAccessBase);
+        Type repositoryInteface = accessIface;
+        AssemblyName asmName = new AssemblyName(string.Format("{0}_{1}", "tmpAsm", Guid.NewGuid().ToString("N")));
+        // create in memory assembly only
+        AssemblyBuilder asmBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(asmName, AssemblyBuilderAccess.Run);
+        ModuleBuilder moduleBuilder = asmBuilder.DefineDynamicModule("core");
+        string proxyTypeName = string.Format("{0}_{1}", "Av3EmuParameterAccessImpl", Guid.NewGuid().ToString("N").Substring(0,6));
+        TypeBuilder typeBuilder = moduleBuilder.DefineType(proxyTypeName);
+        typeBuilder.AddInterfaceImplementation(repositoryInteface);
+        typeBuilder.SetParent(baseType);
+        return typeBuilder.CreateType();
+    }
+    System.Type accessClass;
+    System.Type GetOrCreateAccessClass(System.Type accessIface) {
+        if (accessClass == null) {
+            accessClass = CreateAccessClass(accessIface);
+        }
+        return accessClass;
+    }
+
+    public void ScanForOptionalTypes(MonoBehaviour[] behaviours) {
+        AvDynamicsContactReceivers.Clear();
+        AvDynamicsPhysBones.Clear();
+        HashSet<System.Type> checkedTypes = new HashSet<System.Type>();
+        foreach (MonoBehaviour mb in behaviours) {
+            System.Type mbtype = mb.GetType();
+            if (!checkedTypes.Contains(mbtype)) {
+                checkedTypes.Add(mbtype);
+                // parameter, paramIsGrabbed, Stretchable, Angle.
+                FieldInfo parameterProp = mbtype.GetField("parameter", BindingFlags.Public | BindingFlags.Instance);
+                FieldInfo angleAccessProp = mbtype.GetField("param_Angle", BindingFlags.Public | BindingFlags.Instance);
+                // Debug.Log(mbtype + " got parameter " + parameterProp);
+                // Debug.Log(mbtype + " got angle " + angleAccessProp);
+                if (angleAccessProp != null) {
+                    physBoneState.type = mbtype;
+                    physBoneState.param_Angle = angleAccessProp;
+                    GetOrCreateAccessClass(angleAccessProp.FieldType);
+                    physBoneState.param_AngleValue = mbtype.GetField("param_AngleValue", BindingFlags.Public | BindingFlags.Instance);
+                    physBoneState.param_IsGrabbedValue = mbtype.GetField("param_IsGrabbedValue", BindingFlags.Public | BindingFlags.Instance);
+                    physBoneState.param_IsGrabbed = mbtype.GetField("param_IsGrabbed", BindingFlags.Public | BindingFlags.Instance);
+                    physBoneState.param_StretchValue = mbtype.GetField("param_StretchValue", BindingFlags.Public | BindingFlags.Instance);
+                    physBoneState.param_Stretch = mbtype.GetField("param_Stretch", BindingFlags.Public | BindingFlags.Instance);
+                    physBoneState.parameter = mbtype.GetField("parameter", BindingFlags.Public | BindingFlags.Instance);
+                }
+                var accessProp = mbtype.GetField("paramAccess");
+                if (accessProp != null) {
+                    contactReceiverState.type = mbtype;
+                    GetOrCreateAccessClass(accessProp.FieldType);
+                    contactReceiverState.paramAccess = accessProp;
+                    contactReceiverState.parameter = mbtype.GetField("parameter", BindingFlags.Public | BindingFlags.Instance);
+                    contactReceiverState.paramValue = mbtype.GetField("paramValue", BindingFlags.Public | BindingFlags.Instance);
+                    contactReceiverState.value = mbtype.GetField("value", BindingFlags.Public | BindingFlags.Instance);
+                    // Debug.Log("GOT PARAMETER " + contactReceiverState.parameter + " ACCESS " + accessProp);
+                }
+            }
+            if (mbtype == contactReceiverState.type) {
+                AvDynamicsContactReceivers.Add(mb);
+            }
+            if (mbtype == physBoneState.type) {
+                AvDynamicsPhysBones.Add(mb);
+            }
+
+            // Debug.Log(contactReceiverState.type);
+            // Debug.Log(physBoneState.type);
+        }
+    }
+    public void assignPhysBoneParameters() {
+        foreach (var mb in AvDynamicsContactReceivers) {
+            var old_value = contactReceiverState.paramAccess.GetValue(mb);
+            if (old_value == null || old_value.GetType() != accessClass) {
+                string parameter = (string)contactReceiverState.parameter.GetValue(mb);
+                Av3EmuParameterAccessBase accessInst = (Av3EmuParameterAccessBase)accessClass.GetConstructor(new System.Type[0]).Invoke(new object[0]);
+                accessInst.runtime = this;
+                accessInst.paramName = parameter;
+                contactReceiverState.paramAccess.SetValue(mb, accessInst);
+                Debug.Log("Assigned access " + contactReceiverState.paramAccess.GetValue(mb) + " to param " + parameter + ": was " + old_value);
+            }
+        }
+        foreach (var mb in AvDynamicsPhysBones) {
+            var old_value = physBoneState.param_Stretch.GetValue(mb);
+            if (old_value == null || old_value.GetType() != accessClass) {
+                string parameter = (string)physBoneState.parameter.GetValue(mb);
+                Av3EmuParameterAccessBase accessInst = (Av3EmuParameterAccessBase)accessClass.GetConstructor(new System.Type[0]).Invoke(new object[0]);
+                accessInst.runtime = this;
+                accessInst.paramName = parameter + PhysBoneState.PARAM_ANGLE;
+                physBoneState.param_Angle.SetValue(mb, accessInst);
+                accessInst = (Av3EmuParameterAccessBase)accessClass.GetConstructor(new System.Type[0]).Invoke(new object[0]);
+                accessInst.runtime = this;
+                accessInst.paramName = parameter + PhysBoneState.PARAM_ISGRABBED;
+                physBoneState.param_IsGrabbed.SetValue(mb, accessInst);
+                accessInst = (Av3EmuParameterAccessBase)accessClass.GetConstructor(new System.Type[0]).Invoke(new object[0]);
+                accessInst.runtime = this;
+                accessInst.paramName = parameter + PhysBoneState.PARAM_STRETCH;
+                physBoneState.param_Stretch.SetValue(mb, accessInst);
+                Debug.Log("Assigned strech access " + physBoneState.param_Stretch.GetValue(mb) + " to param " + parameter + ": was " + old_value);
+            }
+        }
+    }
 
     public static float ClampFloatOnly(float val) {
         if (val < -1.0f) {
@@ -439,7 +625,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                             case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add:
                                 /* editor script treats it as random, but it is its own operation */
                                 newValue = ((bp.value ? 1.0 : 0.0) + parameter.value) != 0.0f; // weird but ok...
-                                Debug.Log("Add bool " + bp.name + " to " + newValue + ", " + (bp.value ? 1.0 : 0.0) + ", " + parameter.value);
+                                // Debug.Log("Add bool " + bp.name + " to " + newValue + ", " + (bp.value ? 1.0 : 0.0) + ", " + parameter.value);
                                 if (!bp.synced) {
                                     newValue = parameter.value != 0.0f;
                                     whichController = 0;
@@ -807,6 +993,10 @@ public class LyumaAv3Runtime : MonoBehaviour
                 t.gameObject.layer = desiredLayer;
             }
         }
+
+        // AvDynamicsTriggers = avadesc.gameObject.GetComponentsInChildren<VRCAvatarTrigger>();
+        // AvDynamicsPhysBones = avadesc.gameObject.GetComponentsInChildren<VRCPhysBone>();
+
         InitializeAnimator();
         if (addRuntimeDelegate != null) {
             addRuntimeDelegate(this);
@@ -818,6 +1008,9 @@ public class LyumaAv3Runtime : MonoBehaviour
             var pipelineManager = avadesc.GetComponent<VRC.Core.PipelineManager>();
             string avatarid = pipelineManager != null ? pipelineManager.blueprintId : null;
            OSCConfigurationFile.EnsureOSCJSONConfig(avadesc.expressionParameters, avatarid, this.gameObject.name);
+        }
+        if (!IsMirrorClone && !IsShadowClone) {
+            ScanForOptionalTypes(this.GetComponentsInChildren<MonoBehaviour>());
         }
     }
 
@@ -1972,6 +2165,11 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
             whichcontroller++;
         }
+
+        if (emulator != null && !emulator.DisableAvatarDynamicsIntegration) {
+            SimulateAvatarDynamics();
+        }
+
         for (int i = 0; i < playableBlendingStates.Count; i++) {
             var pbs = playableBlendingStates[i];
             if (pbs == null) {
@@ -2340,6 +2538,76 @@ public class LyumaAv3Runtime : MonoBehaviour
                         Floats[idx].value = (float)(arguments[0]);
                     }
                 }
+            }
+        }
+    }
+
+    private void SimulateAvatarDynamics()
+    {
+        assignPhysBoneParameters();
+        // VRCSDK handles Avatar dynamics internally for now. Keeping below for reference.
+#if false
+        foreach (var receiver in AvDynamicsContactReceivers)
+        {
+            if (receiver == null) continue; // When the component is deleted
+
+            string triggerParameter = (string)contactReceiverState.parameter.GetValue(receiver);
+            if (triggerParameter == "") continue;
+
+            for (var whichcontroller = 0; whichcontroller < playables.Count; whichcontroller++)
+            {
+                var playable = playables[whichcontroller];
+                var parameterIndices = playableParamterIds[whichcontroller];
+                var parameterFloats = playableParamterFloats[whichcontroller];
+                ExecuteWhenParameterExacltyMatchesInPlayable(
+                    parameterIndices, parameterFloats, triggerParameter,
+                    param => playable.SetFloat(param, (float)contactReceiverState.value.GetValue(receiver)));
+                whichcontroller++;
+            }
+        }
+
+        foreach (var physBone in AvDynamicsPhysBones)
+        {
+            if (physBone == null) continue; // When the component is deleted
+
+            var paramName = (string)physBoneState.parameter.GetValue(physBone);
+            if (paramName == "") continue;
+
+            for (var whichcontroller = 0; whichcontroller < playables.Count; whichcontroller++)
+            {
+                var playable = playables[whichcontroller];
+                var parameterIndices = playableParamterIds[whichcontroller];
+                var parameterFloats = playableParamterFloats[whichcontroller];
+                var parameterBools = playableParamterBools[whichcontroller];
+                ExecuteWhenParameterExacltyMatchesInPlayable(
+                    parameterIndices, parameterBools, paramName + PhysBoneState.PARAM_ANGLE,
+                    param => playable.SetBool(param, (bool)physBoneState.param_IsGrabbedValue.GetValue(physBone)));
+                if ((bool)physBoneState.param_IsGrabbedValue.GetValue(physBone))
+                {
+                    Debug.Log("GRABBED!!");
+                }
+                ExecuteWhenParameterExacltyMatchesInPlayable(
+                    parameterIndices, parameterFloats, paramName + PhysBoneState.PARAM_ISGRABBED,
+                    param => playable.SetFloat(param, (float)physBoneState.param_AngleValue.GetValue(physBone)));
+                ExecuteWhenParameterExacltyMatchesInPlayable(
+                    parameterIndices, parameterFloats, paramName + PhysBoneState.PARAM_STRETCH,
+                    param => playable.SetFloat(param, (float)physBoneState.param_StretchValue.GetValue(physBone)));
+                if ((float)physBoneState.param_StretchValue.GetValue(physBone) > 0.01f)
+                {
+                    Debug.Log("STRETCHED!!");
+                }
+            }
+        }
+#endif
+    }
+
+    private static void ExecuteWhenParameterExacltyMatchesInPlayable<T>(Dictionary<string, int> parameterIndices, Dictionary<int, T> parameterFloats, string paramName, Action<string> action)
+    {
+        if (parameterIndices.TryGetValue(paramName, out int paramid))
+        {
+            if (parameterFloats.TryGetValue(paramid, out var currentValue))
+            {
+                action.Invoke(paramName);
             }
         }
     }

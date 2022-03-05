@@ -36,6 +36,7 @@ public class LyumaAv3Emulator : MonoBehaviour
     public bool legacySubAnimatorParameterDriverMode;
     public bool legacyMenuGUI = true;
     private bool lastLegacyMenuGUI = true;
+    public bool DisableAvatarDynamicsIntegration;
     public bool DisableMirrorClone;
     public bool DisableShadowClone;
     private bool lastHead;
