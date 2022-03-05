@@ -4,14 +4,25 @@
 
 ## Planned features for 3.0:
 
-* Package support
-* Basic Avatar Dynamics support
+* Unity Package support
 
-### **New features in v 2.9.1 (3.0 beta2):**
+### **New features in v 2.9.3 (3.0 rc1):**
+
+This build is compatible with all recent SDK versions, including Avatar Dynamics beta. Open Beta is **optional**.
+
+**Avatar Dynamics integration (optional)**
+
+VRCSDK Open Beta provides Avatar Dynamics support built-in. 
+
+This update hooks into the driven parameters on both `PhysBone` and `ContactReceiver`. Enabled by default. Can be disabled by ticking a box on the Emulator Control before entering play mode.
+
+For non-open beta, now supports hot reloading scripts without restarting play mode. This can be useful for rapid testing.
 
 **OSC Now works in the emulator (opt-in)**: Supports sending and receiving OSC messages for your avatar. Off by default. Simply tick "**Enable Avatar OSC**" to turn it on.
 
-Avatar switch messages not implemented yet. Messages are sent using bundles. I have not verified the accuracy of frequency and message type compared to VRC.
+Supports generating, loading and saving JSON config files for OSC for use in VRChat.
+
+**Compatible with VRCFaceTracking**. Avatar switch messages are now implemented! Messages are sent without bundles for compatibility.
 
 Other features:
 
