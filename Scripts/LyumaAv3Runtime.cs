@@ -338,10 +338,10 @@ public class LyumaAv3Runtime : MonoBehaviour
         "Viseme", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "Upright", "AngularY", "Grounded", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation"
     };
     public static readonly HashSet<Type> MirrorCloneComponentBlacklist = new HashSet<Type> {
-        typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(DynamicBone), typeof(DynamicBoneCollider), typeof(Rigidbody), typeof(Joint)
+        typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Rigidbody), typeof(Joint)
     };
     public static readonly HashSet<Type> ShadowCloneComponentBlacklist = new HashSet<Type> {
-        typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Light), typeof(ParticleSystemRenderer), typeof(DynamicBone), typeof(DynamicBoneCollider), typeof(Rigidbody), typeof(Joint)
+        typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Light), typeof(ParticleSystemRenderer), typeof(Rigidbody), typeof(Joint)
     };
     [Header("Built-in inputs / Viseme")]
     public VisemeIndex Viseme;
@@ -1025,7 +1025,8 @@ public class LyumaAv3Runtime : MonoBehaviour
             o.name = gameObject.name + " (MirrorReflection)";
             allMirrorTransforms = MirrorClone.gameObject.GetComponentsInChildren<Transform>(true);
             foreach (Component component in MirrorClone.gameObject.GetComponentsInChildren<Component>(true)) {
-                if (MirrorCloneComponentBlacklist.Contains(component.GetType())) {
+                if (MirrorCloneComponentBlacklist.Contains(component.GetType()) || component.GetType().ToString().Contains("DynamicBone")
+                         || component.GetType().ToString().Contains("VRCContact") || component.GetType().ToString().Contains("VRCPhysBone")) {
                     UnityEngine.Object.Destroy(component);
                 }
             }
@@ -1043,7 +1044,8 @@ public class LyumaAv3Runtime : MonoBehaviour
             o.name = gameObject.name + " (ShadowClone)";
             allShadowTransforms = ShadowClone.gameObject.GetComponentsInChildren<Transform>(true);
             foreach (Component component in ShadowClone.gameObject.GetComponentsInChildren<Component>(true)) {
-                if (ShadowCloneComponentBlacklist.Contains(component.GetType())) {
+                if (ShadowCloneComponentBlacklist.Contains(component.GetType()) || component.GetType().ToString().Contains("DynamicBone")
+                         || component.GetType().ToString().Contains("VRCContact") || component.GetType().ToString().Contains("VRCPhysBone")) {
                     UnityEngine.Object.Destroy(component);
                     continue;
                 }
