@@ -6,15 +6,17 @@
 
 * Unity Package support
 
-### **New features in v 2.9.3 (3.0 rc1):**
+### **New features in v 2.9.5 (3.0 rc3):**
+
+2.9.5: Fixed Build and Publish AGAIN.
 
 This build is compatible with all recent SDK versions, including Avatar Dynamics beta. Open Beta is **optional**.
 
 **Avatar Dynamics integration (optional)**
 
-VRCSDK Open Beta provides Avatar Dynamics support built-in. 
+VRCSDK Open Beta provides Avatar Dynamics support built-in.
 
-This update hooks into the driven parameters on both `PhysBone` and `ContactReceiver`. Enabled by default. Can be disabled by ticking a box on the Emulator Control before entering play mode.
+This update hooks into the driven parameters on both `PhysBone` and `ContactReceiver`. Enabled by default. Can be disabled by ticking a box on the Emulator Control before entering play mode. Recommended to set Radius greater than 0.
 
 For non-open beta, now supports hot reloading scripts without restarting play mode. This can be useful for rapid testing.
 
@@ -33,6 +35,7 @@ Other features:
 * Added new Jump box to simulate a jump (grounded, up velocity, down velocity). Also supported from OSC.
 * Improved a bunch of bugs with Mirror and Shadow clones thanks to 3. They can be disabled by clicking the boxes in the main Emulator Control.
 * Merged in contribution by 3 to support head scaling.
+* Support for IK Sync to local clones.
 * Many more bugfixes.
 
 ### **New features in v 2.9.0 (3.0 beta):**
