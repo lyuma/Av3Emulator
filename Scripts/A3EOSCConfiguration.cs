@@ -136,26 +136,14 @@ public struct A3EOSCConfiguration {
 
     public const string AVTR_EMULATOR_PREFIX = "avtr_LyumaAv3Emulator_";
     public void EnsureOSCJSONConfig(VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters expparams, string avatarid, string name) {
-        string localLowPath = null;
+        string localLowPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (localLowPath.EndsWith("Local")) {
+            localLowPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(localLowPath), "LocalLow");
+        }
         string userid = null;
-
-        System.Type sdkbuilder = typeof(VRC.SDKBase.Editor.VRC_SdkBuilder); //System.Type.GetType("VRC.SDKBase.Editor.VRC_SdkBuilder");
-        if (sdkbuilder != null) {
-            var guidprop = sdkbuilder.GetProperty("LocalLowGUID", System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public);
-            var GetKnownFolderPath = sdkbuilder.GetMethod("GetKnownFolderPath", System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public);
-            if (guidprop != null && GetKnownFolderPath != null) {
-                localLowPath = (string)GetKnownFolderPath.Invoke(null, new object[]{guidprop.GetValue(null)});
-            }
-        }
-        if (localLowPath == null) {
-            localLowPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            if (localLowPath.EndsWith("Local")) {
-                localLowPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(localLowPath), "LocalLow");
-            }
-        }
         string vrcOSCPath = System.IO.Path.Combine(localLowPath, "VRChat", "vrchat", "OSC");
 
-        System.Type apiusertype = typeof(VRC.Core.APIUser); //System.Type.GetType("VRC.Core.APIUser");
+        System.Type apiusertype = System.Type.GetType("VRC.Core.APIUser, VRCCore-Editor");
         if (apiusertype != null) {
             var idprop = apiusertype.GetProperty("id", System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public);
             var prop = apiusertype.GetProperty("CurrentUser", System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public);
