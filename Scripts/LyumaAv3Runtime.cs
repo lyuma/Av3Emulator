@@ -40,6 +40,8 @@ public class LyumaAv3Runtime : MonoBehaviour
     public static AddRuntime addRuntimeDelegate;
     public delegate void UpdateSceneLayersFunc(int layers);
     public static UpdateSceneLayersFunc updateSceneLayersDelegate;
+    public delegate void ApplyOnEnableWorkaroundDelegateType();
+    public static ApplyOnEnableWorkaroundDelegateType ApplyOnEnableWorkaroundDelegate;
 
     public LyumaAv3Runtime OriginalSourceClone = null;
 
@@ -1515,7 +1517,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     private bool isResettingHold;
     private bool isResettingSel;
     void LateUpdate() {
-        if (ResetAndHold) {
+        if (ResetAndHold || (emulator != null && (!emulator.enabled || !emulator.gameObject.activeInHierarchy))) {
             return;
         }
         if (IsMirrorClone || IsShadowClone) {
@@ -1588,7 +1590,25 @@ public class LyumaAv3Runtime : MonoBehaviour
         }
     }
 
+    private bool broadcastStartNextFrame;
+    void OnEnable() {
+        if (emulator != null && emulator.WorkaroundPlayModeScriptCompile) {
+            ApplyOnEnableWorkaroundDelegate();
+        }
+        if (attachedAnimators == null && AvatarSyncSource != null) {
+            broadcastStartNextFrame = true;
+        }
+    }
+
     void Update() {
+        if (broadcastStartNextFrame) {
+            Debug.Log("BROADCASTING START!");
+            broadcastStartNextFrame = false;
+            BroadcastMessage("Start");
+        }
+        if (emulator != null && (!emulator.enabled || !emulator.gameObject.activeInHierarchy)) {
+            return;
+        }
         if (!IsMirrorClone && !IsShadowClone) {
             NormalUpdate();
         }
@@ -2174,7 +2194,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         }
 
         if (emulator != null && !emulator.DisableAvatarDynamicsIntegration) {
-            SimulateAvatarDynamics();
+            assignPhysBoneParameters();
         }
 
         for (int i = 0; i < playableBlendingStates.Count; i++) {
@@ -2545,76 +2565,6 @@ public class LyumaAv3Runtime : MonoBehaviour
                         Floats[idx].value = (float)(arguments[0]);
                     }
                 }
-            }
-        }
-    }
-
-    private void SimulateAvatarDynamics()
-    {
-        assignPhysBoneParameters();
-        // VRCSDK handles Avatar dynamics internally for now. Keeping below for reference.
-#if false
-        foreach (var receiver in AvDynamicsContactReceivers)
-        {
-            if (receiver == null) continue; // When the component is deleted
-
-            string triggerParameter = (string)contactReceiverState.parameter.GetValue(receiver);
-            if (triggerParameter == "") continue;
-
-            for (var whichcontroller = 0; whichcontroller < playables.Count; whichcontroller++)
-            {
-                var playable = playables[whichcontroller];
-                var parameterIndices = playableParamterIds[whichcontroller];
-                var parameterFloats = playableParamterFloats[whichcontroller];
-                ExecuteWhenParameterExacltyMatchesInPlayable(
-                    parameterIndices, parameterFloats, triggerParameter,
-                    param => playable.SetFloat(param, (float)contactReceiverState.value.GetValue(receiver)));
-                whichcontroller++;
-            }
-        }
-
-        foreach (var physBone in AvDynamicsPhysBones)
-        {
-            if (physBone == null) continue; // When the component is deleted
-
-            var paramName = (string)physBoneState.parameter.GetValue(physBone);
-            if (paramName == "") continue;
-
-            for (var whichcontroller = 0; whichcontroller < playables.Count; whichcontroller++)
-            {
-                var playable = playables[whichcontroller];
-                var parameterIndices = playableParamterIds[whichcontroller];
-                var parameterFloats = playableParamterFloats[whichcontroller];
-                var parameterBools = playableParamterBools[whichcontroller];
-                ExecuteWhenParameterExacltyMatchesInPlayable(
-                    parameterIndices, parameterBools, paramName + PhysBoneState.PARAM_ANGLE,
-                    param => playable.SetBool(param, (bool)physBoneState.param_IsGrabbedValue.GetValue(physBone)));
-                if ((bool)physBoneState.param_IsGrabbedValue.GetValue(physBone))
-                {
-                    Debug.Log("GRABBED!!");
-                }
-                ExecuteWhenParameterExacltyMatchesInPlayable(
-                    parameterIndices, parameterFloats, paramName + PhysBoneState.PARAM_ISGRABBED,
-                    param => playable.SetFloat(param, (float)physBoneState.param_AngleValue.GetValue(physBone)));
-                ExecuteWhenParameterExacltyMatchesInPlayable(
-                    parameterIndices, parameterFloats, paramName + PhysBoneState.PARAM_STRETCH,
-                    param => playable.SetFloat(param, (float)physBoneState.param_StretchValue.GetValue(physBone)));
-                if ((float)physBoneState.param_StretchValue.GetValue(physBone) > 0.01f)
-                {
-                    Debug.Log("STRETCHED!!");
-                }
-            }
-        }
-#endif
-    }
-
-    private static void ExecuteWhenParameterExacltyMatchesInPlayable<T>(Dictionary<string, int> parameterIndices, Dictionary<int, T> parameterFloats, string paramName, Action<string> action)
-    {
-        if (parameterIndices.TryGetValue(paramName, out int paramid))
-        {
-            if (parameterFloats.TryGetValue(paramid, out var currentValue))
-            {
-                action.Invoke(paramName);
             }
         }
     }

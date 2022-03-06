@@ -37,6 +37,7 @@ public class LyumaAv3Emulator : MonoBehaviour
     public bool legacyMenuGUI = true;
     private bool lastLegacyMenuGUI = true;
     public bool DisableAvatarDynamicsIntegration;
+    public bool WorkaroundPlayModeScriptCompile = true;
     public bool DisableMirrorClone;
     public bool DisableShadowClone;
     private bool lastHead;
@@ -59,42 +60,33 @@ public class LyumaAv3Emulator : MonoBehaviour
         Debug.Log("drv len "+avatars.Length);
         foreach (var avadesc in avatars)
         {
-            // Creates the playable director, and initializes animator.
-            bool alreadyHadComponent = avadesc.gameObject.GetComponent<LyumaAv3Runtime>() != null;
-            var runtime = avadesc.gameObject.GetOrAddComponent<LyumaAv3Runtime>();
-            runtime.emulator = this;
-            runtime.VRMode = DefaultToVR;
-            runtime.TrackingType = DefaultTrackingType;
-            runtime.InStation = DefaultTestInStation;
-            runtime.DebugDuplicateAnimator = DefaultAnimatorToDebug;
-            runtime.EnableHeadScaling = EnableHeadScaling;
-            runtimes.Add(runtime);
-            if (!alreadyHadComponent && !DisableShadowClone) {
-                runtime.CreateShadowClone();
+            try {
+                // Creates the playable director, and initializes animator.
+                bool alreadyHadComponent = avadesc.gameObject.GetComponent<LyumaAv3Runtime>() != null;
+                var runtime = avadesc.gameObject.GetOrAddComponent<LyumaAv3Runtime>();
+                runtime.emulator = this;
+                runtime.VRMode = DefaultToVR;
+                runtime.TrackingType = DefaultTrackingType;
+                runtime.InStation = DefaultTestInStation;
+                runtime.DebugDuplicateAnimator = DefaultAnimatorToDebug;
+                runtime.EnableHeadScaling = EnableHeadScaling;
+                runtimes.Add(runtime);
+                if (!alreadyHadComponent && !DisableShadowClone) {
+                    runtime.CreateShadowClone();
+                }
+                if (!alreadyHadComponent && !DisableMirrorClone) {
+                    runtime.CreateMirrorClone();
+                }
+                runtime.DisableMirrorAndShadowClones = DisableShadowClone && DisableMirrorClone;
+            } catch (System.Exception e) {
+                Debug.LogException(e);
             }
-            if (!alreadyHadComponent && !DisableMirrorClone) {
-                runtime.CreateMirrorClone();
-            }
-            runtime.DisableMirrorAndShadowClones = DisableShadowClone && DisableMirrorClone;
+        }
+        if (WorkaroundPlayModeScriptCompile) {
+            LyumaAv3Runtime.ApplyOnEnableWorkaroundDelegate();
         }
     }
 
-    private void Start()
-    {
-    }
-    private void OnDisable() {
-        foreach (var runtime in runtimes) {
-            if (runtime != null)
-            {
-                runtime.enabled = false;
-            }
-        }
-    }
-    private void OnEnable() {
-        foreach (var runtime in runtimes) {
-            runtime.enabled = true;
-        }
-    }
     private void OnDestroy() {
         foreach (var runtime in runtimes) {
             Destroy(runtime);
@@ -106,7 +98,7 @@ public class LyumaAv3Emulator : MonoBehaviour
     private void Update() {
         if (RestartingEmulator) {
             RestartingEmulator = false;
-            Start();
+            Awake();
         } else if (RestartEmulator) {
             RestartEmulator = false;
             OnDestroy();

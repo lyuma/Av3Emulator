@@ -23,6 +23,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.Animations;
 using UnityEditor.Animations;
+using UnityEditor.Compilation;
 using UnityEditor.Playables;
 using UnityEngine.Playables;
 using VRC.SDK3.Avatars.Components;
@@ -127,6 +128,26 @@ public static class LyumaAv3EditorSupport
             MoveComponentToTop(runtime);
         };
 
+        // Currently PhysBone and ContactManager cause exceptions if scripts reload during Play mode.
+        // This applies a workaround: disable the objects before compile; call RuntimeInit to recreate them after.
+        LyumaAv3Runtime.ApplyOnEnableWorkaroundDelegate = () => {
+            CompilationPipeline.assemblyCompilationStarted -= WorkaroundDestroyManagersBeforeCompile;
+            CompilationPipeline.assemblyCompilationStarted += WorkaroundDestroyManagersBeforeCompile;
+            GameObject gotmp = GameObject.Find("/TempReloadDontDestroy");
+            if (gotmp != null) {
+                GameObject.DestroyImmediate(gotmp);
+                var avatarDynamicsSetup = typeof(VRCExpressionsMenuEditor).Assembly.GetType("VRC.SDK3.Avatars.AvatarDynamicsSetup");
+                if (avatarDynamicsSetup != null) {
+                    var RuntimeInit = avatarDynamicsSetup.GetMethod("RuntimeInit", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                    if (RuntimeInit != null) {
+                        Debug.Log("Caling avatarDynamicsSetup.RuntimeInit(): " + RuntimeInit);
+                        RuntimeInit.Invoke(null, new object[0]);
+                    }
+                }
+                Debug.Log("DONE workaround");
+            }
+        };
+
         LyumaAv3Osc.GetEditorViewportDelegate = () => {
             try {
                 Rect ret = UnityEditor.SceneView.currentDrawingSceneView.position;
@@ -181,6 +202,28 @@ public static class LyumaAv3EditorSupport
         };
     }
 
+    public static void OnPlayModeStateChange(UnityEditor.PlayModeStateChange pmsc) {
+        // We don't want any of our callbacks causing trouble outside of play mode.
+        if (pmsc != UnityEditor.PlayModeStateChange.EnteredPlayMode) {
+            CompilationPipeline.assemblyCompilationStarted -= WorkaroundDestroyManagersBeforeCompile;
+        }
+    }
+
+    private static void WorkaroundDestroyManagersBeforeCompile(string obj) {
+        Debug.Log("Compile Started");
+        GameObject gotmp = new GameObject("TempReloadDontDestroy");
+        Object.DontDestroyOnLoad(gotmp);
+        GameObject go;
+        go = GameObject.Find("/TriggerManager");
+        if (go != null) {
+            Object.DestroyImmediate(go);
+        }
+        go = GameObject.Find("/PhysBoneManager");
+        if (go != null) {
+            Object.DestroyImmediate(go);
+        }
+    }
+
     static void MoveComponentToTop(Component c) {
         GameObject go = c.gameObject;
         Component[] components = go.GetComponents<Component>();
@@ -206,6 +249,7 @@ public static class LyumaAv3EditorSupport
     static LyumaAv3EditorSupport()
     {
         InitDefaults();
+        EditorApplication.playModeStateChanged += OnPlayModeStateChange;
     }
 
     [MenuItem("Tools/Enable Avatars 3.0 Emulator")]
