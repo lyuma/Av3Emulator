@@ -6,6 +6,18 @@
 
 * Unity Package support
 
+### **New features in v 2.9.6 (3.0 rc4):**
+
+Mostly a stability update to fix common issues with running the emulator.
+
+Grabbing and posing should work more reliably now. Make sure not to leave your bone Radius at 0.
+
+* Made AvatarDynamics parameters more strict to match VRC implementation, so float params must be float; bool params must be bool, and so on.
+* Fixed issues with grabbing and posing bones.
+* Fixed more build errors.
+* Fixed grabbing bones not working when the OSC folder was missing.
+* Added some try/catch for exceptions related to the OSC folder in LocalLow.
+
 ### **New features in v 2.9.5 (3.0 rc3):**
 
 2.9.5: Fixed Build and Publish AGAIN.
