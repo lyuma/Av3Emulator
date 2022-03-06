@@ -216,7 +216,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         return accessClass;
     }
 
-    public void ScanForOptionalTypes(MonoBehaviour[] behaviours) {
+    public void ScanForAvDynamicsTypes(MonoBehaviour[] behaviours) {
         AvDynamicsContactReceivers.Clear();
         AvDynamicsPhysBones.Clear();
         HashSet<System.Type> checkedTypes = new HashSet<System.Type>();
@@ -1004,13 +1004,17 @@ public class LyumaAv3Runtime : MonoBehaviour
         if (AvatarSyncSource == this) {
             CreateAv3MenuComponent();
         }
+        if (!IsMirrorClone && !IsShadowClone) {
+            try {
+                ScanForAvDynamicsTypes(this.GetComponentsInChildren<MonoBehaviour>());
+            }catch (Exception e) {
+                Debug.LogException(e);
+            }
+        }
         if (!IsMirrorClone && !IsShadowClone && AvatarSyncSource == this) {
             var pipelineManager = avadesc.GetComponent<VRC.Core.PipelineManager>();
             string avatarid = pipelineManager != null ? pipelineManager.blueprintId : null;
            OSCConfigurationFile.EnsureOSCJSONConfig(avadesc.expressionParameters, avatarid, this.gameObject.name);
-        }
-        if (!IsMirrorClone && !IsShadowClone) {
-            ScanForOptionalTypes(this.GetComponentsInChildren<MonoBehaviour>());
         }
     }
 
@@ -1734,6 +1738,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 OSCController = null;
             }
             if (OSCController == null && EnableAvatarOSC) {
+                osc = emulator.gameObject.GetOrAddComponent<LyumaAv3Osc>();
                 osc.openSocket = true;
                 osc.avatarDescriptor = avadesc;
                 osc.enabled = true;
