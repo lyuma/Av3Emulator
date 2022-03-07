@@ -60,6 +60,13 @@ public class LyumaAv3Emulator : MonoBehaviour
         Debug.Log(this.name + ": Setting up Av3Emulator on "+avatars.Length + " avatars.", this);
         foreach (var avadesc in avatars)
         {
+            if (avadesc.GetComponent<PipelineSaver>() != null) {
+                Debug.Log("Found PipelineSaver on " + avadesc.name + ". Disabling clones and mirror copy.", avadesc);
+                DisableMirrorClone = true;
+                DisableShadowClone = true;
+                CreateNonLocalClone = false;
+                EnableHeadScaling = false;
+            }
             try {
                 // Creates the playable director, and initializes animator.
                 bool alreadyHadComponent = avadesc.gameObject.GetComponent<LyumaAv3Runtime>() != null;
