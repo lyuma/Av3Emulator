@@ -231,7 +231,11 @@ public class LyumaAv3Runtime : MonoBehaviour
                 FieldInfo angleAccessProp = mbtype.GetField("param_Angle", BindingFlags.Public | BindingFlags.Instance);
                 // Debug.Log(mbtype + " got parameter " + parameterProp);
                 // Debug.Log(mbtype + " got angle " + angleAccessProp);
+                // The class with 
                 if (angleAccessProp != null) {
+                    if (mbtype.Name != "VRCPhysBone") {
+                        Debug.LogError("VRCPhysBone class name has changed to " + mbtype.Name);
+                    }
                     physBoneState.type = mbtype;
                     physBoneState.param_Angle = angleAccessProp;
                     GetOrCreateAccessClass(angleAccessProp.FieldType);
@@ -242,8 +246,11 @@ public class LyumaAv3Runtime : MonoBehaviour
                     physBoneState.param_Stretch = mbtype.GetField("param_Stretch", BindingFlags.Public | BindingFlags.Instance);
                     physBoneState.parameter = mbtype.GetField("parameter", BindingFlags.Public | BindingFlags.Instance);
                 }
-                var accessProp = mbtype.GetField("paramAccess");
+                var accessProp = mbtype.GetField("paramAccess", BindingFlags.Public | BindingFlags.Instance);
                 if (accessProp != null) {
+                    if (mbtype.Name != "VRCContactReceiver") {
+                        Debug.LogError("VRCContactReceiver class name has changed to " + mbtype.Name);
+                    }
                     contactReceiverState.type = mbtype;
                     GetOrCreateAccessClass(accessProp.FieldType);
                     contactReceiverState.paramAccess = accessProp;
@@ -273,7 +280,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 accessInst.runtime = this;
                 accessInst.paramName = parameter;
                 contactReceiverState.paramAccess.SetValue(mb, accessInst);
-                Debug.Log("Assigned access " + contactReceiverState.paramAccess.GetValue(mb) + " to param " + parameter + ": was " + old_value);
+                // Debug.Log("Assigned access " + contactReceiverState.paramAccess.GetValue(mb) + " to param " + parameter + ": was " + old_value);
             }
         }
         foreach (var mb in AvDynamicsPhysBones) {
@@ -292,7 +299,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 accessInst.runtime = this;
                 accessInst.paramName = parameter + PhysBoneState.PARAM_STRETCH;
                 physBoneState.param_Stretch.SetValue(mb, accessInst);
-                Debug.Log("Assigned strech access " + physBoneState.param_Stretch.GetValue(mb) + " to param " + parameter + ": was " + old_value);
+                // Debug.Log("Assigned strech access " + physBoneState.param_Stretch.GetValue(mb) + " to param " + parameter + ": was " + old_value);
             }
         }
     }
@@ -970,7 +977,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             cloned.hideFlags = HideFlags.HideAndDontSave;
             cloned.SetActive(false);
             OriginalSourceClone = cloned.GetComponent<LyumaAv3Runtime>();
-            Debug.Log("ORIGINAL SOURCE CLONE IS " + OriginalSourceClone, this);
+            Debug.Log("Spawned a hidden source clone " + OriginalSourceClone, OriginalSourceClone);
             OriginalSourceClone.OriginalSourceClone = OriginalSourceClone;
         }
         foreach (var smr in gameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true)) {
@@ -1008,7 +1015,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         }
         if (!IsMirrorClone && !IsShadowClone) {
             try {
-                ScanForAvDynamicsTypes(this.GetComponentsInChildren<MonoBehaviour>());
+                ScanForAvDynamicsTypes(this.GetComponentsInChildren<MonoBehaviour>(true));
             }catch (Exception e) {
                 Debug.LogException(e);
             }
@@ -1026,9 +1033,9 @@ public class LyumaAv3Runtime : MonoBehaviour
             MirrorClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
             MirrorClone.GetComponent<Animator>().avatar = null;
             OriginalSourceClone.IsMirrorClone = false;
-            GameObject o;
-            (o = MirrorClone.gameObject).SetActive(true);
+            GameObject o = MirrorClone.gameObject;
             o.name = gameObject.name + " (MirrorReflection)";
+            o.SetActive(true);
             allMirrorTransforms = MirrorClone.gameObject.GetComponentsInChildren<Transform>(true);
             foreach (Component component in MirrorClone.gameObject.GetComponentsInChildren<Component>(true)) {
                 if (MirrorCloneComponentBlacklist.Contains(component.GetType()) || component.GetType().ToString().Contains("DynamicBone")
@@ -1045,9 +1052,9 @@ public class LyumaAv3Runtime : MonoBehaviour
             ShadowClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
             ShadowClone.GetComponent<Animator>().avatar = null;
             OriginalSourceClone.IsShadowClone = false;
-            GameObject o;
-            (o = ShadowClone.gameObject).SetActive(true);
+            GameObject o = ShadowClone.gameObject;
             o.name = gameObject.name + " (ShadowClone)";
+            o.SetActive(true);
             allShadowTransforms = ShadowClone.gameObject.GetComponentsInChildren<Transform>(true);
             foreach (Component component in ShadowClone.gameObject.GetComponentsInChildren<Component>(true)) {
                 if (ShadowCloneComponentBlacklist.Contains(component.GetType()) || component.GetType().ToString().Contains("DynamicBone")
@@ -1320,7 +1327,7 @@ public class LyumaAv3Runtime : MonoBehaviour
 
         // Plays the Graph.
         playableGraph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
-        Debug.Log(this.name + " : " + GetType() + " awoken and ready to Play.");
+        Debug.Log(this.name + " : " + GetType() + " awoken and ready to Play.", this);
         playableGraph.Play();
     }
 
@@ -1412,16 +1419,19 @@ public class LyumaAv3Runtime : MonoBehaviour
             param.synced = true;
             param.name = "VRCEmote";
             Ints.Add(param);
+            usedparams.Add("VRCEmote");
             FloatParam fparam = new FloatParam();
             fparam.stageName = "VRCFaceBlendH";
             fparam.synced = true;
             fparam.name = "VRCFaceBlendH";
             Floats.Add(fparam);
+            usedparams.Add("VRCFaceBlendH");
             fparam = new FloatParam();
             fparam.stageName = "VRCFaceBlendV";
             fparam.synced = true;
             fparam.name = "VRCFaceBlendV";
             Floats.Add(fparam);
+            usedparams.Add("VRCFaceBlendV");
         }
 
         //playableParamterIds

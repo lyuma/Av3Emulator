@@ -57,7 +57,7 @@ public class LyumaAv3Emulator : MonoBehaviour
         animator.runtimeAnimatorController = EmptyController;
         emulatorInstance = this;
         VRCAvatarDescriptor[] avatars = FindObjectsOfType<VRCAvatarDescriptor>();
-        Debug.Log("drv len "+avatars.Length);
+        Debug.Log(this.name + ": Setting up Av3Emulator on "+avatars.Length + " avatars.", this);
         foreach (var avadesc in avatars)
         {
             try {

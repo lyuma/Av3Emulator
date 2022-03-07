@@ -59,8 +59,8 @@ public struct A3EOSCConfiguration {
         const string ADDRESS_PREFIX = "/avatar/parameters/";
         int nonempty;
         if (expparams == null) {
-            expparams = new VRCExpressionParameters {
-                parameters = new VRCExpressionParameters.Parameter[] {
+            expparams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            expparams.parameters = new VRCExpressionParameters.Parameter[] {
                     new VRCExpressionParameters.Parameter {
                         defaultValue = 0,
                         saved = false,
@@ -79,7 +79,6 @@ public struct A3EOSCConfiguration {
                         name = "VRCFaceBlendV",
                         valueType = VRCExpressionParameters.ValueType.Float
                     }
-                }
             };
         }
         nonempty = expparams.parameters.Length;

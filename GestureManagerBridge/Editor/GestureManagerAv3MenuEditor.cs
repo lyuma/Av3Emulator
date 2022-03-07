@@ -182,13 +182,25 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
             addParam("TPoseCalibration", "PoseT");
             addParam("Jump", "Av3 Emu Jump");
             foreach (var xbool in _runtime.Bools) {
-                Params.Add(xbool.name, new StubVrcBoolParam(xbool.name, xbool));
+                if (Params.ContainsKey(xbool.name)) {
+                    UnityEngine.Debug.LogWarning("Duplicate parameter " + xbool.name);
+                } else {
+                    Params.Add(xbool.name, new StubVrcBoolParam(xbool.name, xbool));
+                }
             }
             foreach (var xint in _runtime.Ints) {
-                Params.Add(xint.name, new StubVrcIntParam(xint.name, xint));
+                if (Params.ContainsKey(xint.name)) {
+                    UnityEngine.Debug.LogWarning("Duplicate parameter " + xint.name + " maybe with different type.");
+                } else {
+                    Params.Add(xint.name, new StubVrcIntParam(xint.name, xint));
+                }
             }
             foreach (var xfloat in _runtime.Floats) {
-                Params.Add(xfloat.name, new StubVrcFloatParam(xfloat.name, xfloat));
+                if (Params.ContainsKey(xfloat.name)) {
+                    UnityEngine.Debug.LogWarning("Duplicate parameter " + xfloat.name + " maybe with different type.");
+                } else {
+                    Params.Add(xfloat.name, new StubVrcFloatParam(xfloat.name, xfloat));
+                }
             }
             // UnityEngine.Debug.Log("Initing params " + Params.Keys);
         }
@@ -224,7 +236,6 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
     {
         if (av3Module.Params.Count == 0) {
             av3Module.InitForAvatar();
-            Debug.Log(String.Join(",",av3Module.Params.Keys.ToArray()));
         }
         var menu = (GestureManagerAv3Menu)target;
         if (av3Module.RadialMenus.ContainsKey(editor)) return av3Module.RadialMenus[editor];
