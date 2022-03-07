@@ -577,7 +577,9 @@ public class A3ESimpleOSC
         }
         public void Close() {
             shutdown = true;
-            udpServer.Close();
+            if (udpServer != null) {
+                udpServer.Close();
+            }
         }
         public void SendBytes(byte[] buffer, int length, IPEndPoint endPoint) {
             if (endPoint == null) {

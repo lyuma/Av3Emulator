@@ -6,9 +6,11 @@
 
 * Unity Package support
 
-### **New features in v 2.9.6 (3.0 rc4):**
+### **New features in v 2.9.7 (3.0 rc4):**
 
-Mostly a stability update to fix common issues with running the emulator.
+2.9.7: Fix VRCPhysBone and ContactReceiver components disabled by default.
+
+2.9.6: Mostly a stability update to fix common issues with running the emulator.
 
 Grabbing and posing should work more reliably now. Make sure not to leave your bone Radius at 0.
 
