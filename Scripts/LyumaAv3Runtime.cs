@@ -280,6 +280,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 accessInst.runtime = this;
                 accessInst.paramName = parameter;
                 contactReceiverState.paramAccess.SetValue(mb, accessInst);
+                accessInst.floatVal = (float)contactReceiverState.paramValue.GetValue(mb);
                 // Debug.Log("Assigned access " + contactReceiverState.paramAccess.GetValue(mb) + " to param " + parameter + ": was " + old_value);
             }
         }
@@ -291,14 +292,17 @@ public class LyumaAv3Runtime : MonoBehaviour
                 accessInst.runtime = this;
                 accessInst.paramName = parameter + PhysBoneState.PARAM_ANGLE;
                 physBoneState.param_Angle.SetValue(mb, accessInst);
+                accessInst.floatVal = (float) physBoneState.param_AngleValue.GetValue(mb);
                 accessInst = (Av3EmuParameterAccessBase)accessClass.GetConstructor(new System.Type[0]).Invoke(new object[0]);
                 accessInst.runtime = this;
                 accessInst.paramName = parameter + PhysBoneState.PARAM_ISGRABBED;
                 physBoneState.param_IsGrabbed.SetValue(mb, accessInst);
+                accessInst.boolVal = (bool)physBoneState.param_IsGrabbedValue.GetValue(mb);
                 accessInst = (Av3EmuParameterAccessBase)accessClass.GetConstructor(new System.Type[0]).Invoke(new object[0]);
                 accessInst.runtime = this;
                 accessInst.paramName = parameter + PhysBoneState.PARAM_STRETCH;
                 physBoneState.param_Stretch.SetValue(mb, accessInst);
+                accessInst.floatVal = (float)physBoneState.param_StretchValue.GetValue(mb);
                 // Debug.Log("Assigned strech access " + physBoneState.param_Stretch.GetValue(mb) + " to param " + parameter + ": was " + old_value);
             }
         }
@@ -2203,7 +2207,9 @@ public class LyumaAv3Runtime : MonoBehaviour
             whichcontroller++;
         }
 
-        if (emulator != null && !emulator.DisableAvatarDynamicsIntegration) {
+        if ((emulator != null && !emulator.DisableAvatarDynamicsIntegration)
+            || (AvatarSyncSource?.emulator != null && !AvatarSyncSource.emulator.DisableAvatarDynamicsIntegration))
+        {
             assignPhysBoneParameters();
         }
 
