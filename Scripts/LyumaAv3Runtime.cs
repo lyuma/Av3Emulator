@@ -149,16 +149,16 @@ public class LyumaAv3Runtime : MonoBehaviour
             get {
                 // Debug.Log(paramName + " GETb");
                 int idx;
-                // if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return runtime.Ints[idx].value != 0;
-                // if (runtime.FloatToIndex.TryGetValue(paramName, out idx))return runtime.Floats[idx].value != 0.0f;
+                if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return runtime.Ints[idx].value != 0;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx))return runtime.Floats[idx].value != 0.0f;
                 if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value;
                 return false;
             }
             set {
                 // Debug.Log(paramName + " SETb " + value);
                 int idx;
-                // if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = value ? 1 : 0;
-                // if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = value ? 1.0f : 0.0f;
+                if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = value ? 1 : 0;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = value ? 1.0f : 0.0f;
                 if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value;
             }
         }
@@ -167,33 +167,33 @@ public class LyumaAv3Runtime : MonoBehaviour
                 int idx;
                 // Debug.Log(paramName + " GETi");
                 if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return runtime.Ints[idx].value;
-                // if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) return (int)runtime.Floats[idx].value;
-                // if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value ? 1 : 0;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) return (int)runtime.Floats[idx].value;
+                if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value ? 1 : 0;
                 return 0;
             }
             set {
                 // Debug.Log(paramName + " SETi " + value);
                 int idx;
                 if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = value;
-                // if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = (float)value;
-                // if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value != 0;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = (float)value;
+                if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value != 0;
             }
         }
         public float floatVal {
             get {
                 // Debug.Log(paramName + " GETf");
                 int idx;
-                // if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return (float)runtime.Ints[idx].value;
+                if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return (float)runtime.Ints[idx].value;
                 if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) return runtime.Floats[idx].value;
-                // if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value ? 1.0f : 0.0f;
+                if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value ? 1.0f : 0.0f;
                 return 0.0f;
             }
             set {
                 // Debug.Log(paramName + " SETf " + value);
                 int idx;
-                // if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = (int)value;
+                if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = (int)value;
                 if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = value;
-                // if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value != 0.0f;
+                if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value != 0.0f;
             }
         }
     }
