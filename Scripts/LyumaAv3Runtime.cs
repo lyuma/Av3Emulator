@@ -937,6 +937,10 @@ public class LyumaAv3Runtime : MonoBehaviour
         // Debug.Log("AWOKEN " + gameObject.name, this);
         attachedAnimators = new HashSet<Animator>();
         if (AvatarSyncSource == null) {
+            var oml = GetComponent<UnityEngine.AI.OffMeshLink>();
+            if (oml != null && oml.startTransform != null) {
+                this.emulator = oml.startTransform.GetComponent<LyumaAv3Emulator>();
+            }
             Transform transform = this.transform;
             SourceObjectPath = "";
             while (transform != null) {
@@ -948,7 +952,10 @@ public class LyumaAv3Runtime : MonoBehaviour
             AvatarSyncSource = GameObject.Find(SourceObjectPath).GetComponent<LyumaAv3Runtime>();
         }
 
-        DebugDuplicateAnimator = VRCAvatarDescriptor.AnimLayerType.Base;
+        if (this.emulator != null) {
+            DebugDuplicateAnimator = this.emulator.DefaultAnimatorToDebug;
+            ViewAnimatorOnlyNoParams = this.emulator.DefaultAnimatorToDebug;
+        }
 
         animator = this.gameObject.GetOrAddComponent<Animator>();
         if (animatorAvatar != null && animator.avatar == null) {

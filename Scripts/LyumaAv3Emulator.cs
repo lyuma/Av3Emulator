@@ -69,8 +69,11 @@ public class LyumaAv3Emulator : MonoBehaviour
             }
             try {
                 // Creates the playable director, and initializes animator.
+                var oml = avadesc.gameObject.GetOrAddComponent<UnityEngine.AI.OffMeshLink>();
+                oml.startTransform = this.transform;
                 bool alreadyHadComponent = avadesc.gameObject.GetComponent<LyumaAv3Runtime>() != null;
                 var runtime = avadesc.gameObject.GetOrAddComponent<LyumaAv3Runtime>();
+                GameObject.DestroyImmediate(oml);
                 runtime.emulator = this;
                 runtime.VRMode = DefaultToVR;
                 runtime.TrackingType = DefaultTrackingType;
