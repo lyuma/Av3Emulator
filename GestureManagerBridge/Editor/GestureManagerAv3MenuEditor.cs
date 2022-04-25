@@ -40,7 +40,7 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
         class VelocityParam : GestureManager.Scripts.Editor.Modules.Vrc3.Params.Vrc3Param {
             public LyumaAv3Runtime runtime;
             public int axis;
-            public VelocityParam(string name, LyumaAv3Runtime runtime, int axis, float amplifier=1) : base(name, AnimatorControllerParameterType.Float, amplifier) {
+            public VelocityParam(string name, LyumaAv3Runtime runtime, int axis) : base(name, AnimatorControllerParameterType.Float) {
                 this.axis = axis;
                 this.runtime = runtime;
             }
@@ -57,9 +57,8 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
         class ReflectedVrcParam : GestureManager.Scripts.Editor.Modules.Vrc3.Params.Vrc3Param {
             public System.Reflection.FieldInfo property;
             public LyumaAv3Runtime runtime;
-            public ReflectedVrcParam(string name, LyumaAv3Runtime runtime, System.Reflection.FieldInfo property, float amplifier=1) : base(name,
-                    property.FieldType == typeof(bool) ? AnimatorControllerParameterType.Bool : (property.FieldType == typeof(float) ? AnimatorControllerParameterType.Float : AnimatorControllerParameterType.Int),
-                    amplifier) {
+            public ReflectedVrcParam(string name, LyumaAv3Runtime runtime, System.Reflection.FieldInfo property) : base(name,
+                    property.FieldType == typeof(bool) ? AnimatorControllerParameterType.Bool : (property.FieldType == typeof(float) ? AnimatorControllerParameterType.Float : AnimatorControllerParameterType.Int)) {
                 this.property = property;
                 this.runtime = runtime;
             }
@@ -89,7 +88,7 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
         }
         class StubVrcBoolParam : GestureManager.Scripts.Editor.Modules.Vrc3.Params.Vrc3Param {
             public LyumaAv3Runtime.BoolParam param;
-            public StubVrcBoolParam(string name, LyumaAv3Runtime.BoolParam param, float amplifier=1) : base(name, AnimatorControllerParameterType.Bool, amplifier) { this.param = param; }
+            public StubVrcBoolParam(string name, LyumaAv3Runtime.BoolParam param) : base(name, AnimatorControllerParameterType.Bool) { this.param = param; }
             public override float Get() {
                 return param.value ? 1.0f : 0.0f;
             }
@@ -100,7 +99,7 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
         }
         class StubVrcIntParam : GestureManager.Scripts.Editor.Modules.Vrc3.Params.Vrc3Param {
             public LyumaAv3Runtime.IntParam param;
-            public StubVrcIntParam(string name, LyumaAv3Runtime.IntParam param, float amplifier=1) : base(name, AnimatorControllerParameterType.Int, amplifier) { this.param = param; }
+            public StubVrcIntParam(string name, LyumaAv3Runtime.IntParam param) : base(name, AnimatorControllerParameterType.Int) { this.param = param; }
             public override float Get() {
                 return param.value;
             }
@@ -111,7 +110,7 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
         }
         class StubVrcFloatParam : GestureManager.Scripts.Editor.Modules.Vrc3.Params.Vrc3Param {
             public LyumaAv3Runtime.FloatParam param;
-            public StubVrcFloatParam(string name, LyumaAv3Runtime.FloatParam param, float amplifier=1) : base(name, AnimatorControllerParameterType.Float, amplifier) { this.param = param; }
+            public StubVrcFloatParam(string name, LyumaAv3Runtime.FloatParam param) : base(name, AnimatorControllerParameterType.Float) { this.param = param; }
             public override float Get() {
                 return param.value;
             }
@@ -134,19 +133,19 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
                 if (param is StubVrcBoolParam) {
                     StubVrcBoolParam bparam = (StubVrcBoolParam) param;
                     if (bparam.param.lastValue != bparam.param.value) {
-                        bparam.Set(RadialMenus.Values, bparam.param.value ? 1.0f : 0.0f);
+                        bparam.Set(this, bparam.param.value ? 1.0f : 0.0f);
                     }
                 }
                 if (param is StubVrcIntParam) {
                     StubVrcIntParam iparam = (StubVrcIntParam) param;
                     if (iparam.param.lastValue != iparam.param.value) {
-                        iparam.Set(RadialMenus.Values, iparam.param.value);
+                        iparam.Set(this, iparam.param.value);
                     }
                 }
                 if (param is StubVrcFloatParam) {
                     StubVrcFloatParam fparam = (StubVrcFloatParam) param;
                     if (fparam.param.lastValue != fparam.param.value) {
-                        fparam.Set(RadialMenus.Values, fparam.param.value);
+                        fparam.Set(this, fparam.param.value);
                     }
                 }
             }
@@ -169,11 +168,11 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
             Params.Clear();
             foreach (var builtinprop in LyumaAv3Runtime.BUILTIN_PARAMETERS) {
                 if (builtinprop == "VelocityX") {
-                    Params.Add(builtinprop, new VelocityParam(builtinprop, _runtime, 0, 8));
+                    Params.Add(builtinprop, new VelocityParam(builtinprop, _runtime, 0));
                 } else if (builtinprop == "VelocityY") {
-                    Params.Add(builtinprop, new VelocityParam(builtinprop, _runtime, 1, 8));
+                    Params.Add(builtinprop, new VelocityParam(builtinprop, _runtime, 1));
                 } else if (builtinprop == "VelocityZ") {
-                    Params.Add(builtinprop, new VelocityParam(builtinprop, _runtime, 2, 8));
+                    Params.Add(builtinprop, new VelocityParam(builtinprop, _runtime, 2));
                 } else {
                     addParam(builtinprop, builtinprop);
                 }
