@@ -6,29 +6,22 @@
 
 * Unity Package support
 
-### **New features in v 2.9.7 (3.0 rc4):**
+### **New features in v 2.9.8 (3.0 rc5):**
 
-2.9.7: Fix VRCPhysBone and ContactReceiver components disabled by default.
+2.9.8:
 
-2.9.6: Mostly a stability update to fix common issues with running the emulator.
+* Allow all parameter types for contacts, Strech, IsGrabbed and Angle. (Thanks, bd_)
+* Fix for non-local clones and reduced logspam (Thanks, bd_)
 
-Grabbing and posing should work more reliably now. Make sure not to leave your bone Radius at 0.
+Using reflection, the emulator continues to be compatible with older pre-physbone SDK versions. This may be the last version of Av3Emulator supporting older SDKs.
 
-* Made AvatarDynamics parameters more strict to match VRC implementation, so float params must be float; bool params must be bool, and so on.
-* Fixed issues with grabbing and posing bones.
-* Fixed more build errors.
-* Fixed grabbing bones not working when the OSC folder was missing.
-* Added some try/catch for exceptions related to the OSC folder in LocalLow.
+**Avatar Dynamics integration (read NOTE)**
 
-### **New features in v 2.9.5 (3.0 rc3):**
+Latest VRCSDK provides Avatar Dynamics support built-in.
 
-2.9.5: Fixed Build and Publish AGAIN.
+**NOTE**: To test Avatar Dynamics, you must have a **Camera** in your scene **tagged as "Main Camera"** (top of the inspector next to the layer dropdown).
 
-This build is compatible with all recent SDK versions, including Avatar Dynamics beta. Open Beta is **optional**.
-
-**Avatar Dynamics integration (optional)**
-
-VRCSDK Open Beta provides Avatar Dynamics support built-in.
+To test, you must be in **Game View**. Make use of _GameObject menu -> Align With View (Ctrl+Shift+F)_ for easily copying the Scene View to your camera transform.
 
 This update hooks into the driven parameters on both `PhysBone` and `ContactReceiver`. Enabled by default. Can be disabled by ticking a box on the Emulator Control before entering play mode. Recommended to set Radius greater than 0.
 
@@ -51,6 +44,22 @@ Other features:
 * Merged in contribution by 3 to support head scaling.
 * Support for IK Sync to local clones.
 * Many more bugfixes.
+
+### **New features in v 2.9.7 (3.0 rc4):**
+
+2.9.7: Fix VRCPhysBone and ContactReceiver components disabled by default.
+
+2.9.6: Mostly a stability update to fix common issues with running the emulator.
+
+Grabbing and posing should work more reliably now. Make sure not to leave your bone Radius at 0.
+
+* Made AvatarDynamics parameters more strict to match VRC implementation, so float params must be float; bool params must be bool, and so on.
+* Fixed issues with grabbing and posing bones.
+* Fixed more build errors.
+* Fixed grabbing bones not working when the OSC folder was missing.
+* Added some try/catch for exceptions related to the OSC folder in LocalLow.
+
+2.9.5: Fixed Build and Publish AGAIN.
 
 ### **New features in v 2.9.0 (3.0 beta):**
 
