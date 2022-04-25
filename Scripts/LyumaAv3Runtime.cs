@@ -1328,9 +1328,9 @@ public class LyumaAv3Runtime : MonoBehaviour
                 playableMixer.SetLayerAdditive((uint)effectiveIdx, true);
             }
 
-            if (i < dupeOffset) {//i == 0 && AnimatorToDebug != VRCAvatarDescriptor.AnimLayerType.Base) {
-                playableMixer.SetInputWeight(i, 0f);
-            }
+            // Keep weight 1.0 if (i < dupeOffset).
+            // Layers have incorrect AAP values if playable weight is 0.0...
+            // and the duplicate layers will be overridden later anyway by Base.
         }
 
         LateRefreshExpressionParameters(stageNameToValue);
