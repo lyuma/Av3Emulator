@@ -518,6 +518,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     }
     List<PlayableBlendingState> playableBlendingStates = new List<PlayableBlendingState>();
 
+    static HashSet<Animator> issuedWarningAnimators = new HashSet<Animator>();
     static bool getTopLevelRuntime(string component, Animator innerAnimator, out LyumaAv3Runtime runtime) {
         if (animatorToTopLevelRuntime.TryGetValue(innerAnimator, out runtime)) {
             return true;
@@ -538,7 +539,12 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
             return true;
         }
-        Debug.LogError("[" + component + "]: outermost Animator is not known: " + innerAnimator + ". If you changed something, consider resetting avatar", innerAnimator);
+
+        if (!issuedWarningAnimators.Contains(innerAnimator))
+        {
+            issuedWarningAnimators.Add(innerAnimator);
+            Debug.LogWarning("[" + component + "]: outermost Animator is not known: " + innerAnimator + ". If you changed something, consider resetting avatar", innerAnimator);
+        }
 
         return false;
     }
