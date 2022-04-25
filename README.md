@@ -10,8 +10,12 @@
 
 2.9.8:
 
+* Upgrade GestureManager to version 3.4 in the .unitypackage build. Some constructor arguments changed, so be sure to upgrade both.
 * Allow all parameter types for contacts, Strech, IsGrabbed and Angle. (Thanks, bd_)
 * Fix for non-local clones and reduced logspam (Thanks, bd_)
+* Fix animated animator parameters (AAP) support for Debug Duplicate Animator.
+* Ensure animator window is refreshed when switching Debug Duplicate Animator.
+* Fix possible bug when using Default Animator to Debug in emulator control.
 
 Using reflection, the emulator continues to be compatible with older pre-physbone SDK versions. This may be the last version of Av3Emulator supporting older SDKs.
 
