@@ -73,7 +73,9 @@ public class LyumaAv3Emulator : MonoBehaviour
                 oml.startTransform = this.transform;
                 bool alreadyHadComponent = avadesc.gameObject.GetComponent<LyumaAv3Runtime>() != null;
                 var runtime = avadesc.gameObject.GetOrAddComponent<LyumaAv3Runtime>();
-                GameObject.DestroyImmediate(oml);
+                if (oml != null) {
+                    GameObject.DestroyImmediate(oml);
+                }
                 runtime.emulator = this;
                 runtime.VRMode = DefaultToVR;
                 runtime.TrackingType = DefaultTrackingType;

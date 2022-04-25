@@ -940,6 +940,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             var oml = GetComponent<UnityEngine.AI.OffMeshLink>();
             if (oml != null && oml.startTransform != null) {
                 this.emulator = oml.startTransform.GetComponent<LyumaAv3Emulator>();
+                GameObject.DestroyImmediate(oml);
             }
             Transform transform = this.transform;
             SourceObjectPath = "";
@@ -1037,6 +1038,9 @@ public class LyumaAv3Runtime : MonoBehaviour
                 Debug.LogException(e);
             }
         }
+        if (this.AvatarSyncSource != this || IsMirrorClone || IsShadowClone) {
+            PrevAnimatorToViewLiteParamsShow0 = (char)(int)ViewAnimatorOnlyNoParams;
+        }
         if (!IsMirrorClone && !IsShadowClone && AvatarSyncSource == this) {
             var pipelineManager = avadesc.GetComponent<VRC.Core.PipelineManager>();
             string avatarid = pipelineManager != null ? pipelineManager.blueprintId : null;
@@ -1094,6 +1098,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     {
         ResetAvatar = false;
         PrevAnimatorToDebug = (char)(int)DebugDuplicateAnimator;
+        ViewAnimatorOnlyNoParams = DebugDuplicateAnimator;
 
         animator = this.gameObject.GetOrAddComponent<Animator>();
         animator.avatar = animatorAvatar;
@@ -1675,6 +1680,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             isResettingSel = false;
             if (updateSelectionDelegate != null && AvatarSyncSource == this) {
                 updateSelectionDelegate(this.gameObject);
+                PrevAnimatorToViewLiteParamsShow0 = (char)126;
             }
         }
         if (isResettingHold && (!ResetAvatar || !ResetAndHold)) {
@@ -1682,6 +1688,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             isResettingSel = true;
             if (updateSelectionDelegate != null && AvatarSyncSource == this) {
                 updateSelectionDelegate(this.emulator != null ? this.emulator.gameObject : null);
+                PrevAnimatorToViewLiteParamsShow0 = (char)126;
             }
         }
         if (ResetAvatar && ResetAndHold) {
