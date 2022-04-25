@@ -24,6 +24,8 @@ using VRC.SDK3.Avatars.Components;
 [RequireComponent(typeof(Animator))]
 public class LyumaAv3Emulator : MonoBehaviour
 {
+    static readonly ulong EMULATOR_VERSION = 0x2_09_08_00;
+
     public bool DefaultToVR = false;
     public bool DefaultTestInStation = false;
     public LyumaAv3Runtime.TrackingTypeIndex DefaultTrackingType = LyumaAv3Runtime.TrackingTypeIndex.HeadHands;
