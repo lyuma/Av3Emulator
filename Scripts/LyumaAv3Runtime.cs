@@ -149,16 +149,16 @@ public class LyumaAv3Runtime : MonoBehaviour
             get {
                 // Debug.Log(paramName + " GETb");
                 int idx;
-                // if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return runtime.Ints[idx].value != 0;
-                // if (runtime.FloatToIndex.TryGetValue(paramName, out idx))return runtime.Floats[idx].value != 0.0f;
+                if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return runtime.Ints[idx].value != 0;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx))return runtime.Floats[idx].value != 0.0f;
                 if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value;
                 return false;
             }
             set {
                 // Debug.Log(paramName + " SETb " + value);
                 int idx;
-                // if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = value ? 1 : 0;
-                // if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = value ? 1.0f : 0.0f;
+                if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = value ? 1 : 0;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = value ? 1.0f : 0.0f;
                 if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value;
             }
         }
@@ -167,33 +167,33 @@ public class LyumaAv3Runtime : MonoBehaviour
                 int idx;
                 // Debug.Log(paramName + " GETi");
                 if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return runtime.Ints[idx].value;
-                // if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) return (int)runtime.Floats[idx].value;
-                // if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value ? 1 : 0;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) return (int)runtime.Floats[idx].value;
+                if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value ? 1 : 0;
                 return 0;
             }
             set {
                 // Debug.Log(paramName + " SETi " + value);
                 int idx;
                 if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = value;
-                // if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = (float)value;
-                // if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value != 0;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = (float)value;
+                if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value != 0;
             }
         }
         public float floatVal {
             get {
                 // Debug.Log(paramName + " GETf");
                 int idx;
-                // if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return (float)runtime.Ints[idx].value;
+                if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return (float)runtime.Ints[idx].value;
                 if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) return runtime.Floats[idx].value;
-                // if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value ? 1.0f : 0.0f;
+                if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value ? 1.0f : 0.0f;
                 return 0.0f;
             }
             set {
                 // Debug.Log(paramName + " SETf " + value);
                 int idx;
-                // if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = (int)value;
+                if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = (int)value;
                 if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = value;
-                // if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value != 0.0f;
+                if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value != 0.0f;
             }
         }
     }
@@ -280,6 +280,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 accessInst.runtime = this;
                 accessInst.paramName = parameter;
                 contactReceiverState.paramAccess.SetValue(mb, accessInst);
+                accessInst.floatVal = (float)contactReceiverState.paramValue.GetValue(mb);
                 // Debug.Log("Assigned access " + contactReceiverState.paramAccess.GetValue(mb) + " to param " + parameter + ": was " + old_value);
             }
         }
@@ -291,14 +292,17 @@ public class LyumaAv3Runtime : MonoBehaviour
                 accessInst.runtime = this;
                 accessInst.paramName = parameter + PhysBoneState.PARAM_ANGLE;
                 physBoneState.param_Angle.SetValue(mb, accessInst);
+                accessInst.floatVal = (float) physBoneState.param_AngleValue.GetValue(mb);
                 accessInst = (Av3EmuParameterAccessBase)accessClass.GetConstructor(new System.Type[0]).Invoke(new object[0]);
                 accessInst.runtime = this;
                 accessInst.paramName = parameter + PhysBoneState.PARAM_ISGRABBED;
                 physBoneState.param_IsGrabbed.SetValue(mb, accessInst);
+                accessInst.boolVal = (bool)physBoneState.param_IsGrabbedValue.GetValue(mb);
                 accessInst = (Av3EmuParameterAccessBase)accessClass.GetConstructor(new System.Type[0]).Invoke(new object[0]);
                 accessInst.runtime = this;
                 accessInst.paramName = parameter + PhysBoneState.PARAM_STRETCH;
                 physBoneState.param_Stretch.SetValue(mb, accessInst);
+                accessInst.floatVal = (float)physBoneState.param_StretchValue.GetValue(mb);
                 // Debug.Log("Assigned strech access " + physBoneState.param_Stretch.GetValue(mb) + " to param " + parameter + ": was " + old_value);
             }
         }
@@ -2203,7 +2207,9 @@ public class LyumaAv3Runtime : MonoBehaviour
             whichcontroller++;
         }
 
-        if (emulator != null && !emulator.DisableAvatarDynamicsIntegration) {
+        if ((emulator != null && !emulator.DisableAvatarDynamicsIntegration)
+            || (AvatarSyncSource?.emulator != null && !AvatarSyncSource.emulator.DisableAvatarDynamicsIntegration))
+        {
             assignPhysBoneParameters();
         }
 
