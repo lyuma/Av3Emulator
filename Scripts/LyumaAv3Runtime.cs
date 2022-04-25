@@ -2530,6 +2530,74 @@ public class LyumaAv3Runtime : MonoBehaviour
             break;
         }
     }
+    public void processOSCVRCInputMessage(string ParamName, object arg0) {
+        float argFloat = getObjectFloat(arg0);
+        int argInt = getObjectInt(arg0);
+        bool argBool = isObjectTrue(arg0);
+        switch (ParamName) {
+            case "VelocityZ":
+                Velocity.z = argFloat;
+                break;
+            case "VelocityY":
+                Velocity.y = argFloat;
+                break;
+            case "VelocityX":
+                Velocity.x = argFloat;
+                break;
+            case "InStation":
+                InStation = argBool;
+                break;
+            case "Seated":
+                Seated = argBool;
+                break;
+            case "AFK":
+                AFK = argBool;
+                break;
+            case "Upright":
+                Upright = argFloat;
+                break;
+            case "AngularY":
+                AngularY = argFloat;
+                break;
+            case "Grounded":
+                Grounded = argBool;
+                break;
+            case "MuteSelf":
+                MuteSelf = argBool;
+                break;
+            case "VRMode":
+                VRMode = argBool;
+                break;
+            case "TrackingType":
+                char ttichar = (char)argInt;
+                TrackingTypeIdxInt = ttichar;
+                break;
+            case "GestureRightWeight":
+                GestureRightWeight = argFloat;
+                break;
+            case "GestureRight":
+                char grchar = (char)argInt;
+                GestureRightIdxInt = grchar;
+                break;
+            case "GestureLeftWeight":
+                GestureLeftWeight = argFloat;
+                break;
+            case "GestureLeft":
+                char glchar = (char)argInt;
+                GestureLeftIdxInt = glchar;                             
+                break;
+            case "Voice":
+                Voice = argFloat;
+                break;
+            case "Viseme":
+                char vichar = (char)argInt;
+                VisemeInt = vichar;
+                break;
+            default:
+                Debug.LogWarning("Unrecognized built in VRC param");
+                break;
+        }
+    }
     public void HandleOSCMessages(List<A3ESimpleOSC.OSCMessage> messages) {
         var innerProperties = new Dictionary<string, A3EOSCConfiguration.InnerJson>();
         foreach (var ij in OSCConfigurationFile.OSCJsonConfig.parameters) {
@@ -2546,13 +2614,16 @@ public class LyumaAv3Runtime : MonoBehaviour
             float argFloat = getObjectFloat(arguments[0]);
             int argInt = getObjectInt(arguments[0]);
             bool argBool = isObjectTrue(arguments[0]);
+            string ParamName;
             if (msgPath.StartsWith("/input/")) {
-                string ParamName = msgPath.Split(new char[]{'/'}, 3)[2];
+                ParamName = msgPath.Split(new char[]{'/'}, 3)[2];
                 processOSCInputMessage(ParamName, arguments[0]);
             } else {
-                string ParamName;
+                ParamName = msgPath.Split(new char[]{'/'}, 4)[3];;
                 if (OSCConfigurationFile.SendRecvAllParamsNotInJSON) {
-                    ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
+                    continue;
+                } else if (BUILTIN_PARAMETERS.Contains( ParamName ) ) {                     
+                    processOSCVRCInputMessage( ParamName, arguments[0]);
                 } else if (innerProperties.ContainsKey(msgPath)) {
                     ParamName = innerProperties[msgPath].name;
                     if (innerProperties[msgPath].input.type == "Float") {
