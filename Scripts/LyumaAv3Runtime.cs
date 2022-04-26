@@ -348,7 +348,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         Uninitialized, GenericRig, NoFingers, HeadHands, HeadHandsHip, HeadHandsHipFeet = 6
     }
     public static HashSet<string> BUILTIN_PARAMETERS = new HashSet<string> {
-        "Viseme", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "Upright", "AngularY", "Grounded", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation"
+        "Viseme", "Voice", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "Upright", "AngularY", "Grounded", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation"
     };
     public static readonly HashSet<Type> MirrorCloneComponentBlacklist = new HashSet<Type> {
         typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Rigidbody), typeof(Joint)
@@ -2569,29 +2569,25 @@ public class LyumaAv3Runtime : MonoBehaviour
                 VRMode = argBool;
                 break;
             case "TrackingType":
-                char ttichar = (char)argInt;
-                TrackingTypeIdxInt = ttichar;
+                TrackingTypeIdx = argInt;
                 break;
             case "GestureRightWeight":
                 GestureRightWeight = argFloat;
                 break;
             case "GestureRight":
-                char grchar = (char)argInt;
-                GestureRightIdxInt = grchar;
+                GestureRightIdx = argInt;
                 break;
             case "GestureLeftWeight":
                 GestureLeftWeight = argFloat;
                 break;
             case "GestureLeft":
-                char glchar = (char)argInt;
-                GestureLeftIdxInt = glchar;                             
+                GestureLeftIdx = argInt;                             
                 break;
             case "Voice":
                 Voice = argFloat;
                 break;
             case "Viseme":
-                char vichar = (char)argInt;
-                VisemeInt = vichar;
+                VisemeIdx = argInt;
                 break;
             default:
                 Debug.LogWarning("Unrecognized built in VRC param");
@@ -2619,7 +2615,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 ParamName = msgPath.Split(new char[]{'/'}, 3)[2];
                 processOSCInputMessage(ParamName, arguments[0]);
             } else {
-                ParamName = msgPath.Split(new char[]{'/'}, 4)[3];;
+                ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
                 if (OSCConfigurationFile.SendRecvAllParamsNotInJSON) {
                     continue;
                 } else if (BUILTIN_PARAMETERS.Contains( ParamName ) ) {                     
