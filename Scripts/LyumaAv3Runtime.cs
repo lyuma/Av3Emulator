@@ -28,6 +28,7 @@ using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using System.Reflection.Emit;
 using System.Reflection;
+using System.Linq;
 
 // [RequireComponent(typeof(Animator))]
 public class LyumaAv3Runtime : MonoBehaviour
@@ -261,6 +262,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
             }
             if (mbtype == contactReceiverState.type) {
+                ContactDrivenParameterSync(mb);
                 AvDynamicsContactReceivers.Add(mb);
             }
             if (mbtype == physBoneState.type) {
@@ -270,7 +272,38 @@ public class LyumaAv3Runtime : MonoBehaviour
             // Debug.Log(contactReceiverState.type);
             // Debug.Log(physBoneState.type);
         }
+
     }
+
+    // Fix Sync of AD Driven Local Parameters
+    void ContactDrivenParameterSync(MonoBehaviour contact)
+    {
+        string parameter = (string)contactReceiverState.parameter.GetValue(contact);
+        if (string.IsNullOrEmpty(parameter))
+            return;
+
+        IntParam intParam = Ints.FirstOrDefault(x => x.name.Equals(parameter));
+        if ((intParam != null) && !intParam.synced)
+        {
+            intParam.stageName = intParam.name + " (SYNCED)";
+            intParam.synced = true;
+        }
+
+        FloatParam floatParam = Floats.FirstOrDefault(x => x.name.Equals(parameter));
+        if ((floatParam != null) && !floatParam.synced)
+        {
+            floatParam.stageName = floatParam.name + " (SYNCED)";
+            floatParam.synced = true;
+        }
+
+        BoolParam boolParam = Bools.FirstOrDefault(x => x.name.Equals(parameter));
+        if ((boolParam != null) && !boolParam.synced)
+        {
+            boolParam.stageName = boolParam.name + " (SYNCED)";
+            boolParam.synced = true;
+        }
+    }
+
     public void assignPhysBoneParameters() {
         foreach (var mb in AvDynamicsContactReceivers) {
             var old_value = contactReceiverState.paramAccess.GetValue(mb);
