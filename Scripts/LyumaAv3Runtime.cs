@@ -2615,11 +2615,8 @@ public class LyumaAv3Runtime : MonoBehaviour
                 ParamName = msgPath.Split(new char[]{'/'}, 3)[2];
                 processOSCInputMessage(ParamName, arguments[0]);
             } else {
-                ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
                 if (OSCConfigurationFile.SendRecvAllParamsNotInJSON) {
-                    continue;
-                } else if (BUILTIN_PARAMETERS.Contains( ParamName ) ) {                     
-                    processOSCVRCInputMessage( ParamName, arguments[0]);
+                    ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
                 } else if (innerProperties.ContainsKey(msgPath)) {
                     ParamName = innerProperties[msgPath].name;
                     if (innerProperties[msgPath].input.type == "Float") {
@@ -2638,8 +2635,13 @@ public class LyumaAv3Runtime : MonoBehaviour
                         continue;
                     }
                 } else {
-                    Debug.LogWarning("Address " + msgPath + " not found for input in JSON.");
-                    continue;
+                    ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
+                    if (BUILTIN_PARAMETERS.Contains( ParamName ) ) {                     
+                        processOSCVRCInputMessage( ParamName, arguments[0]);
+                    } else {
+                        Debug.LogWarning("Address " + msgPath + " not found for input in JSON.");
+                        continue;
+                    }
                 }
                 if (OSCController != null && OSCController.debugPrintReceivedMessages) {
                     Debug.Log("Recvd "+ParamName + ": " + msg);
