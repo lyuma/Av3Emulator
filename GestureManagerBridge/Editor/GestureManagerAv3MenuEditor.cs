@@ -231,17 +231,16 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
 
 
     StubAv3Module av3Module;
+    RadialMenu cachedMenu;
     public RadialMenu GetOrCreateRadial(UnityEditor.Editor editor)
     {
         if (av3Module.Params.Count == 0) {
             av3Module.InitForAvatar();
         }
-        var menu = (GestureManagerAv3Menu)target;
-        if (av3Module.RadialMenus.ContainsKey(editor)) return av3Module.RadialMenus[editor];
-
-        av3Module.RadialMenus[editor] = new RadialMenu(av3Module);
-        av3Module.RadialMenus[editor].Set(menu.RootMenu);
-        return av3Module.RadialMenus[editor];
+        cachedMenu = (RadialMenu)(typeof(GestureManager.Scripts.Editor.Modules.Vrc3.ModuleVrc3).GetMethod("GetOrCreateRadial",
+                System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance).Invoke(
+                    av3Module, new object[]{editor}));
+        return cachedMenu;
     }
     public override VisualElement CreateInspectorGUI()
     {
@@ -299,9 +298,8 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
             rect = EditorGUILayout.GetControlRect(false, 0);
             rect.height = 1;
             EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 1));
-            RadialMenu tmpmenu;
-            if (av3Module.RadialMenus.TryGetValue(this as UnityEditor.Editor, out tmpmenu)) {
-                tmpmenu.style.display = DisplayStyle.None;
+            if (cachedMenu != null) {
+                cachedMenu.style.display = DisplayStyle.None;
             }
             RenderButtonMenu();
 
