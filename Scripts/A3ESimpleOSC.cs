@@ -570,7 +570,7 @@ public class A3ESimpleOSC
                     }
                 } catch (SocketException) {
                     if (!shutdown) {
-                        throw;
+                        continue; //throw;
                     }
                 }
             }

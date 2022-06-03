@@ -550,8 +550,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     }
 
     static LyumaAv3Runtime() {
-        VRCAvatarParameterDriver.Initialize += (x) => {
-            x.ApplySettings += (behaviour, animator) =>
+        VRCAvatarParameterDriver.OnApplySettings += (behaviour, animator) =>
             {
                 LyumaAv3Runtime runtime;
                 if (!getTopLevelRuntime("VRCAvatarParameterDriver", animator, out runtime)) {
@@ -700,7 +699,6 @@ public class LyumaAv3Runtime : MonoBehaviour
                     runtime.duplicateParameterAdds.Add(key);
                 }
             };
-        };
         VRCPlayableLayerControl.Initialize += (x) => {
             x.ApplySettings += (behaviour, animator) =>
             {
