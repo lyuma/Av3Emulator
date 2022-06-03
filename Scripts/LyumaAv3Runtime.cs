@@ -23,11 +23,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
-// using VRC.PhysBone;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
-using System.Reflection.Emit;
-using System.Reflection;
+using VRC.SDK3.Dynamics.Contact.Components;
+using VRC.SDK3.Dynamics.PhysBone.Components;
 
 // [RequireComponent(typeof(Animator))]
 public class LyumaAv3Runtime : MonoBehaviour
@@ -114,35 +113,10 @@ public class LyumaAv3Runtime : MonoBehaviour
     private int mouthOpenBlendShapeIdx;
     private int[] visemeBlendShapeIdxs;
 
-    [NonSerialized] public List<MonoBehaviour> AvDynamicsPhysBones = new List<MonoBehaviour>();
-    [NonSerialized] public List<MonoBehaviour> AvDynamicsContactReceivers = new List<MonoBehaviour>();
-    class WrappedComponent {
-        public System.Type type;
-    }
-    class PhysBoneState : WrappedComponent {
-        public System.Reflection.FieldInfo parameter, param_Angle, param_AngleValue;
-        public System.Reflection.FieldInfo param_IsGrabbed, param_IsGrabbedValue;
-        public System.Reflection.FieldInfo param_Stretch, param_StretchValue;
-        public const string PARAM_ISGRABBED = "_IsGrabbed";
-        public const string PARAM_ANGLE = "_Angle";
-        public const string PARAM_STRETCH = "_Stretch";
-    }
-    PhysBoneState physBoneState = new PhysBoneState();
-    class ContactReceiverState : WrappedComponent {
-        public System.Reflection.FieldInfo parameter, paramValue, value;
-        public System.Reflection.FieldInfo paramAccess;
-    }
-    ContactReceiverState contactReceiverState = new ContactReceiverState();
+    [NonSerialized] public VRCPhysBone[] AvDynamicsPhysBones = new VRCPhysBone[]{};
+    [NonSerialized] public VRCContactReceiver[] AvDynamicsContactReceivers = new VRCContactReceiver[]{};
 
-    // Vtable must match VRC.SDKBase.IAnimParameterAccess:
-    private interface IAnimParameterAccessX
-    {
-        bool boolVal { get; set; }
-        int intVal { get; set; }
-        float floatVal { get; set; }
-    }
-
-    public class Av3EmuParameterAccessBase : IAnimParameterAccessX{
+    public class Av3EmuParameterAccess : VRC.SDKBase.IAnimParameterAccess {
         public LyumaAv3Runtime runtime;
         public string paramName;
         public bool boolVal {
@@ -197,112 +171,43 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
         }
     }
-    System.Type CreateAccessClass(System.Type accessIface) {
-        Type baseType = typeof(Av3EmuParameterAccessBase);
-        Type repositoryInteface = accessIface;
-        AssemblyName asmName = new AssemblyName(string.Format("{0}_{1}", "tmpAsm", Guid.NewGuid().ToString("N")));
-        // create in memory assembly only
-        AssemblyBuilder asmBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(asmName, AssemblyBuilderAccess.Run);
-        ModuleBuilder moduleBuilder = asmBuilder.DefineDynamicModule("core");
-        string proxyTypeName = string.Format("{0}_{1}", "Av3EmuParameterAccessImpl", Guid.NewGuid().ToString("N").Substring(0,6));
-        TypeBuilder typeBuilder = moduleBuilder.DefineType(proxyTypeName);
-        typeBuilder.AddInterfaceImplementation(repositoryInteface);
-        typeBuilder.SetParent(baseType);
-        return typeBuilder.CreateType();
-    }
-    System.Type accessClass;
-    System.Type GetOrCreateAccessClass(System.Type accessIface) {
-        if (accessClass == null) {
-            accessClass = CreateAccessClass(accessIface);
-        }
-        return accessClass;
-    }
 
-    public void ScanForAvDynamicsTypes(MonoBehaviour[] behaviours) {
-        AvDynamicsContactReceivers.Clear();
-        AvDynamicsPhysBones.Clear();
-        HashSet<System.Type> checkedTypes = new HashSet<System.Type>();
-        foreach (MonoBehaviour mb in behaviours) {
-            System.Type mbtype = mb.GetType();
-            if (!checkedTypes.Contains(mbtype)) {
-                checkedTypes.Add(mbtype);
-                // parameter, paramIsGrabbed, Stretchable, Angle.
-                FieldInfo parameterProp = mbtype.GetField("parameter", BindingFlags.Public | BindingFlags.Instance);
-                FieldInfo angleAccessProp = mbtype.GetField("param_Angle", BindingFlags.Public | BindingFlags.Instance);
-                // Debug.Log(mbtype + " got parameter " + parameterProp);
-                // Debug.Log(mbtype + " got angle " + angleAccessProp);
-                // The class with 
-                if (angleAccessProp != null) {
-                    if (mbtype.Name != "VRCPhysBone") {
-                        Debug.LogError("VRCPhysBone class name has changed to " + mbtype.Name);
-                    }
-                    physBoneState.type = mbtype;
-                    physBoneState.param_Angle = angleAccessProp;
-                    GetOrCreateAccessClass(angleAccessProp.FieldType);
-                    physBoneState.param_AngleValue = mbtype.GetField("param_AngleValue", BindingFlags.Public | BindingFlags.Instance);
-                    physBoneState.param_IsGrabbedValue = mbtype.GetField("param_IsGrabbedValue", BindingFlags.Public | BindingFlags.Instance);
-                    physBoneState.param_IsGrabbed = mbtype.GetField("param_IsGrabbed", BindingFlags.Public | BindingFlags.Instance);
-                    physBoneState.param_StretchValue = mbtype.GetField("param_StretchValue", BindingFlags.Public | BindingFlags.Instance);
-                    physBoneState.param_Stretch = mbtype.GetField("param_Stretch", BindingFlags.Public | BindingFlags.Instance);
-                    physBoneState.parameter = mbtype.GetField("parameter", BindingFlags.Public | BindingFlags.Instance);
-                }
-                var accessProp = mbtype.GetField("paramAccess", BindingFlags.Public | BindingFlags.Instance);
-                if (accessProp != null) {
-                    if (mbtype.Name != "VRCContactReceiver") {
-                        Debug.LogError("VRCContactReceiver class name has changed to " + mbtype.Name);
-                    }
-                    contactReceiverState.type = mbtype;
-                    GetOrCreateAccessClass(accessProp.FieldType);
-                    contactReceiverState.paramAccess = accessProp;
-                    contactReceiverState.parameter = mbtype.GetField("parameter", BindingFlags.Public | BindingFlags.Instance);
-                    contactReceiverState.paramValue = mbtype.GetField("paramValue", BindingFlags.Public | BindingFlags.Instance);
-                    contactReceiverState.value = mbtype.GetField("value", BindingFlags.Public | BindingFlags.Instance);
-                    // Debug.Log("GOT PARAMETER " + contactReceiverState.parameter + " ACCESS " + accessProp);
-                }
-            }
-            if (mbtype == contactReceiverState.type) {
-                AvDynamicsContactReceivers.Add(mb);
-            }
-            if (mbtype == physBoneState.type) {
-                AvDynamicsPhysBones.Add(mb);
-            }
-
-            // Debug.Log(contactReceiverState.type);
-            // Debug.Log(physBoneState.type);
-        }
-    }
-    public void assignPhysBoneParameters() {
+    public void assignContactParameters(VRCContactReceiver[] behaviours) {
+        AvDynamicsContactReceivers = behaviours;
         foreach (var mb in AvDynamicsContactReceivers) {
-            var old_value = contactReceiverState.paramAccess.GetValue(mb);
-            if (old_value == null || old_value.GetType() != accessClass) {
-                string parameter = (string)contactReceiverState.parameter.GetValue(mb);
-                Av3EmuParameterAccessBase accessInst = (Av3EmuParameterAccessBase)accessClass.GetConstructor(new System.Type[0]).Invoke(new object[0]);
+            var old_value = mb.paramAccess;
+            if (old_value == null || old_value.GetType() != typeof(Av3EmuParameterAccess)) {
+                string parameter = mb.parameter;
+                Av3EmuParameterAccess accessInst = new Av3EmuParameterAccess();
                 accessInst.runtime = this;
                 accessInst.paramName = parameter;
-                contactReceiverState.paramAccess.SetValue(mb, accessInst);
-                accessInst.floatVal = (float)contactReceiverState.paramValue.GetValue(mb);
+                mb.paramAccess = accessInst;
+                accessInst.floatVal = mb.paramValue;
                 // Debug.Log("Assigned access " + contactReceiverState.paramAccess.GetValue(mb) + " to param " + parameter + ": was " + old_value);
             }
         }
+    }
+    public void assignPhysBoneParameters(VRCPhysBone[] behaviours) {
+        AvDynamicsPhysBones = behaviours;
         foreach (var mb in AvDynamicsPhysBones) {
-            var old_value = physBoneState.param_Stretch.GetValue(mb);
-            if (old_value == null || old_value.GetType() != accessClass) {
-                string parameter = (string)physBoneState.parameter.GetValue(mb);
-                Av3EmuParameterAccessBase accessInst = (Av3EmuParameterAccessBase)accessClass.GetConstructor(new System.Type[0]).Invoke(new object[0]);
+            var old_value = mb.param_Stretch;
+            if (old_value == null || old_value.GetType() != typeof(Av3EmuParameterAccess)) {
+                string parameter = mb.parameter;
+                Av3EmuParameterAccess accessInst = new Av3EmuParameterAccess();
                 accessInst.runtime = this;
-                accessInst.paramName = parameter + PhysBoneState.PARAM_ANGLE;
-                physBoneState.param_Angle.SetValue(mb, accessInst);
-                accessInst.floatVal = (float) physBoneState.param_AngleValue.GetValue(mb);
-                accessInst = (Av3EmuParameterAccessBase)accessClass.GetConstructor(new System.Type[0]).Invoke(new object[0]);
+                accessInst.paramName = parameter + VRCPhysBone.PARAM_ANGLE;
+                mb.param_Angle = accessInst;
+                accessInst.floatVal = mb.param_AngleValue;
+                accessInst = new Av3EmuParameterAccess();
                 accessInst.runtime = this;
-                accessInst.paramName = parameter + PhysBoneState.PARAM_ISGRABBED;
-                physBoneState.param_IsGrabbed.SetValue(mb, accessInst);
-                accessInst.boolVal = (bool)physBoneState.param_IsGrabbedValue.GetValue(mb);
-                accessInst = (Av3EmuParameterAccessBase)accessClass.GetConstructor(new System.Type[0]).Invoke(new object[0]);
+                accessInst.paramName = parameter + VRCPhysBone.PARAM_ISGRABBED;
+                mb.param_IsGrabbed = accessInst;
+                accessInst.boolVal = mb.param_IsGrabbedValue;
+                accessInst = new Av3EmuParameterAccess();
                 accessInst.runtime = this;
-                accessInst.paramName = parameter + PhysBoneState.PARAM_STRETCH;
-                physBoneState.param_Stretch.SetValue(mb, accessInst);
-                accessInst.floatVal = (float)physBoneState.param_StretchValue.GetValue(mb);
+                accessInst.paramName = parameter + VRCPhysBone.PARAM_STRETCH;
+                mb.param_Stretch = accessInst;
+                accessInst.floatVal = mb.param_StretchValue;
                 // Debug.Log("Assigned strech access " + physBoneState.param_Stretch.GetValue(mb) + " to param " + parameter + ": was " + old_value);
             }
         }
@@ -1019,22 +924,12 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
         }
 
-        // AvDynamicsTriggers = avadesc.gameObject.GetComponentsInChildren<VRCAvatarTrigger>();
-        // AvDynamicsPhysBones = avadesc.gameObject.GetComponentsInChildren<VRCPhysBone>();
-
         InitializeAnimator();
         if (addRuntimeDelegate != null) {
             addRuntimeDelegate(this);
         }
         if (AvatarSyncSource == this) {
             CreateAv3MenuComponent();
-        }
-        if (!IsMirrorClone && !IsShadowClone) {
-            try {
-                ScanForAvDynamicsTypes(this.GetComponentsInChildren<MonoBehaviour>(true));
-            }catch (Exception e) {
-                Debug.LogException(e);
-            }
         }
         if (this.AvatarSyncSource != this || IsMirrorClone || IsShadowClone) {
             PrevAnimatorToViewLiteParamsShow0 = (char)(int)ViewAnimatorOnlyNoParams;
@@ -2225,10 +2120,12 @@ public class LyumaAv3Runtime : MonoBehaviour
             whichcontroller++;
         }
 
-        if ((emulator != null && !emulator.DisableAvatarDynamicsIntegration)
-            || (AvatarSyncSource?.emulator != null && !AvatarSyncSource.emulator.DisableAvatarDynamicsIntegration))
+        if (((emulator != null && !emulator.DisableAvatarDynamicsIntegration)
+            || (AvatarSyncSource?.emulator != null && !AvatarSyncSource.emulator.DisableAvatarDynamicsIntegration)) &&
+            !IsMirrorClone && !IsShadowClone)
         {
-            assignPhysBoneParameters();
+            assignContactParameters(avadesc.gameObject.GetComponentsInChildren<VRCContactReceiver>());
+            assignPhysBoneParameters(avadesc.gameObject.GetComponentsInChildren<VRCPhysBone>());
         }
 
         for (int i = 0; i < playableBlendingStates.Count; i++) {
