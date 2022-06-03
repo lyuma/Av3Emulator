@@ -314,7 +314,7 @@ public class LyumaAv3MenuEditor : Editor
     private bool ParameterizedButton(VRCExpressionsMenu.Control control, string parameterName, float wantedValue)
     {
         var hasParameter = IsValidParameterName(parameterName);
-        return GUILayout.Button(new GUIContent(control.name + (hasParameter ? " (" + parameterName + " = " + wantedValue + ")" : ""), control.icon), GUILayout.MinHeight(36),GUILayout.MinWidth(40),GUILayout.ExpandHeight(true));
+        return GUILayout.Button(new GUIContent(control.name + (hasParameter ? " (" + parameterName + " = " + wantedValue + ")" : ""), control.icon), GUILayout.Height(36),GUILayout.MinWidth(40));
     }
 
     private static T GreenBackground<T>(bool isActive, Func<T> inside)

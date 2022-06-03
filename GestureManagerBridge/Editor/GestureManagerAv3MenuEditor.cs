@@ -311,7 +311,7 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
             return;
         }
         EditorGUILayout.Space(10);
-        gmenu.compact = false;
+        gmenu.compact = true;
 
         var menu = GetOrCreateRadial(this as UnityEditor.Editor);
         if (!gmenu.IsMenuOpen) {
