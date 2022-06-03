@@ -116,6 +116,7 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
             }
             protected internal override void InternalSet(float value) {
                 param.value = value;
+                param.exportedValue = value;
             }
         }
         private LyumaAv3Runtime _runtime;

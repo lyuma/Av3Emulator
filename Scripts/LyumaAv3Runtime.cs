@@ -124,7 +124,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 // Debug.Log(paramName + " GETb");
                 int idx;
                 if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return runtime.Ints[idx].value != 0;
-                if (runtime.FloatToIndex.TryGetValue(paramName, out idx))return runtime.Floats[idx].value != 0.0f;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx))return runtime.Floats[idx].exportedValue != 0.0f;
                 if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value;
                 return false;
             }
@@ -132,7 +132,10 @@ public class LyumaAv3Runtime : MonoBehaviour
                 // Debug.Log(paramName + " SETb " + value);
                 int idx;
                 if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = value ? 1 : 0;
-                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = value ? 1.0f : 0.0f;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) {
+                    runtime.Floats[idx].value = value ? 1.0f : 0.0f;
+                    runtime.Floats[idx].exportedValue = runtime.Floats[idx].value;
+                }
                 if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value;
             }
         }
@@ -141,7 +144,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 int idx;
                 // Debug.Log(paramName + " GETi");
                 if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return runtime.Ints[idx].value;
-                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) return (int)runtime.Floats[idx].value;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) return (int)runtime.Floats[idx].exportedValue;
                 if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value ? 1 : 0;
                 return 0;
             }
@@ -149,7 +152,10 @@ public class LyumaAv3Runtime : MonoBehaviour
                 // Debug.Log(paramName + " SETi " + value);
                 int idx;
                 if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = value;
-                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = (float)value;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) {
+                    runtime.Floats[idx].value = (float)value;
+                    runtime.Floats[idx].exportedValue = runtime.Floats[idx].value;
+                }
                 if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value != 0;
             }
         }
@@ -158,7 +164,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 // Debug.Log(paramName + " GETf");
                 int idx;
                 if (runtime.IntToIndex.TryGetValue(paramName, out idx)) return (float)runtime.Ints[idx].value;
-                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) return runtime.Floats[idx].value;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) return runtime.Floats[idx].exportedValue;
                 if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) return runtime.Bools[idx].value ? 1.0f : 0.0f;
                 return 0.0f;
             }
@@ -166,7 +172,10 @@ public class LyumaAv3Runtime : MonoBehaviour
                 // Debug.Log(paramName + " SETf " + value);
                 int idx;
                 if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = (int)value;
-                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) runtime.Floats[idx].value = value;
+                if (runtime.FloatToIndex.TryGetValue(paramName, out idx)) {
+                    runtime.Floats[idx].value = value;
+                    runtime.Floats[idx].exportedValue = value;
+                }
                 if (runtime.BoolToIndex.TryGetValue(paramName, out idx)) runtime.Bools[idx].value = value != 0.0f;
             }
         }
@@ -335,6 +344,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         public string name;
         [HideInInspector] public bool synced;
         [Range(-1, 1)] public float value;
+        [Range(-1, 1)] public float exportedValue;
         [HideInInspector] public float lastValue;
     }
     [Header("User-generated inputs")]
@@ -507,15 +517,16 @@ public class LyumaAv3Runtime : MonoBehaviour
                     if (runtime.FloatToIndex.TryGetValue(actualName, out idx)) {
                         switch (parameter.type) {
                             case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Set:
-                                runtime.Floats[idx].value = parameter.value;
+                                runtime.Floats[idx].exportedValue = parameter.value;
                                 break;
                             case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add:
-                                runtime.Floats[idx].value += parameter.value;
+                                runtime.Floats[idx].exportedValue += parameter.value;
                                 break;
                             case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random:
-                                runtime.Floats[idx].value = UnityEngine.Random.Range(parameter.valueMin, parameter.valueMax);
+                                runtime.Floats[idx].exportedValue = UnityEngine.Random.Range(parameter.valueMin, parameter.valueMax);
                                 break;
                         }
+                        runtime.Floats[idx].value = runtime.Floats[idx].exportedValue;
                     }
                     if (runtime.BoolToIndex.TryGetValue(actualName, out idx)) {
                         bool newValue;
@@ -525,76 +536,38 @@ public class LyumaAv3Runtime : MonoBehaviour
                         switch (parameter.type) {
                             case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Set:
                                 newValue = parameter.value != 0.0f;
-                                if (!bp.synced) {
-                                    // Triggers ignore alue and Set unconditionally.
-                                    whichController = 0;
-                                    foreach (var p in runtime.playables) {
-                                        if (bp.hasBool[whichController]) {
-                                            p.SetBool(actualName, newValue);
-                                        }
-                                        whichController++;
-                                    }
-                                    whichController = 0;
-                                    foreach (var p in runtime.playables) {
-                                        if (bp.hasTrigger[whichController]) {
-                                            p.SetTrigger(actualName);
-                                        }
-                                        whichController++;
-                                    }
-                                    bp.lastValue = newValue;
-                                }
-                                bp.value = newValue;
                                 break;
                             case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add:
                                 /* editor script treats it as random, but it is its own operation */
                                 newValue = ((bp.value ? 1.0 : 0.0) + parameter.value) != 0.0f; // weird but ok...
                                 // Debug.Log("Add bool " + bp.name + " to " + newValue + ", " + (bp.value ? 1.0 : 0.0) + ", " + parameter.value);
-                                if (!bp.synced) {
-                                    newValue = parameter.value != 0.0f;
-                                    whichController = 0;
-                                    // Triggers ignore value and Set unconditionally.
-                                    foreach (var p in runtime.playables) {
-                                        if (bp.hasBool[whichController]) {
-                                            p.SetBool(actualName, newValue);
-                                        }
-                                        whichController++;
-                                    }
-                                    whichController = 0;
-                                    foreach (var p in runtime.playables) {
-                                        if (bp.hasTrigger[whichController]) {
-                                            p.SetTrigger(actualName);
-                                        }
-                                        whichController++;
-                                    }
-                                    bp.lastValue = newValue;
-                                }
-                                bp.value = newValue;
                                 break;
                             case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random:
                                 // random is *not* idempotent.
                                 newValue = UnityEngine.Random.Range(0.0f, 1.0f) < parameter.chance;
-                                if (!bp.synced) {
-                                    whichController = 0;
-                                    foreach (var p in runtime.playables) {
-                                        if (bp.hasBool[whichController]) {
-                                            p.SetBool(actualName, newValue);
-                                        }
-                                        whichController++;
-                                    }
-                                    if (newValue) {
-                                        whichController = 0;
-                                        foreach (var p in runtime.playables) {
-                                            if (bp.hasTrigger[whichController]) {
-                                                p.SetTrigger(actualName);
-                                            }
-                                            whichController++;
-                                        }
-                                    }
-                                    bp.lastValue = newValue;
-                                }
-                                bp.value = newValue;
                                 break;
+                            default:
+                                continue;
                         }
+                        if (!bp.synced) {
+                            // Triggers ignore alue and Set unconditionally.
+                            whichController = 0;
+                            foreach (var p in runtime.playables) {
+                                if (bp.hasBool[whichController]) {
+                                    p.SetBool(actualName, newValue);
+                                }
+                                whichController++;
+                            }
+                            whichController = 0;
+                            foreach (var p in runtime.playables) {
+                                if (bp.hasTrigger[whichController]) {
+                                    p.SetTrigger(actualName);
+                                }
+                                whichController++;
+                            }
+                            bp.lastValue = newValue;
+                        }
+                        bp.value = newValue;
                     }
                 }
                 foreach (var key in deleteParameterAdds) {
@@ -1253,7 +1226,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                 stageNameToValue[val.stageName] = val.value;
             }
             foreach (var val in Floats) {
-                stageNameToValue[val.stageName] = val.value;
+                stageNameToValue[val.stageName] = val.exportedValue;
             }
             foreach (var val in Bools) {
                 stageNameToValue[val.stageName] = val.value ? 1.0f : 0.0f;
@@ -1308,6 +1281,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                     param.synced = true;
                     param.name = stageParam.name;
                     param.value = lastDefault;
+                    param.exportedValue = lastDefault;
                     param.lastValue = 0;
                     FloatToIndex[param.name] = Floats.Count;
                     Floats.Add(param);
@@ -1392,6 +1366,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                     param.synced = false;
                     param.name = aparam.name;
                     param.value = aparam.defaultFloat;
+                    param.exportedValue = aparam.defaultFloat;
                     param.lastValue = param.value;
                     FloatToIndex[param.name] = Floats.Count;
                     Floats.Add(param);
@@ -1730,7 +1705,8 @@ public class LyumaAv3Runtime : MonoBehaviour
                     // Simulate IK sync of open gesture parameter.
                     if (ShouldSyncThisFrame || (IKSyncRadialMenu && menus.Length >= 1 && menus[0].IsControlIKSynced(Floats[i].name))
                             || (IKSyncRadialMenu && menus.Length >= 2 && menus[1].IsControlIKSynced(Floats[i].name))) {
-                        Floats[i].value = ClampAndQuantizeFloat(AvatarSyncSource.Floats[i].value);
+                        Floats[i].exportedValue = ClampAndQuantizeFloat(AvatarSyncSource.Floats[i].exportedValue);
+                        Floats[i].value = Floats[i].exportedValue;
                     }
                 }
             }
@@ -1773,10 +1749,11 @@ public class LyumaAv3Runtime : MonoBehaviour
         for (int i = 0; i < Floats.Count; i++) {
             if (StageParamterToBuiltin.ContainsKey(Floats[i].stageName)) {
                 if (locally8bitQuantizedFloats) {
-                    Floats[i].value = ClampAndQuantizeFloat(Floats[i].value);
+                    Floats[i].exportedValue = ClampAndQuantizeFloat(Floats[i].exportedValue);
                 } else {
-                    Floats[i].value = ClampFloatOnly(Floats[i].value);
+                    Floats[i].exportedValue = ClampFloatOnly(Floats[i].exportedValue);
                 }
+                Floats[i].value = Floats[i].exportedValue;
             }
         }
         for (int i = 0; i < Ints.Count; i++) {
@@ -1938,6 +1915,9 @@ public class LyumaAv3Runtime : MonoBehaviour
                     if (paramterFloats.TryGetValue(paramid, out fparam)) {
                         if (fparam != playable.GetFloat(paramid)) {
                             param.value = param.lastValue = playable.GetFloat(paramid);
+                            if (!playable.IsParameterControlledByCurve(paramid)) {
+                                param.exportedValue = param.value;
+                            }
                         }
                     }
                     paramterFloats[paramid] = param.value;
@@ -2495,6 +2475,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                     int idx;
                     if (FloatToIndex.TryGetValue(ParamName, out idx)) {
                         Floats[idx].value = (float)(arguments[0]);
+                        Floats[idx].exportedValue = Floats[idx].value;
                     }
                 }
             }
