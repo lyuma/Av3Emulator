@@ -54,8 +54,8 @@ public class LyumaAv3Runtime : MonoBehaviour
     public bool KeepSavedParametersOnReset = true;
     [HideInInspector] public bool legacyMenuGUI = true;
     private bool lastLegacyMenuGUI = true;
-    [Header("View other playable layers. Unity is glitchy when not 'Base'.")]
-    [Tooltip("Selects the playable layer to be visible in Unity's Animator window. Unless this is set to Base, creates duplicate playable layers with weight 0. It hopefully works the same.")]
+    [Header("Animator to Debug. Unity is glitchy when not 'Base'.")]
+    [Tooltip("Selects the playable layer to be visible with parameters in the Animator. If you view any other playable in the Animator window, parameters will say 0 and will not update.")]
     public VRCAvatarDescriptor.AnimLayerType DebugDuplicateAnimator;
     private char PrevAnimatorToDebug;
     [Tooltip("Selects the playable layer to be visible in Unity's Animator window. Does not reset avatar. Unless this is set to Base, will cause 'Invalid Layer Index' logspam; layers will show wrong weight and parameters will all be 0.")]
@@ -1631,6 +1631,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         }
         if (PrevAnimatorToViewLiteParamsShow0 == (char)127) {
             updateSelectionDelegate(this);
+            ViewAnimatorOnlyNoParams = (VRCAvatarDescriptor.AnimLayerType)(int)126;
             PrevAnimatorToViewLiteParamsShow0 = (char)(int)ViewAnimatorOnlyNoParams;
         }
         if ((char)(int)ViewAnimatorOnlyNoParams != PrevAnimatorToViewLiteParamsShow0) {
