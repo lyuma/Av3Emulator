@@ -10,7 +10,7 @@
 
 2.9.9:
 
-* **Only compatible with the latest SDK VRCSDK3-AVATAR-2022.06.02.12.22** Please update the SDK.
+* **Requires SDK VRCSDK3-AVATAR-2022.06.03 or newer** Please update the SDK if it is before June 2022.
 * Added support for the new Copy parameters feature.
 * Bifurcate exported and internal float values to avoid pollution from AAPs. This should match game better, as you cannot sync an AAP value over the network.
 You will not see `exportedValue` and `value` sliders for floats. Value will represent what the Animator sees, while Exported represents the value which is synced (and used for parameter Copy).
