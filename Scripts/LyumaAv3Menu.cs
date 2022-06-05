@@ -49,7 +49,7 @@ public class LyumaAv3Menu : MonoBehaviour
 
             var actualParam = allConditions.Find(param => param.name == MandatedParam.name);
             if (actualParam == null) return false;
-            return actualParam.value == MandatedParam.value;
+            return actualParam.exportedValue == MandatedParam.exportedValue;
         }
     }
 
@@ -88,7 +88,7 @@ public class LyumaAv3Menu : MonoBehaviour
         }
         var floatx = Runtime.Floats.Find(param => param.name == paramName);
         if (floatx != null) {
-            var currentValue = floatx.value;
+            var currentValue = floatx.exportedValue;
             var newValue = wantedValue == currentValue ? 0.0f : wantedValue;
             DoSetRuntimeX(paramName, newValue);
         }
@@ -107,7 +107,7 @@ public class LyumaAv3Menu : MonoBehaviour
 
     public void UserSubMenu(VRCExpressionsMenu subMenu, string paramName, float wantedValue)
     {
-        MenuStack.Add(new MenuConditional(subMenu, new LyumaAv3Runtime.FloatParam {name = paramName, value = wantedValue}));
+        MenuStack.Add(new MenuConditional(subMenu, new LyumaAv3Runtime.FloatParam {name = paramName, value = wantedValue, exportedValue = wantedValue}));
         DoSetRuntimeX(paramName, wantedValue);
     }
 
@@ -163,6 +163,7 @@ public class LyumaAv3Menu : MonoBehaviour
         var floatParam = Runtime.Floats.Find(param => param.name == paramName);
         if (floatParam != null) {
             floatParam.value = newValue;
+            floatParam.exportedValue = newValue;
         }
         var boolParam = Runtime.Bools.Find(param => param.name == paramName);
         if (boolParam != null) {
@@ -179,7 +180,7 @@ public class LyumaAv3Menu : MonoBehaviour
 
         var floatParam = Runtime.Floats.Find(param => param.name == paramName);
         if (floatParam != null) {
-            return floatParam.value == value;
+            return floatParam.exportedValue == value;
         }
 
         var boolParam = Runtime.Bools.Find(param => param.name == paramName);
@@ -194,7 +195,7 @@ public class LyumaAv3Menu : MonoBehaviour
         var floatParam = Runtime.Floats.Find(param => param.name == paramName);
         if (floatParam == null) return 0;
 
-        return floatParam.value;
+        return floatParam.exportedValue;
     }
 
     public void UserFloat(string paramName, float newValue)
@@ -203,6 +204,7 @@ public class LyumaAv3Menu : MonoBehaviour
         if (floatParam == null) return;
 
         floatParam.value = newValue;
+        floatParam.exportedValue = newValue;
     }
 
     public bool HasActiveControl()

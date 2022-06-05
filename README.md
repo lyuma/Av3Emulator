@@ -6,6 +6,16 @@
 
 * Unity Package support
 
+### **New features in v 2.9.10 (3.0 rc7):**
+
+2.9.10:
+
+* Fixed legacy menu being completely broken.
+* Fixed ParameterDriver Copy when setting float parameters.
+* Made ParameterDriver Copy set boolean to true if negative, to match docs.
+* Allow dragging Expression Value in the Floats section of the inspector.
+* In the Floats section, "Value" will show the animated Animator parameter (if driven by curve) which may be different from the expression value which is used for sync and parameter driver Copy.
+
 ### **New features in v 2.9.9 (3.0 rc6):**
 
 2.9.9:

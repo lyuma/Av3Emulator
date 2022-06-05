@@ -343,8 +343,20 @@ public class LyumaAv3Runtime : MonoBehaviour
         [HideInInspector] public string stageName;
         public string name;
         [HideInInspector] public bool synced;
+        [Range(-1, 1)] public float expressionValue;
+        [HideInInspector] public float lastExpressionValue_;
         [Range(-1, 1)] public float value;
-        [Range(-1, 1)] public float exportedValue;
+        [HideInInspector] private float exportedValue_;
+        public float exportedValue {
+            get {
+                return exportedValue_;
+            } set {
+                this.exportedValue_ = value;
+                this.value = value;
+                this.lastExpressionValue_ = value;
+                this.expressionValue = value;
+            }
+        }
         [HideInInspector] public float lastValue;
     }
     [Header("User-generated inputs")]
@@ -549,7 +561,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                                 runtime.Floats[idx].exportedValue = UnityEngine.Random.Range(parameter.valueMin, parameter.valueMax);
                                 break;
                             case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Copy:
-                                runtime.Floats[idx].value = runtime.getAdjustedParameterAsFloat(parameter.source, parameter.convertRange, parameter.sourceMin, parameter.sourceMax, parameter.destMin, parameter.destMax);
+                                runtime.Floats[idx].exportedValue = runtime.getAdjustedParameterAsFloat(parameter.source, parameter.convertRange, parameter.sourceMin, parameter.sourceMax, parameter.destMin, parameter.destMax);
                                 break;
                         }
                         runtime.Floats[idx].value = runtime.Floats[idx].exportedValue;
@@ -573,7 +585,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                                 newValue = UnityEngine.Random.Range(0.0f, 1.0f) < parameter.chance;
                                 break;
                             case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Copy:
-                                newValue = runtime.getAdjustedParameterAsFloat(parameter.source, parameter.convertRange, parameter.sourceMin, parameter.sourceMax, parameter.destMin, parameter.destMax) > 0.0f;
+                                newValue = runtime.getAdjustedParameterAsFloat(parameter.source, parameter.convertRange, parameter.sourceMin, parameter.sourceMax, parameter.destMin, parameter.destMax) != 0.0f;
                                 break;
                             default:
                                 continue;
@@ -1776,6 +1788,10 @@ public class LyumaAv3Runtime : MonoBehaviour
             InStation = AvatarSyncSource.InStation;
         }
         for (int i = 0; i < Floats.Count; i++) {
+            if (Floats[i].expressionValue != Floats[i].lastExpressionValue_) {
+                Floats[i].exportedValue = Floats[i].expressionValue;
+                Floats[i].lastExpressionValue_ = Floats[i].expressionValue;
+            }
             if (StageParamterToBuiltin.ContainsKey(Floats[i].stageName)) {
                 if (locally8bitQuantizedFloats) {
                     Floats[i].exportedValue = ClampAndQuantizeFloat(Floats[i].exportedValue);
