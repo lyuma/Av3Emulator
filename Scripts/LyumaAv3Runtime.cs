@@ -42,6 +42,52 @@ public class LyumaAv3Runtime : MonoBehaviour
     public delegate void ApplyOnEnableWorkaroundDelegateType();
     public static ApplyOnEnableWorkaroundDelegateType ApplyOnEnableWorkaroundDelegate;
 
+    private static SortedDictionary<int, HashSet<Action<VRCAvatarDescriptor>>> initCallbacks =
+        new SortedDictionary<int, HashSet<Action<VRCAvatarDescriptor>>>();
+
+    /**
+     * Adds a callback to be called when the avatar is initialized. This can be used to perform any build-time
+     * manipulation when the emulator initializes. The hooks will be invoked from the Awake callback of the Av3Runtime
+     * component, in order of execOrder.
+     *
+     * If your editor extension also uses a VRCSDK build hook, it's recommended to use the same execOrder for both.
+     *
+     * Note that this function uses a generic Action instead of a specific delegate type to make it easier to invoke
+     * from reflective code, and thus to avoid a hard dependency on Av3Emu.
+     */
+    public static void AddInitAvatarHook(int execOrder, Action<VRCAvatarDescriptor> action)
+    {
+        if (!initCallbacks.TryGetValue(execOrder, out var callbackSet))
+        {
+            callbackSet = new HashSet<Action<VRCAvatarDescriptor>>();
+            initCallbacks[execOrder] = callbackSet;
+        }
+
+        callbackSet.Add(action);
+    }
+
+    /**
+     * Deregisters a callback previously registered with AddInitAvatarHook.
+     */
+    public static void RemoveInitAvatarHook(int execOrder, Action<VRCAvatarDescriptor> action)
+    {
+        if (initCallbacks.TryGetValue(execOrder, out var callbackSet))
+        {
+            callbackSet.Remove(action);
+        }
+    }
+
+    private static void InvokeAvatarInitHooks(VRCAvatarDescriptor avatar)
+    {
+        foreach (var callbackSet in initCallbacks.Values)
+        {
+            foreach (var callback in callbackSet)
+            {
+                callback(avatar);
+            }
+        }
+    }
+
     public LyumaAv3Runtime OriginalSourceClone = null;
 
     [Tooltip("Resets avatar state machine instantly")]
@@ -851,6 +897,9 @@ public class LyumaAv3Runtime : MonoBehaviour
             Debug.Log("Deduplicating Awake() call if we already got awoken by our children.", this);
             return;
         }
+
+        InvokeAvatarInitHooks(GetComponent<VRCAvatarDescriptor>());
+
         // Debug.Log("AWOKEN " + gameObject.name, this);
         attachedAnimators = new HashSet<Animator>();
         if (AvatarSyncSource == null) {
