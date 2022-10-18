@@ -265,7 +265,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         Uninitialized, GenericRig, NoFingers, HeadHands, HeadHandsHip, HeadHandsHipFeet = 6
     }
     public static HashSet<string> BUILTIN_PARAMETERS = new HashSet<string> {
-        "Viseme", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "Upright", "AngularY", "Grounded", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation"
+        "Viseme", "Voice", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "Upright", "AngularY", "Grounded", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation"
     };
     public static readonly HashSet<Type> MirrorCloneComponentBlacklist = new HashSet<Type> {
         typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Rigidbody), typeof(Joint)
@@ -2455,6 +2455,70 @@ public class LyumaAv3Runtime : MonoBehaviour
             break;
         }
     }
+    public void processOSCVRCInputMessage(string ParamName, object arg0) {
+        float argFloat = getObjectFloat(arg0);
+        int argInt = getObjectInt(arg0);
+        bool argBool = isObjectTrue(arg0);
+        switch (ParamName) {
+            case "VelocityZ":
+                Velocity.z = argFloat;
+                break;
+            case "VelocityY":
+                Velocity.y = argFloat;
+                break;
+            case "VelocityX":
+                Velocity.x = argFloat;
+                break;
+            case "InStation":
+                InStation = argBool;
+                break;
+            case "Seated":
+                Seated = argBool;
+                break;
+            case "AFK":
+                AFK = argBool;
+                break;
+            case "Upright":
+                Upright = argFloat;
+                break;
+            case "AngularY":
+                AngularY = argFloat;
+                break;
+            case "Grounded":
+                Grounded = argBool;
+                break;
+            case "MuteSelf":
+                MuteSelf = argBool;
+                break;
+            case "VRMode":
+                VRMode = argBool;
+                break;
+            case "TrackingType":
+                TrackingTypeIdx = argInt;
+                break;
+            case "GestureRightWeight":
+                GestureRightWeight = argFloat;
+                break;
+            case "GestureRight":
+                GestureRightIdx = argInt;
+                break;
+            case "GestureLeftWeight":
+                GestureLeftWeight = argFloat;
+                break;
+            case "GestureLeft":
+                GestureLeftIdx = argInt;                             
+                break;
+            case "Voice":
+                Voice = argFloat;
+                break;
+            case "Viseme":
+                VisemeIdx = argInt;
+                break;
+            default:
+                Debug.LogWarning("Unrecognized built in VRC param");
+                break;
+        }
+    }
     public void HandleOSCMessages(List<A3ESimpleOSC.OSCMessage> messages) {
         var innerProperties = new Dictionary<string, A3EOSCConfiguration.InnerJson>();
         foreach (var ij in OSCConfigurationFile.OSCJsonConfig.parameters) {
@@ -2471,11 +2535,11 @@ public class LyumaAv3Runtime : MonoBehaviour
             float argFloat = getObjectFloat(arguments[0]);
             int argInt = getObjectInt(arguments[0]);
             bool argBool = isObjectTrue(arguments[0]);
+            string ParamName;
             if (msgPath.StartsWith("/input/")) {
-                string ParamName = msgPath.Split(new char[]{'/'}, 3)[2];
+                ParamName = msgPath.Split(new char[]{'/'}, 3)[2];
                 processOSCInputMessage(ParamName, arguments[0]);
             } else {
-                string ParamName;
                 if (OSCConfigurationFile.SendRecvAllParamsNotInJSON) {
                     ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
                 } else if (innerProperties.ContainsKey(msgPath)) {
@@ -2496,8 +2560,13 @@ public class LyumaAv3Runtime : MonoBehaviour
                         continue;
                     }
                 } else {
-                    Debug.LogWarning("Address " + msgPath + " not found for input in JSON.");
-                    continue;
+                    ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
+                    if (BUILTIN_PARAMETERS.Contains( ParamName ) ) {                     
+                        processOSCVRCInputMessage( ParamName, arguments[0]);
+                    } else {
+                        Debug.LogWarning("Address " + msgPath + " not found for input in JSON.");
+                        continue;
+                    }
                 }
                 if (OSCController != null && OSCController.debugPrintReceivedMessages) {
                     Debug.Log("Recvd "+ParamName + ": " + msg);
