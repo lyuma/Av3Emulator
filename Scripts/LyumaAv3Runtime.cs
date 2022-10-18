@@ -42,6 +42,9 @@ public class LyumaAv3Runtime : MonoBehaviour
     public delegate void ApplyOnEnableWorkaroundDelegateType();
     public static ApplyOnEnableWorkaroundDelegateType ApplyOnEnableWorkaroundDelegate;
 
+    // This is injected by Editor-scope scripts to give us access to VRCBuildPipelineCallbacks.
+    public static Action<GameObject> InvokeOnPreProcessAvatar = (_) => { };
+
     public LyumaAv3Runtime OriginalSourceClone = null;
 
     [Tooltip("Resets avatar state machine instantly")]
@@ -851,6 +854,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             Debug.Log("Deduplicating Awake() call if we already got awoken by our children.", this);
             return;
         }
+
         // Debug.Log("AWOKEN " + gameObject.name, this);
         attachedAnimators = new HashSet<Animator>();
         if (AvatarSyncSource == null) {

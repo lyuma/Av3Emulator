@@ -27,6 +27,7 @@ using UnityEditor.Compilation;
 using UnityEditor.Playables;
 using UnityEngine.Playables;
 using VRC.SDK3.Avatars.Components;
+using VRC.SDKBase.Editor.BuildPipeline;
 
 [InitializeOnLoadAttribute]
 public static class LyumaAv3EditorSupport
@@ -250,6 +251,11 @@ public static class LyumaAv3EditorSupport
     {
         InitDefaults();
         EditorApplication.playModeStateChanged += OnPlayModeStateChange;
+        LyumaAv3Runtime.InvokeOnPreProcessAvatar = (obj) =>
+        {
+            Debug.Log("Invoking OnPreprocessAvatar for " + obj, obj);
+            VRCBuildPipelineCallbacks.OnPreprocessAvatar(obj);
+        };
     }
 
     [MenuItem("Tools/Enable Avatars 3.0 Emulator")]

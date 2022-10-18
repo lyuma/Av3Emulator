@@ -26,20 +26,25 @@ public class LyumaAv3Emulator : MonoBehaviour
 {
     static readonly ulong EMULATOR_VERSION = 0x2_09_08_00;
 
+    [Header("Fake VR or Desktop mode selection")]
     public bool DefaultToVR = false;
     public bool DefaultTestInStation = false;
     public LyumaAv3Runtime.TrackingTypeIndex DefaultTrackingType = LyumaAv3Runtime.TrackingTypeIndex.HeadHands;
+    [Header("Emulation")]
     public VRCAvatarDescriptor.AnimLayerType DefaultAnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base;
     public bool RestartEmulator;
     private bool RestartingEmulator;
-    public bool CreateNonLocalClone;
-    public int CreateNonLocalCloneCount;
     [Tooltip("Simulate behavior with sub-animator parameter drivers prior to the 2021.1.1 patch (19 Jan 2021)")]
-    public bool legacySubAnimatorParameterDriverMode;
+    public bool legacySubAnimatorParameterDriverMode = false;
     public bool legacyMenuGUI = true;
     private bool lastLegacyMenuGUI = true;
+    [Header("Unity Integrations")]
+    public bool RunPreprocessAvatarHook = false;
     public bool DisableAvatarDynamicsIntegration;
     public bool WorkaroundPlayModeScriptCompile = true;
+    [Header("Networked and mirror clone emulation")]
+    public bool CreateNonLocalClone;
+    public int CreateNonLocalCloneCount;
     public bool DisableMirrorClone;
     public bool DisableShadowClone;
     private bool lastHead;
@@ -51,6 +56,7 @@ public class LyumaAv3Emulator : MonoBehaviour
     static public RuntimeAnimatorController EmptyController;
 
     public List<LyumaAv3Runtime> runtimes = new List<LyumaAv3Runtime>();
+    public LinkedList<LyumaAv3Runtime> forceActiveRuntimes = new LinkedList<LyumaAv3Runtime>();
 
     private void Awake()
     {
@@ -71,10 +77,18 @@ public class LyumaAv3Emulator : MonoBehaviour
             }
             try {
                 // Creates the playable director, and initializes animator.
+                bool alreadyHadComponent = avadesc.gameObject.GetComponent<LyumaAv3Runtime>() != null;
+                if (RunPreprocessAvatarHook && !alreadyHadComponent) {
+                    LyumaAv3Runtime.InvokeOnPreProcessAvatar(avadesc.gameObject);
+                    avadesc.gameObject.SetActive(true);
+                }
+
                 var oml = avadesc.gameObject.GetOrAddComponent<UnityEngine.AI.OffMeshLink>();
                 oml.startTransform = this.transform;
-                bool alreadyHadComponent = avadesc.gameObject.GetComponent<LyumaAv3Runtime>() != null;
                 var runtime = avadesc.gameObject.GetOrAddComponent<LyumaAv3Runtime>();
+                if (RunPreprocessAvatarHook && !alreadyHadComponent) {
+                    forceActiveRuntimes.AddLast(runtime);
+                }
                 if (oml != null) {
                     GameObject.DestroyImmediate(oml);
                 }
@@ -114,9 +128,13 @@ public class LyumaAv3Emulator : MonoBehaviour
             RestartingEmulator = false;
             Awake();
         } else if (RestartEmulator) {
+            RunPreprocessAvatarHook = false;
             RestartEmulator = false;
             OnDestroy();
             RestartingEmulator = true;
+        }
+        foreach (var runtime in forceActiveRuntimes) {
+            runtime.gameObject.SetActive(true);
         }
         if (ViewBothRealAndMirror) {
             LyumaAv3Runtime.updateSceneLayersDelegate(~0);
