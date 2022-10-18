@@ -116,6 +116,9 @@ public class LyumaAv3Runtime : MonoBehaviour
     private int mouthOpenBlendShapeIdx;
     private int[] visemeBlendShapeIdxs;
 
+    public Dictionary<String, object> DataLastShovedIntoOSCAnyway = new Dictionary<String, object>();
+    public Dictionary<String, object> DataToShoveIntoOSCAnyway = new Dictionary<String, object>();
+
     [NonSerialized] public VRCPhysBone[] AvDynamicsPhysBones = new VRCPhysBone[]{};
     [NonSerialized] public VRCContactReceiver[] AvDynamicsContactReceivers = new VRCContactReceiver[]{};
 
@@ -132,6 +135,12 @@ public class LyumaAv3Runtime : MonoBehaviour
                 return false;
             }
             set {
+                object oldObj = null;
+		runtime.DataLastShovedIntoOSCAnyway.TryGetValue(paramName, out oldObj);
+                if ((object)value != oldObj) {
+                    runtime.DataToShoveIntoOSCAnyway[paramName] = value;
+                    runtime.DataLastShovedIntoOSCAnyway[paramName] = value;
+                }
                 // Debug.Log(paramName + " SETb " + value);
                 int idx;
                 if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = value ? 1 : 0;
@@ -152,6 +161,12 @@ public class LyumaAv3Runtime : MonoBehaviour
                 return 0;
             }
             set {
+                object oldObj = null;
+		runtime.DataLastShovedIntoOSCAnyway.TryGetValue(paramName, out oldObj);
+                if ((object)value != oldObj) {
+                    runtime.DataToShoveIntoOSCAnyway[paramName] = value;
+                    runtime.DataLastShovedIntoOSCAnyway[paramName] = value;
+                }
                 // Debug.Log(paramName + " SETi " + value);
                 int idx;
                 if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = value;
@@ -172,6 +187,12 @@ public class LyumaAv3Runtime : MonoBehaviour
                 return 0.0f;
             }
             set {
+                object oldObj = null;
+		runtime.DataLastShovedIntoOSCAnyway.TryGetValue(paramName, out oldObj);
+                if ((object)value != oldObj) {
+                    runtime.DataToShoveIntoOSCAnyway[paramName] = value;
+                    runtime.DataLastShovedIntoOSCAnyway[paramName] = value;
+                }
                 // Debug.Log(paramName + " SETf " + value);
                 int idx;
                 if (runtime.IntToIndex.TryGetValue(paramName, out idx)) runtime.Ints[idx].value = (int)value;
@@ -2249,6 +2270,14 @@ public class LyumaAv3Runtime : MonoBehaviour
             path="/avatar/change",
             time = new Vector2Int(-1,-1),
         });
+        foreach (var prop in DataToShoveIntoOSCAnyway) {
+            messages.Add(new A3ESimpleOSC.OSCMessage {
+                arguments = new object[1] {prop.Value},
+                path = "/avatar/parameters/" + prop.Key,
+                time = new Vector2Int(-1,-1),
+            });
+        }
+        DataToShoveIntoOSCAnyway.Clear();
         if (OSCConfigurationFile.SendRecvAllParamsNotInJSON) {
             foreach (var b in Bools) {
                 if (b.synced) {
