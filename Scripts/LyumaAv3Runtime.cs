@@ -1158,8 +1158,8 @@ public class LyumaAv3Runtime : MonoBehaviour
             {
                 ac = vrcAnimLayer.animatorController;
                 mask = vrcAnimLayer.mask;
-                if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.FX) {
-                    mask = animLayerToDefaultAvaMask[vrcAnimLayer.type]; // Force mask to prevent muscle overrides.
+                if (mask == null && vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.FX) {
+                    mask = animLayerToDefaultAvaMask[vrcAnimLayer.type]; // When empty, defaults to a mask that prevents muscle overrides.
                 }
             }
             if (ac == null) {
