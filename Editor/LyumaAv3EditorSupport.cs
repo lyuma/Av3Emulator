@@ -42,16 +42,26 @@ public static class LyumaAv3EditorSupport
         {VRCAvatarDescriptor.AnimLayerType.Action, "vrc_AvatarV3ActionLayer"},
         {VRCAvatarDescriptor.AnimLayerType.Gesture, "vrc_AvatarV3HandsLayer"},
     };
+    static Dictionary<VRCAvatarDescriptor.AnimLayerType, string> animLayerToDefaultGUID = new Dictionary<VRCAvatarDescriptor.AnimLayerType, string> {
+        {VRCAvatarDescriptor.AnimLayerType.TPose, "00121b5812372b74f9012473856d8acf"},
+        {VRCAvatarDescriptor.AnimLayerType.IKPose, "a9b90a833b3486e4b82834c9d1f7c4ee"},
+        {VRCAvatarDescriptor.AnimLayerType.Base, "4e4e1a372a526074884b7311d6fc686b"},
+        {VRCAvatarDescriptor.AnimLayerType.Sitting, "1268460c14f873240981bf15aa88b21a"},
+        {VRCAvatarDescriptor.AnimLayerType.Additive, "573a1373059632b4d820876efe2d277f"},
+        {VRCAvatarDescriptor.AnimLayerType.FX, "d40be620cf6c698439a2f0a5144919fe"},
+        {VRCAvatarDescriptor.AnimLayerType.Action, "d5aeb52dc5e89244abdb9da8296fad0b"},
+        {VRCAvatarDescriptor.AnimLayerType.Gesture, "404d228aeae421f4590305bc4cdaba16"},
+    };
     static Dictionary<VRCAvatarDescriptor.AnimLayerType, string> animLayerToDefaultAvaMaskFile = new Dictionary<VRCAvatarDescriptor.AnimLayerType, string>
     {
-        {VRCAvatarDescriptor.AnimLayerType.TPose, "vrc_MusclesOnly"},
-        {VRCAvatarDescriptor.AnimLayerType.IKPose, "vrc_MusclesOnly"},
+        {VRCAvatarDescriptor.AnimLayerType.TPose, "LyumaMusclesOnly"},
+        {VRCAvatarDescriptor.AnimLayerType.IKPose, "LyumaMusclesOnly"},
         {VRCAvatarDescriptor.AnimLayerType.Base, null},//"LyumaFullMask"},
         {VRCAvatarDescriptor.AnimLayerType.Sitting, null},//"LyumaFullMask"},
         {VRCAvatarDescriptor.AnimLayerType.Additive, null},//"LyumaFullMask"},
         {VRCAvatarDescriptor.AnimLayerType.FX, "LyumaEmptyMask"}, // TODO
         {VRCAvatarDescriptor.AnimLayerType.Action, null},//"vrc_MusclesOnly"},
-        {VRCAvatarDescriptor.AnimLayerType.Gesture, "vrc_HandsOnly"},
+        {VRCAvatarDescriptor.AnimLayerType.Gesture, "LyumaHandsOnly"},
     };
 
     static void InitDefaults() {
@@ -60,7 +70,13 @@ public static class LyumaAv3EditorSupport
                 LyumaAv3Runtime.animLayerToDefaultController[kv.Key] = null;
             } else
             {
-                AnimatorController ac = AssetDatabase.LoadAssetAtPath<AnimatorController>("Assets/VRCSDK/Examples3/Animation/Controllers/" + kv.Value + ".controller");
+                //Debug.Log("{VRCAvatarDescriptor.AnimLayerType." + kv.Value + ", \"" + AssetDatabase.AssetPathToGUID("Assets/VRCSDK/Examples3/Animation/Controllers/" + kv.Value + ".controller") + "\"},");
+                AnimatorController ac = AssetDatabase.LoadAssetAtPath<AnimatorController>("Assets/VRCSDK/Examples3/Animation/Controllers/" + kv.Value + ".controllersSADASASDASD");
+                if (ac == null)
+                {
+                    string SDKPath = AssetDatabase.GUIDToAssetPath(animLayerToDefaultGUID[kv.Key]);
+                    ac = AssetDatabase.LoadAssetAtPath<AnimatorController>(SDKPath);
+                }
                 if (ac == null)
                 {
                     Debug.LogWarning("Failed to resolve animator controller " + kv.Value + " for " + kv.Key);
