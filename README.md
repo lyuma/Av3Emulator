@@ -6,6 +6,18 @@
 
 * Unity Package support
 
+### **New features in v 2.9.11:**
+
+2.9.11:
+
+* Updated for new GestureManager.
+* Support sending and recieving avatar dynamics over OSC.
+* Support receiving in-game input (velocity, etc.) from OSC. Thanks, NotAKidOnSteam.
+* Can also test loopback using same send and recieve port. Enable Gizmos in Game View toolbar.
+* Add checkbox to enable Avatar Preprocess hooks. Thanks, bd_. May interfere with the first clone.
+* Fix for new FX mask behavior. Thanks, Mysteryem.
+* Attempt to mitigate default mask and controllers from Creator Companion SDK.
+
 ### **New features in v 2.9.10 (3.0 rc7):**
 
 2.9.10:
