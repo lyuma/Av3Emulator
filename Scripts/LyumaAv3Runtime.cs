@@ -69,6 +69,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     private float nextUpdateTime = 0.0f;
     [Header("OSC (double click OSC Controller for debug and port settings)")]
     public bool EnableAvatarOSC = false;
+    public bool LogOSCWarnings = false;
     public LyumaAv3Osc OSCController = null;
     public A3EOSCConfiguration OSCConfigurationFile = new A3EOSCConfiguration();
 
@@ -1704,7 +1705,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             CreateMirrorClone();
             CreateShadowClone();
         }
-        if (emulator != null) {
+        if (emulator != null && AvatarSyncSource == null) {
             if (LastViewMirrorReflection != ViewMirrorReflection) {
                 emulator.ViewMirrorReflection = ViewMirrorReflection;
             } else {
@@ -2564,13 +2565,15 @@ public class LyumaAv3Runtime : MonoBehaviour
             float argFloat = getObjectFloat(arguments[0]);
             int argInt = getObjectInt(arguments[0]);
             bool argBool = isObjectTrue(arguments[0]);
-            string ParamName;
+            string ParamName = "";
             if (msgPath.StartsWith("/input/")) {
                 ParamName = msgPath.Split(new char[]{'/'}, 3)[2];
                 processOSCInputMessage(ParamName, arguments[0]);
             } else {
                 if (OSCConfigurationFile.SendRecvAllParamsNotInJSON) {
-                    ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
+                    if (msgPath.StartsWith("/avatar/parameters/")) {
+                        ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
+                    }
                 } else if (innerProperties.ContainsKey(msgPath)) {
                     ParamName = innerProperties[msgPath].name;
                     if (innerProperties[msgPath].input.type == "Float") {
@@ -2589,11 +2592,15 @@ public class LyumaAv3Runtime : MonoBehaviour
                         continue;
                     }
                 } else {
-                    ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
+                    if (msgPath.StartsWith("/avatar/parameters/")) {
+                        ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
+                    }
                     if (BUILTIN_PARAMETERS.Contains( ParamName ) ) {                     
                         processOSCVRCInputMessage( ParamName, arguments[0]);
-                    } else {
-                        Debug.LogWarning("Address " + msgPath + " not found for input in JSON.");
+                    } else if (!IntToIndex.ContainsKey(ParamName) && !BoolToIndex.ContainsKey(ParamName) && !FloatToIndex.ContainsKey(ParamName)) {
+                        if (LogOSCWarnings) { //if (!ParamName.EndsWith("_Angle") && !ParamName.EndsWith("_IsGrabbed") && !ParamName.EndsWith("_Stretch")) {
+                            Debug.LogWarning("Address " + msgPath + " not found for input in JSON.");
+                        }
                         continue;
                     }
                 }
