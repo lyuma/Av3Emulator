@@ -855,11 +855,6 @@ public class LyumaAv3Runtime : MonoBehaviour
             return;
         }
 
-        if (OriginalSourceClone == null)
-        {
-            InvokeOnPreProcessAvatar(gameObject);
-        }
-
         // Debug.Log("AWOKEN " + gameObject.name, this);
         attachedAnimators = new HashSet<Animator>();
         if (AvatarSyncSource == null) {

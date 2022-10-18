@@ -253,6 +253,7 @@ public static class LyumaAv3EditorSupport
         EditorApplication.playModeStateChanged += OnPlayModeStateChange;
         LyumaAv3Runtime.InvokeOnPreProcessAvatar = (obj) =>
         {
+            Debug.Log("Invoking OnPreprocessAvatar for " + obj, obj);
             VRCBuildPipelineCallbacks.OnPreprocessAvatar(obj);
         };
     }
