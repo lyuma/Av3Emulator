@@ -25,6 +25,8 @@ using VRC.SDK3.Avatars.Components;
 public class LyumaAv3Emulator : MonoBehaviour
 {
     static readonly ulong EMULATOR_VERSION = 0x2_09_08_00;
+    public delegate void EnableClampBlendShapeWeightsDelegateType();
+    public static EnableClampBlendShapeWeightsDelegateType EnableClampBlendShapeWeightsDelegate;
 
     [Header("Fake VR or Desktop mode selection")]
     public bool DefaultToVR = false;
@@ -60,6 +62,7 @@ public class LyumaAv3Emulator : MonoBehaviour
 
     private void Awake()
     {
+        EnableClampBlendShapeWeightsDelegate();
         Animator animator = gameObject.GetOrAddComponent<Animator>();
         animator.enabled = false;
         animator.runtimeAnimatorController = EmptyController;

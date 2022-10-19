@@ -114,6 +114,11 @@ public static class LyumaAv3EditorSupport
         foreach (string guid in AssetDatabase.FindAssets("EmptyController")) {
             LyumaAv3Emulator.EmptyController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(AssetDatabase.GUIDToAssetPath(guid));
         }
+        
+        // VRChat clamps BlendShapes in the [0, 100] range, but the user may not have this setting enabled
+        LyumaAv3Emulator.EnableClampBlendShapeWeightsDelegate = () => {
+            UnityEditor.PlayerSettings.legacyClampBlendShapeWeights = true;
+        };
 
         LyumaAv3Runtime.updateSelectionDelegate = (obj) => {
             if (obj == null && LyumaAv3Emulator.emulatorInstance != null) {
