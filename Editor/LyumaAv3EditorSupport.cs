@@ -71,8 +71,7 @@ namespace Lyuma.Av3Emulator.Editor
                     LyumaAv3Runtime.animLayerToDefaultController[kv.Key] = null;
                 } else
                 {
-                    //Debug.Log("{VRCAvatarDescriptor.AnimLayerType." + kv.Value + ", \"" + AssetDatabase.AssetPathToGUID("Assets/VRCSDK/Examples3/Animation/Controllers/" + kv.Value + ".controller") + "\"},");
-                    AnimatorController ac = AssetDatabase.LoadAssetAtPath<AnimatorController>("Assets/VRCSDK/Examples3/Animation/Controllers/" + kv.Value + ".controllersSADASASDASD");
+                    AnimatorController ac = AssetDatabase.LoadAssetAtPath<AnimatorController>("Assets/VRCSDK/Examples3/Animation/Controllers/" + kv.Value + ".controller");
                     if (ac == null)
                     {
                         string SDKPath = AssetDatabase.GUIDToAssetPath(animLayerToDefaultGUID[kv.Key]);
