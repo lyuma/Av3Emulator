@@ -21,7 +21,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using VRC.SDK3.Avatars.Components;
-using UnityEditor;
+using UnityEngine.SceneManagement;
 using VRC.Dynamics;
 using VRC.SDK3.Dynamics.Contact.Components;
 using VRC.SDK3.Dynamics.PhysBone.Components;
@@ -68,6 +68,7 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		public List<LyumaAv3Runtime> runtimes = new List<LyumaAv3Runtime>();
 		public LinkedList<LyumaAv3Runtime> forceActiveRuntimes = new LinkedList<LyumaAv3Runtime>();
+		public HashSet<VRCAvatarDescriptor> scannedAvatars = new HashSet<VRCAvatarDescriptor>();
 
 		public enum DefaultPoseOptions
 		{
@@ -139,7 +140,23 @@ namespace Lyuma.Av3Emulator.Runtime
 			animator.enabled = false;
 			animator.runtimeAnimatorController = EmptyController;
 			emulatorInstance = this;
-			VRCAvatarDescriptor[] avatars = FindObjectsOfType<VRCAvatarDescriptor>();
+			ScanForAvatars();
+			if (WorkaroundPlayModeScriptCompile) {
+				LyumaAv3Runtime.ApplyOnEnableWorkaroundDelegate();
+			}
+
+			SceneManager.sceneLoaded += OnSceneLoaded;
+		}
+
+		private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
+			ScanForAvatars();
+		}
+
+		private void ScanForAvatars() {
+			VRCAvatarDescriptor[] avatars = FindObjectsOfType<VRCAvatarDescriptor>()
+				.Where(avatar => !scannedAvatars.Contains(avatar))
+				.ToArray();
+			scannedAvatars.UnionWith(avatars);
 			Debug.Log(this.name + ": Setting up Av3Emulator on "+avatars.Length + " avatars.", this);
 			foreach (var avadesc in avatars)
 			{
@@ -211,9 +228,6 @@ namespace Lyuma.Av3Emulator.Runtime
 					Debug.LogException(e);
 				}
 			}
-			if (WorkaroundPlayModeScriptCompile) {
-				LyumaAv3Runtime.ApplyOnEnableWorkaroundDelegate();
-			}
 		}
 
 		private void OnDestroy() {
@@ -224,6 +238,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			runtimes.Clear();
 			LyumaAv3Runtime.updateSceneLayersDelegate(~0);
+			SceneManager.sceneLoaded -= OnSceneLoaded;
 		}
 
 		private void Update() {
