@@ -23,21 +23,20 @@ SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BlackStartX.GestureManager.Editor.Modules.Vrc3;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 using VRC.SDK3.Avatars.Components;
-using VRC.SDK3.Avatars.ScriptableObjects;
-using GestureManager.Scripts.Editor.Modules.Vrc3;
 
 [CustomEditor(typeof(GestureManagerAv3Menu))]
 public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
 {
     private readonly Dictionary<Texture2D, Texture2D> _resizedIcons = new Dictionary<Texture2D, Texture2D>();
 
-    class StubAv3Module : GestureManager.Scripts.Editor.Modules.Vrc3.ModuleVrc3 {
-        class VelocityParam : GestureManager.Scripts.Editor.Modules.Vrc3.Params.Vrc3Param {
+    class StubAv3Module : BlackStartX.GestureManager.Editor.Modules.Vrc3.ModuleVrc3 {
+        class VelocityParam : BlackStartX.GestureManager.Editor.Modules.Vrc3.Params.Vrc3Param {
             public LyumaAv3Runtime runtime;
             public int axis;
             public VelocityParam(string name, LyumaAv3Runtime runtime, int axis) : base(name, AnimatorControllerParameterType.Float) {
@@ -48,13 +47,13 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
                 Vector3 vel = runtime.Velocity;
                 return vel[axis];
             }
-            protected internal override void InternalSet(float value) {
+            protected override void InternalSet(float value) {
                 Vector3 vel = runtime.Velocity;
                 vel[axis] = value;
                 runtime.Velocity = vel;
             }
         }
-        class ReflectedVrcParam : GestureManager.Scripts.Editor.Modules.Vrc3.Params.Vrc3Param {
+        class ReflectedVrcParam : BlackStartX.GestureManager.Editor.Modules.Vrc3.Params.Vrc3Param {
             public System.Reflection.FieldInfo property;
             public LyumaAv3Runtime runtime;
             public ReflectedVrcParam(string name, LyumaAv3Runtime runtime, System.Reflection.FieldInfo property) : base(name,
@@ -73,7 +72,7 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
                     return (float)(int)Convert.ChangeType(property.GetValue(runtime), typeof(int));
                 }
             }
-            protected internal override void InternalSet(float value) {
+            protected override void InternalSet(float value) {
                 // UnityEngine.Debug.Log("Internal set bool " + param.name + " to " + value + " was " + param.value + "(" + param.lastValue + ")");
                 if (property.FieldType == typeof(bool)) {
                     property.SetValue(runtime, value > 0.5f);
@@ -86,35 +85,35 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
                 }
             }
         }
-        class StubVrcBoolParam : GestureManager.Scripts.Editor.Modules.Vrc3.Params.Vrc3Param {
+        class StubVrcBoolParam : BlackStartX.GestureManager.Editor.Modules.Vrc3.Params.Vrc3Param {
             public LyumaAv3Runtime.BoolParam param;
             public StubVrcBoolParam(string name, LyumaAv3Runtime.BoolParam param) : base(name, AnimatorControllerParameterType.Bool) { this.param = param; }
             public override float Get() {
                 return param.value ? 1.0f : 0.0f;
             }
-            protected internal override void InternalSet(float value) {
+            protected override void InternalSet(float value) {
                 UnityEngine.Debug.Log("Internal set bool " + param.name + " to " + value + " was " + param.value + "(" + param.lastValue + ")");
                 param.value = value > 0.5f ? true: false;
             }
         }
-        class StubVrcIntParam : GestureManager.Scripts.Editor.Modules.Vrc3.Params.Vrc3Param {
+        class StubVrcIntParam : BlackStartX.GestureManager.Editor.Modules.Vrc3.Params.Vrc3Param {
             public LyumaAv3Runtime.IntParam param;
             public StubVrcIntParam(string name, LyumaAv3Runtime.IntParam param) : base(name, AnimatorControllerParameterType.Int) { this.param = param; }
             public override float Get() {
                 return param.value;
             }
-            protected internal override void InternalSet(float value) {
+            protected override void InternalSet(float value) {
                 UnityEngine.Debug.Log("Internal set int " + param.name + " to " + value + " was " + param.value + "(" + param.lastValue + ")");
                 param.value = (int)value;
             }
         }
-        class StubVrcFloatParam : GestureManager.Scripts.Editor.Modules.Vrc3.Params.Vrc3Param {
+        class StubVrcFloatParam : BlackStartX.GestureManager.Editor.Modules.Vrc3.Params.Vrc3Param {
             public LyumaAv3Runtime.FloatParam param;
             public StubVrcFloatParam(string name, LyumaAv3Runtime.FloatParam param) : base(name, AnimatorControllerParameterType.Float) { this.param = param; }
             public override float Get() {
                 return param.value;
             }
-            protected internal override void InternalSet(float value) {
+            protected override void InternalSet(float value) {
                 param.value = value;
                 param.exportedValue = value;
             }
@@ -238,9 +237,9 @@ public class GestureManagerAv3MenuEditor : LyumaAv3MenuEditor
         if (av3Module.Params.Count == 0) {
             av3Module.InitForAvatar();
         }
-        cachedMenu = (RadialMenu)(typeof(GestureManager.Scripts.Editor.Modules.Vrc3.ModuleVrc3).GetMethod("GetOrCreateRadial",
+        cachedMenu = (RadialMenu)(typeof(BlackStartX.GestureManager.Editor.Modules.Vrc3.ModuleVrc3).GetMethod("GetOrCreateRadial",
                 System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance).Invoke(
-                    av3Module, new object[]{editor}));
+                    av3Module, new object[]{editor, false}));
         return cachedMenu;
     }
     public override VisualElement CreateInspectorGUI()
