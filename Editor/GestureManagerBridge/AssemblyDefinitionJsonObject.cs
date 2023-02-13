@@ -1,7 +1,7 @@
 ﻿using System;
 using Codice.CM.Client.Differences;
 
-namespace Editor.GestureManagerBridge
+namespace GestureManagerBridge
 {
 	[Serializable]
 	public class AssemblyDefinitionJsonObject

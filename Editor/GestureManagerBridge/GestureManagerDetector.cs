@@ -4,11 +4,12 @@ using System.IO;
 using System.Linq;
 using BestHTTP.JSON;
 using Boo.Lang.Runtime;
+using GestureManagerBridge;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 
-namespace Editor.GestureManagerBridge
+namespace GestureManagerBridge
 {
 	[InitializeOnLoad, ExecuteInEditMode]
 	public class GestureManagerDetector
