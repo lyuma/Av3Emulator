@@ -52,16 +52,17 @@ public static class LyumaAv3EditorSupport
         {VRCAvatarDescriptor.AnimLayerType.Action, "3e479eeb9db24704a828bffb15406520"},
         {VRCAvatarDescriptor.AnimLayerType.Gesture, "404d228aeae421f4590305bc4cdaba16"},
     };
-    static Dictionary<VRCAvatarDescriptor.AnimLayerType, string> animLayerToDefaultAvaMaskFile = new Dictionary<VRCAvatarDescriptor.AnimLayerType, string>
+    
+    static Dictionary<VRCAvatarDescriptor.AnimLayerType, AvatarMask> animLayerToDefaultAvaMaskFile = new Dictionary<VRCAvatarDescriptor.AnimLayerType, AvatarMask>
     {
-        {VRCAvatarDescriptor.AnimLayerType.TPose, "LyumaMusclesOnly"},
-        {VRCAvatarDescriptor.AnimLayerType.IKPose, "LyumaMusclesOnly"},
+        {VRCAvatarDescriptor.AnimLayerType.TPose, LyumaAv3Masks.musclesOnly},
+        {VRCAvatarDescriptor.AnimLayerType.IKPose, LyumaAv3Masks.musclesOnly},
         {VRCAvatarDescriptor.AnimLayerType.Base, null},//"LyumaFullMask"},
         {VRCAvatarDescriptor.AnimLayerType.Sitting, null},//"LyumaFullMask"},
         {VRCAvatarDescriptor.AnimLayerType.Additive, null},//"LyumaFullMask"},
-        {VRCAvatarDescriptor.AnimLayerType.FX, "LyumaEmptyMask"}, // TODO
+        {VRCAvatarDescriptor.AnimLayerType.FX, LyumaAv3Masks.emptyMask}, // TODO
         {VRCAvatarDescriptor.AnimLayerType.Action, null},//"vrc_MusclesOnly"},
-        {VRCAvatarDescriptor.AnimLayerType.Gesture, "LyumaHandsOnly"},
+        {VRCAvatarDescriptor.AnimLayerType.Gesture, LyumaAv3Masks.handsOnly},
     };
 
     static void InitDefaults() {
@@ -93,28 +94,15 @@ public static class LyumaAv3EditorSupport
             }
         }
         foreach (var kv in animLayerToDefaultAvaMaskFile) {
-            if (kv.Value == null) {
-                LyumaAv3Runtime.animLayerToDefaultAvaMask[kv.Key] = null;
-            } else
-            {
-                AvatarMask mask = null;
-                foreach (var guid in AssetDatabase.FindAssets(kv.Value))
-                {
-                    string path = AssetDatabase.GUIDToAssetPath(guid);
-                    mask = AssetDatabase.LoadAssetAtPath<AvatarMask>(path);
-                }
-                if (mask == null)
-                {
-                    Debug.LogWarning("Failed to resolve avatar mask " + kv.Value + " for " + kv.Key);
-                    mask = new AvatarMask();
-                }
-                LyumaAv3Runtime.animLayerToDefaultAvaMask[kv.Key] = mask;
-            }
-        }
-        foreach (string guid in AssetDatabase.FindAssets("EmptyController")) {
-            LyumaAv3Emulator.EmptyController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(AssetDatabase.GUIDToAssetPath(guid));
+            LyumaAv3Runtime.animLayerToDefaultAvaMask[kv.Key] = kv.Value;
         }
 
+        AnimatorController emptycontroller = new AnimatorController();
+        AnimatorControllerLayer emptyLayer = new AnimatorControllerLayer();
+        emptyLayer.stateMachine = new AnimatorStateMachine();
+        emptycontroller.layers = new[] { emptyLayer };
+        LyumaAv3Emulator.EmptyController = emptycontroller;
+        
         LyumaAv3Runtime.updateSelectionDelegate = (obj) => {
             if (obj == null && LyumaAv3Emulator.emulatorInstance != null) {
                 // Debug.Log("Resetting selected object: " + LyumaAv3Emulator.emulatorInstance);
