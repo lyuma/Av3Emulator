@@ -2179,7 +2179,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             if (parameterIndices.TryGetValue("IsLocal", out paramid))
             {
                 AnimatorControllerParameterType inType = parameterTypes["IsLocal"];
-                SetTypeWithMismatch(playable, paramid, IsLocal, inType);
+                SetTypeWithMismatch(playable, paramid, IsLocal || IsMirrorClone || IsShadowClone, inType);
             }
             if (parameterIndices.TryGetValue("Grounded", out paramid))
             {
