@@ -27,6 +27,7 @@ using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using VRC.SDK3.Dynamics.Contact.Components;
 using VRC.SDK3.Dynamics.PhysBone.Components;
+using static VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
 
 // [RequireComponent(typeof(Animator))]
 public class LyumaAv3Runtime : MonoBehaviour
@@ -101,6 +102,7 @@ public class LyumaAv3Runtime : MonoBehaviour
     private Transform[] allShadowTransforms;
     private List<AnimatorControllerPlayable> playables = new List<AnimatorControllerPlayable>();
     private List<Dictionary<string, int>> playableParamterIds = new List<Dictionary<string, int>>();
+    private List<Dictionary<string, AnimatorControllerParameterType>> playableParamterTypes = new List<Dictionary<string, AnimatorControllerParameterType>>();
     private List<Dictionary<int, float>> playableParamterFloats = new List<Dictionary<int, float>>();
     private List<Dictionary<int, int>> playableParamterInts = new List<Dictionary<int, int>>();
     private List<Dictionary<int, bool>> playableParamterBools = new List<Dictionary<int, bool>>();
@@ -1307,6 +1309,7 @@ public class LyumaAv3Runtime : MonoBehaviour
         FloatToIndex.Clear();
         BoolToIndex.Clear();
         playableParamterFloats.Clear();
+        playableParamterTypes.Clear();
         playableParamterIds.Clear();
         playableParamterInts.Clear();
         playableParamterBools.Clear();
@@ -1393,13 +1396,16 @@ public class LyumaAv3Runtime : MonoBehaviour
         //playableParamterIds
         int whichcontroller = 0;
         playableParamterIds.Clear();
+        playableParamterTypes.Clear();
         foreach (AnimatorControllerPlayable playable in playables) {
             Dictionary<string, int> parameterIndices = new Dictionary<string, int>();
+            Dictionary<string, AnimatorControllerParameterType> parameterTypes = new Dictionary<string, AnimatorControllerParameterType>();
             playableParamterInts.Add(new Dictionary<int, int>());
             playableParamterFloats.Add(new Dictionary<int, float>());
             playableParamterBools.Add(new Dictionary<int, bool>());
             // Debug.Log("SETUP index " + whichcontroller + " len " + playables.Count);
             playableParamterIds.Add(parameterIndices);
+            playableParamterTypes.Add(parameterTypes);
             int pcnt = playable.IsValid() ? playable.GetParameterCount() : 0;
             for (i = 0; i < pcnt; i++) {
                 AnimatorControllerParameter aparam = playable.GetParameter(i);
@@ -1408,6 +1414,7 @@ public class LyumaAv3Runtime : MonoBehaviour
                     actualName = aparam.name;
                 }
                 parameterIndices[actualName] = aparam.nameHash;
+                parameterTypes[actualName] = aparam.type;
                 if (usedparams.Contains(actualName)) {
                     if (BoolToIndex.ContainsKey(aparam.name) && aparam.type == AnimatorControllerParameterType.Bool) {
                         Bools[BoolToIndex[aparam.name]].hasBool[whichcontroller] = true;
@@ -1920,13 +1927,16 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
             // Debug.Log("Index " + whichcontroller + " len " + playables.Count);
             Dictionary<string, int> parameterIndices = playableParamterIds[whichcontroller];
+            Dictionary<string, AnimatorControllerParameterType> parameterTypes = playableParamterTypes[whichcontroller];
             int paramid;
             foreach (FloatParam param in Floats)
             {
                 if (parameterIndices.TryGetValue(param.name, out paramid))
                 {
                     if (param.value != param.lastValue) {
-                        playable.SetFloat(paramid, param.value);
+                        AnimatorControllerParameterType outType = parameterTypes[param.name];
+                        SetTypeWithMismatch(playable, paramid, param.value, outType);
+                        // playable.SetFloat(paramid, param.value);
                     }
                 }
             }
@@ -1934,8 +1944,11 @@ public class LyumaAv3Runtime : MonoBehaviour
             {
                 if (parameterIndices.TryGetValue(param.name, out paramid))
                 {
-                    if (param.value != param.lastValue) {
-                        playable.SetInteger(paramid, param.value);
+                    if (param.value != param.lastValue)
+                    {
+                        AnimatorControllerParameterType outType = parameterTypes[param.name];
+                        SetTypeWithMismatch(playable, paramid, param.value, outType);
+                        // playable.SetInteger(paramid, param.value);
                     }
                 }
             }
@@ -1943,11 +1956,11 @@ public class LyumaAv3Runtime : MonoBehaviour
             {
                 if (parameterIndices.TryGetValue(param.name, out paramid))
                 {
-                    if (param.value != param.lastValue) {
-                        playable.SetBool(paramid, param.value); // also sets triggers.
-                        // if (param.value) {
-                        //     playable.SetTrigger(paramid);
-                        // }
+                    if (param.value != param.lastValue)
+                    {
+                        AnimatorControllerParameterType outType = parameterTypes[param.name];
+                        // playable.SetBool(paramid, param.value); // also sets triggers.
+                        SetTypeWithMismatch(playable, paramid, param.value, outType);
                     }
                 }
             }
@@ -1972,6 +1985,7 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
             // Debug.Log("Index " + whichcontroller + " len " + playables.Count);
             Dictionary<string, int> parameterIndices = playableParamterIds[whichcontroller];
+            Dictionary<string, AnimatorControllerParameterType> parameterTypes = playableParamterTypes[whichcontroller];
             Dictionary<int, int> paramterInts = playableParamterInts[whichcontroller];
             Dictionary<int, float> paramterFloats = playableParamterFloats[whichcontroller];
             Dictionary<int, bool> paramterBools = playableParamterBools[whichcontroller];
@@ -1983,9 +1997,12 @@ public class LyumaAv3Runtime : MonoBehaviour
             {
                 if (parameterIndices.TryGetValue(param.name, out paramid))
                 {
-                    if (paramterFloats.TryGetValue(paramid, out fparam)) {
-                        if (fparam != playable.GetFloat(paramid)) {
-                            param.value = param.lastValue = playable.GetFloat(paramid);
+                    AnimatorControllerParameterType inType = parameterTypes[param.name];
+                    if (paramterFloats.TryGetValue(paramid, out fparam))
+                    {
+                        float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
+                        if (fparam != f) {
+                            param.value = param.lastValue = f;
                             if (!playable.IsParameterControlledByCurve(paramid)) {
                                 param.exportedValue = param.value;
                             }
@@ -1998,9 +2015,11 @@ public class LyumaAv3Runtime : MonoBehaviour
             {
                 if (parameterIndices.TryGetValue(param.name, out paramid))
                 {
+                    AnimatorControllerParameterType inType = parameterTypes[param.name];
                     if (paramterInts.TryGetValue(paramid, out iparam)) {
-                        if (iparam != playable.GetInteger(paramid)) {
-                            param.value = param.lastValue = playable.GetInteger(paramid);
+                        int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
+                        if (iparam != i) {
+                            param.value = param.lastValue = i;
                         }
                     }
                     paramterInts[paramid] = param.value;
@@ -2010,9 +2029,11 @@ public class LyumaAv3Runtime : MonoBehaviour
             {
                 if (param.hasBool[whichcontroller] && parameterIndices.TryGetValue(param.name, out paramid))
                 {
+                    AnimatorControllerParameterType inType = parameterTypes[param.name];
                     if (paramterBools.TryGetValue(paramid, out bparam)) {
-                        if (bparam != (playable.GetBool(paramid))) {
-                            param.value = param.lastValue = playable.GetBool(paramid);
+                        bool b = (bool)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Bool);
+                        if (bparam != b) {
+                            param.value = param.lastValue = b;
                         }
                     }
                     paramterBools[paramid] = param.value;
@@ -2020,154 +2041,243 @@ public class LyumaAv3Runtime : MonoBehaviour
             }
             if (parameterIndices.TryGetValue("Viseme", out paramid))
             {
-                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != playable.GetInteger(paramid)) {
-                    VisemeInt = VisemeIdx = playable.GetInteger(paramid);
-                    Viseme = (VisemeIndex)VisemeInt;
+                AnimatorControllerParameterType inType = parameterTypes["Viseme"];
+                if (paramterInts.TryGetValue(paramid, out iparam))
+                {
+                    int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
+                    if (iparam != i)
+                    {
+                        VisemeInt = VisemeIdx = i;
+                        Viseme = (VisemeIndex)VisemeInt;
+                    }
                 }
-                playable.SetInteger(paramid, VisemeInt);
+                SetTypeWithMismatch(playable, paramid, VisemeInt, inType);
                 paramterInts[paramid] = VisemeInt;
             }
             if (parameterIndices.TryGetValue("GestureLeft", out paramid))
             {
-                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != playable.GetInteger(paramid)) {
-                    GestureLeftIdx = playable.GetInteger(paramid);
-                    GestureLeftIdxInt = (char)GestureLeftIdx;
-                    GestureLeft = (GestureIndex)GestureLeftIdx;
+                AnimatorControllerParameterType inType = parameterTypes["GestureLeft"];
+                if (paramterInts.TryGetValue(paramid, out iparam))
+                {
+                    int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
+                    if (iparam != i)
+                    {
+                        GestureLeftIdx = i;
+                        GestureLeftIdxInt = (char)GestureLeftIdx;
+                        GestureLeft = (GestureIndex)GestureLeftIdx; 
+                    } 
                 }
-                playable.SetInteger(paramid, (int)GestureLeft);
+                SetTypeWithMismatch(playable, paramid, (int)GestureLeft, inType);
                 paramterInts[paramid] = (int)GestureLeft;
             }
             if (parameterIndices.TryGetValue("GestureLeftWeight", out paramid))
             {
-                if (paramterFloats.TryGetValue(paramid, out fparam) && fparam != playable.GetFloat(paramid)) {
-                    GestureLeftWeight = playable.GetFloat(paramid);
+                AnimatorControllerParameterType inType = parameterTypes["GestureLeftWeight"];
+                if (paramterFloats.TryGetValue(paramid, out fparam)) {
+                    float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
+                    if (fparam != f)
+                    {
+                        GestureLeftWeight = f;
+                    }
                 }
-                playable.SetFloat(paramid, GestureLeftWeight);
+                SetTypeWithMismatch(playable, paramid, GestureLeftWeight, inType);
                 paramterFloats[paramid] = GestureLeftWeight;
             }
             if (parameterIndices.TryGetValue("GestureRight", out paramid))
             {
-                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != playable.GetInteger(paramid)) {
-                    GestureRightIdx = playable.GetInteger(paramid);
-                    GestureRightIdxInt = (char)GestureRightIdx;
-                    GestureRight = (GestureIndex)GestureRightIdx;
+                AnimatorControllerParameterType inType = parameterTypes["GestureRight"];
+                if (paramterInts.TryGetValue(paramid, out iparam)) {
+                    int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
+                    if (iparam != i)
+                    {
+                        GestureRightIdx = i;
+                        GestureRightIdxInt = (char)GestureRightIdx;
+                        GestureRight = (GestureIndex)GestureRightIdx;
+                    }
                 }
-                playable.SetInteger(paramid, (int)GestureRight);
+                SetTypeWithMismatch(playable, paramid, (int)GestureRight, inType);
                 paramterInts[paramid] = (int)GestureRight;
             }
             if (parameterIndices.TryGetValue("GestureRightWeight", out paramid))
             {
-                if (paramterFloats.TryGetValue(paramid, out fparam) && fparam != playable.GetFloat(paramid)) {
-                    GestureRightWeight = playable.GetFloat(paramid);
+                AnimatorControllerParameterType inType = parameterTypes["GestureRightWeight"];
+                if (paramterFloats.TryGetValue(paramid, out fparam)) {
+                    float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
+                    if (fparam != f)
+                    {
+                        GestureRightWeight = f;
+                    }
                 }
-                playable.SetFloat(paramid, GestureRightWeight);
+                SetTypeWithMismatch(playable, paramid, GestureRightWeight, inType);
                 paramterFloats[paramid] = GestureRightWeight;
             }
             if (parameterIndices.TryGetValue("VelocityX", out paramid))
             {
-                if (paramterFloats.TryGetValue(paramid, out fparam) && fparam != playable.GetFloat(paramid)) {
-                    Velocity.x = playable.GetFloat(paramid);
+                AnimatorControllerParameterType inType = parameterTypes["VelocityX"];
+                if (paramterFloats.TryGetValue(paramid, out fparam)) {
+                    float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
+                    if (fparam != f)
+                    {
+                        Velocity.x = f;
+                    }
                 }
-                playable.SetFloat(paramid, Velocity.x);
+                SetTypeWithMismatch(playable, paramid, Velocity.x, inType);
                 paramterFloats[paramid] = Velocity.x;
             }
             if (parameterIndices.TryGetValue("VelocityY", out paramid))
             {
-                if (paramterFloats.TryGetValue(paramid, out fparam) && fparam != playable.GetFloat(paramid)) {
-                    Velocity.y = playable.GetFloat(paramid);
+                AnimatorControllerParameterType inType = parameterTypes["VelocityY"];
+                if (paramterFloats.TryGetValue(paramid, out fparam)) {
+                    float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
+                    if (fparam != f)
+                    {
+                        Velocity.y = f;
+                    }
                 }
-                playable.SetFloat(paramid, Velocity.y);
+                SetTypeWithMismatch(playable, paramid, Velocity.y, inType);
                 paramterFloats[paramid] = Velocity.y;
             }
             if (parameterIndices.TryGetValue("VelocityZ", out paramid))
             {
-                if (paramterFloats.TryGetValue(paramid, out fparam) && fparam != playable.GetFloat(paramid)) {
-                    Velocity.z = playable.GetFloat(paramid);
+                AnimatorControllerParameterType inType = parameterTypes["VelocityZ"];
+                if (paramterFloats.TryGetValue(paramid, out fparam)) {
+                    float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
+                    if (fparam != f)
+                    {
+                        Velocity.z = f;
+                    }
                 }
-                playable.SetFloat(paramid, Velocity.z);
+                SetTypeWithMismatch(playable, paramid, Velocity.z, inType);
                 paramterFloats[paramid] = Velocity.z;
             }
             if (parameterIndices.TryGetValue("AngularY", out paramid))
             {
-                if (paramterFloats.TryGetValue(paramid, out fparam) && fparam != playable.GetFloat(paramid)) {
-                    AngularY = playable.GetFloat(paramid);
+                AnimatorControllerParameterType inType = parameterTypes["AngularY"];
+                if (paramterFloats.TryGetValue(paramid, out fparam)) {
+                    float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
+                    if (fparam != f)
+                    {
+                        AngularY = f;
+                    }
                 }
-                playable.SetFloat(paramid, AngularY);
+                SetTypeWithMismatch(playable, paramid, AngularY, inType);
                 paramterFloats[paramid] = AngularY;
             }
             if (parameterIndices.TryGetValue("Upright", out paramid))
             {
-                if (paramterFloats.TryGetValue(paramid, out fparam) && fparam != playable.GetFloat(paramid)) {
-                    Upright = playable.GetFloat(paramid);
+                AnimatorControllerParameterType inType = parameterTypes["Upright"];
+                if (paramterFloats.TryGetValue(paramid, out fparam)) {
+                    float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
+                    if (fparam != f)
+                    {
+                        Upright = f;
+                    }
                 }
-                playable.SetFloat(paramid, Upright);
+                SetTypeWithMismatch(playable, paramid, Upright, inType);
                 paramterFloats[paramid] = Upright;
             }
             if (parameterIndices.TryGetValue("IsLocal", out paramid))
             {
-                playable.SetBool(paramid, IsLocal);
+                AnimatorControllerParameterType inType = parameterTypes["IsLocal"];
+                SetTypeWithMismatch(playable, paramid, IsLocal, inType);
             }
             if (parameterIndices.TryGetValue("Grounded", out paramid))
             {
-                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != (playable.GetBool(paramid) ? 1 : 0)) {
-                    Grounded = playable.GetBool(paramid);
+                AnimatorControllerParameterType inType = parameterTypes["Grounded"];
+                if (paramterInts.TryGetValue(paramid, out iparam)) {
+                    int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
+                    if (i != iparam)
+                    {
+                        Grounded = i == 1;
+                    }
                 }
-                playable.SetBool(paramid, Grounded);
+                SetTypeWithMismatch(playable, paramid, Grounded, inType);
                 paramterInts[paramid] = Grounded ? 1 : 0;
             }
             if (parameterIndices.TryGetValue("Seated", out paramid))
             {
-                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != (playable.GetBool(paramid) ? 1 : 0)) {
-                    Seated = playable.GetBool(paramid);
+                AnimatorControllerParameterType inType = parameterTypes["Seated"];
+                if (paramterInts.TryGetValue(paramid, out iparam)) {
+                    int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
+                    if (i != iparam)
+                    {
+                        Seated = i == 1;
+                    }
                 }
-                playable.SetBool(paramid, Seated);
+                SetTypeWithMismatch(playable, paramid, Seated, inType);
                 paramterInts[paramid] = Seated ? 1 : 0;
             }
             if (parameterIndices.TryGetValue("AFK", out paramid))
             {
-                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != (playable.GetBool(paramid) ? 1 : 0)) {
-                    AFK = playable.GetBool(paramid);
+                AnimatorControllerParameterType inType = parameterTypes["AFK"];
+                if (paramterInts.TryGetValue(paramid, out iparam)) {
+                    int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
+                    if (i != iparam)
+                    {
+                        AFK = i == 1;
+                    }
                 }
-                playable.SetBool(paramid, AFK);
+                SetTypeWithMismatch(playable, paramid, AFK, inType);
                 paramterInts[paramid] = AFK ? 1 : 0;
             }
             if (parameterIndices.TryGetValue("TrackingType", out paramid))
             {
-                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != playable.GetInteger(paramid)) {
-                    TrackingTypeIdx = playable.GetInteger(paramid);
-                    TrackingTypeIdxInt = (char)TrackingTypeIdx;
-                    TrackingType = (TrackingTypeIndex)TrackingTypeIdx;
+                AnimatorControllerParameterType inType = parameterTypes["TrackingType"];
+                if (paramterInts.TryGetValue(paramid, out iparam)) {
+                    int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
+                    if (iparam != i)
+                    {
+                        TrackingTypeIdx = i;
+                        TrackingTypeIdxInt = (char)TrackingTypeIdx;
+                        TrackingType = (TrackingTypeIndex)TrackingTypeIdx;
+                    }
                 }
-                playable.SetInteger(paramid, (int)TrackingType);
+                SetTypeWithMismatch(playable, paramid, (int)TrackingType, inType);
                 paramterInts[paramid] = (int)TrackingType;
             }
             if (parameterIndices.TryGetValue("VRMode", out paramid))
             {
-                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != playable.GetInteger(paramid)) {
-                    VRMode = playable.GetInteger(paramid) != 0;
+                AnimatorControllerParameterType inType = parameterTypes["VRMode"];
+                if (paramterInts.TryGetValue(paramid, out iparam)) {
+                    int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
+                    if (iparam != i)
+                    {
+                        VRMode = i != 0;
+                    }
                 }
-                playable.SetInteger(paramid, VRMode ? 1 : 0);
+                SetTypeWithMismatch(playable, paramid,VRMode ? 1 : 0, inType);
                 paramterInts[paramid] = VRMode ? 1 : 0;
             }
             if (parameterIndices.TryGetValue("MuteSelf", out paramid))
             {
-                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != (playable.GetBool(paramid) ? 1 : 0)) {
-                    MuteSelf = playable.GetBool(paramid);
+                AnimatorControllerParameterType inType = parameterTypes["MuteSelf"];
+                if (paramterInts.TryGetValue(paramid, out iparam)) {
+                    int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
+                    if (iparam != i)
+                    {
+                        MuteSelf = i == 1;
+                    }
                 }
-                playable.SetBool(paramid, MuteSelf);
+                SetTypeWithMismatch(playable, paramid, MuteSelf, inType);
                 paramterInts[paramid] = MuteSelf ? 1 : 0;
             }
             if (parameterIndices.TryGetValue("InStation", out paramid))
             {
-                if (paramterInts.TryGetValue(paramid, out iparam) && iparam != (playable.GetBool(paramid) ? 1 : 0))
+                AnimatorControllerParameterType inType = parameterTypes["InStation"];
+                if (paramterInts.TryGetValue(paramid, out iparam))
                 {
-                    InStation = playable.GetBool(paramid);
+                    int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
+                    if (iparam != i)
+                    {
+                        InStation = i == 1;
+                    }
                 }
-                playable.SetBool(paramid, InStation);
+                SetTypeWithMismatch(playable, paramid, InStation, inType);
                 paramterInts[paramid] = InStation ? 1 : 0;
             }
             if (parameterIndices.TryGetValue("AvatarVersion", out paramid)) {
-                playable.SetInteger(paramid, AvatarVersion);
+                AnimatorControllerParameterType inType = parameterTypes["AvatarVersion"];
+                SetTypeWithMismatch(playable, paramid, AvatarVersion, inType);
             }
             whichcontroller++;
         }
@@ -2217,6 +2327,99 @@ public class LyumaAv3Runtime : MonoBehaviour
                 }
             }
         }
+    }
+
+    void SetTypeWithMismatch(AnimatorControllerPlayable playable, int id, object value, AnimatorControllerParameterType outType)
+    {
+        if (value is float floatValue)
+        {
+            switch (outType)
+            {
+                case AnimatorControllerParameterType.Bool:
+                    playable.SetBool(id, floatValue > 0.0f);
+                    break;
+                case AnimatorControllerParameterType.Float:
+                    playable.SetFloat(id, floatValue);
+                    break;
+                case AnimatorControllerParameterType.Int:
+                    playable.SetInteger(id, (int)Math.Round(floatValue, 0));
+                    break;
+            }
+        }
+        if (value is int intValue)
+        {
+            switch (outType)
+            {
+                case AnimatorControllerParameterType.Bool:
+                    playable.SetBool(id, intValue > 0.0f);
+                    break;
+                case AnimatorControllerParameterType.Float:
+                    playable.SetFloat(id, (float)intValue);
+                    break;
+                case AnimatorControllerParameterType.Int:
+                    playable.SetInteger(id, intValue);
+                    break;
+            }
+        }
+        if (value is bool boolValue)
+        {
+            switch (outType)
+            {
+                case AnimatorControllerParameterType.Bool:
+                    playable.SetBool(id, boolValue);
+                    break;
+                case AnimatorControllerParameterType.Float:
+                    playable.SetFloat(id, boolValue ? 1.0f : 0.0f);
+                    break;
+                case AnimatorControllerParameterType.Int:
+                    playable.SetInteger(id, boolValue ? 1 : 0);
+                    break;
+            }
+        }
+    }
+
+    object GetTypeWithMismatch(AnimatorControllerPlayable playable, int id, AnimatorControllerParameterType inType, AnimatorControllerParameterType outType)
+    {
+        switch (inType)
+        {
+            case AnimatorControllerParameterType.Float:
+                float floatValue = playable.GetFloat(id);
+                switch (outType)
+                {
+                    case AnimatorControllerParameterType.Bool:
+                        return floatValue > 0.0f;
+                    case AnimatorControllerParameterType.Float:
+                        return floatValue;
+                    case AnimatorControllerParameterType.Int:
+                        return (int)Math.Round(floatValue, 0);
+                }
+                return null;
+            case AnimatorControllerParameterType.Int:
+                int intValue = playable.GetInteger(id);
+                switch (outType)
+                {
+                    case AnimatorControllerParameterType.Bool:
+                        return intValue > 0;
+                    case AnimatorControllerParameterType.Float:
+                        return (float)intValue;
+                    case AnimatorControllerParameterType.Int:
+                        return intValue;
+                }
+                return null;
+            case AnimatorControllerParameterType.Bool:
+                bool boolValue = playable.GetBool(id);
+                switch (outType)
+                {
+                    case AnimatorControllerParameterType.Bool: 
+                        return boolValue;
+                    case AnimatorControllerParameterType.Float:
+                        return boolValue ? 1.0f : 0.0f; 
+                    case AnimatorControllerParameterType.Int:
+                        return boolValue ? 1 : 0;
+                }
+                return null;
+        }
+        return null;
     }
 
     float getObjectFloat(object o) {
