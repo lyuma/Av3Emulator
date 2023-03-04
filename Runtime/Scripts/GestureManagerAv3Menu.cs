@@ -23,29 +23,32 @@ using UnityEngine;
 using System.Collections.Generic;
 using VRC.SDK3.Avatars.ScriptableObjects;
 
-public class GestureManagerAv3Menu : LyumaAv3Menu
+namespace Lyuma.Av3Emulator.Runtime
 {
-
-    // public LyumaAv3Runtime Runtime;
-    // public VRCExpressionsMenu RootMenu;
-    // public bool IsMenuOpen { get; private set; }
-    // private int? _activeControlIndex = null;
-    // private string _activeControlParameterName;
-    public bool compact = true;
-
-    private void Awake()
+    public class GestureManagerAv3Menu : LyumaAv3Menu
     {
-        IsMenuOpen = true;
+
+        // public LyumaAv3Runtime Runtime;
+        // public VRCExpressionsMenu RootMenu;
+        // public bool IsMenuOpen { get; private set; }
+        // private int? _activeControlIndex = null;
+        // private string _activeControlParameterName;
+        public bool compact = true;
+
+        private void Awake()
+        {
+            IsMenuOpen = true;
 
         if (LyumaAv3Runtime.addRuntimeDelegate != null) {
-            LyumaAv3Runtime.addRuntimeDelegate(this);
+                LyumaAv3Runtime.addRuntimeDelegate(this);
+            }
         }
+
+        // public void ToggleMenu()
+        // {
+
+        //     IsMenuOpen = !IsMenuOpen;
+        // }
+
     }
-
-    // public void ToggleMenu()
-    // {
-
-    //     IsMenuOpen = !IsMenuOpen;
-    // }
-
 }

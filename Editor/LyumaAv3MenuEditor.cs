@@ -19,327 +19,330 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. */
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using Lyuma.Av3Emulator.Runtime;
 using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.ScriptableObjects;
 
-[CustomEditor(typeof(LyumaAv3Menu), true)]
-public class LyumaAv3MenuEditor : Editor
+namespace Lyuma.Av3Emulator.Editor
 {
-    private VRCExpressionsMenu _currentMenu;
-
-    public override void OnInspectorGUI()
+    [CustomEditor(typeof(LyumaAv3Menu), true)]
+    public class LyumaAv3MenuEditor : UnityEditor.Editor
     {
-        var menu = (LyumaAv3Menu)target;
-        GUILayout.BeginHorizontal();
-        if (GUILayout.Button(menu.IsMenuOpen ? "Close menu" : "Open menu"))
-        {
-            menu.ToggleMenu();
-        }
+        private VRCExpressionsMenu _currentMenu;
 
-        if (menu.gameObject.GetComponents<LyumaAv3Menu>().Length == 1)
+        public override void OnInspectorGUI()
         {
-            if (GUILayout.Button("+", GUILayout.Width(20)))
+            var menu = (LyumaAv3Menu)target;
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(menu.IsMenuOpen ? "Close menu" : "Open menu"))
             {
-                OpenMenuForTwoHandedSupport(menu);
+                menu.ToggleMenu();
             }
-        }
 
-        GUILayout.EndHorizontal();
-
-        RenderButtonMenu();
-    }
-
-    protected void RenderButtonMenu() {
-
-        var menu = (LyumaAv3Menu)target;
-        if (menu.Runtime == null) return;
-        if (menu.RootMenu == null)
-        {
-            menu.RootMenu = (VRCExpressionsMenu)EditorGUILayout.ObjectField(new GUIContent("Expressions Menu"), null, typeof(VRCExpressionsMenu), false);
-            return;
-        }
-
-        var isInRootMenu = menu.MenuStack.Count == 0;
-
-        GUILayout.Label(
-            (isInRootMenu ? "Expressions" : LabelizeMenu()) +
-            (menu.IsMenuOpen ? "" : " [Menu is closed]"),
-            EditorStyles.boldLabel);
-
-        if (!menu.IsMenuOpen) {
-            return;
-        }
-
-        _currentMenu = menu.MenuStack.Count == 0 ? menu.RootMenu : menu.MenuStack.Last().ExpressionsMenu;
-
-        EditorGUI.BeginDisabledGroup(true);
-        EditorGUILayout.ObjectField(_currentMenu, typeof(VRCExpressionsMenu), false);
-        EditorGUI.EndDisabledGroup();
-
-        EditorGUI.BeginDisabledGroup(isInRootMenu || menu.HasActiveControl());
-        if (GUILayout.Button("Back"))
-        {
-            menu.UserBack();
-        }
-        EditorGUI.EndDisabledGroup();
-        if (_currentMenu == null) {
-            EditorGUILayout.LabelField("(This submenu is null)");
-            return;
-        }
-        for (var controlIndex = 0; controlIndex < _currentMenu.controls.Count; controlIndex++)
-        {
-            var control = _currentMenu.controls[controlIndex];
-            switch (control.type)
+            if (menu.gameObject.GetComponents<LyumaAv3Menu>().Length == 1)
             {
-                case VRCExpressionsMenu.Control.ControlType.Button:
-                    FromToggle(control, "Button");
-                    break;
-                case VRCExpressionsMenu.Control.ControlType.Toggle:
-                    FromToggle(control, "Toggle");
-                    break;
-                case VRCExpressionsMenu.Control.ControlType.SubMenu:
-                    FromSubMenu(control);
-                    break;
-                case VRCExpressionsMenu.Control.ControlType.TwoAxisPuppet:
-                    FromTwoAxis(control, controlIndex);
-                    break;
-                case VRCExpressionsMenu.Control.ControlType.FourAxisPuppet:
-                    FromFourAxis(control, controlIndex);
-                    break;
-                case VRCExpressionsMenu.Control.ControlType.RadialPuppet:
-                    FromRadial(control, controlIndex);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
+                if (GUILayout.Button("+", GUILayout.Width(20)))
+                {
+                    OpenMenuForTwoHandedSupport(menu);
+                }
             }
+
+            GUILayout.EndHorizontal();
+
+            RenderButtonMenu();
         }
 
-        if (_currentMenu.controls.Count == 0)
-        {
-            EditorGUILayout.LabelField("(This menu has no controls)");
-        }
-    }
+        protected void RenderButtonMenu() {
 
-    private static void OpenMenuForTwoHandedSupport(LyumaAv3Menu menu)
-    {
-        var mainMenu = menu.Runtime.gameObject.AddComponent<LyumaAv3Menu>();
-        mainMenu.useLegacyMenu = menu.useLegacyMenu;
-        mainMenu.Runtime = menu.Runtime;
-        mainMenu.RootMenu = menu.RootMenu;
-    }
-
-    private string LabelizeMenu()
-    {
-        var menu = (LyumaAv3Menu)target;
-
-        var lastMenu = menu.MenuStack.Last();
-        if (lastMenu.MandatedParam == null)
-        {
-            if (lastMenu.ExpressionsMenu == null) {
-                return "SubMenu linked to null menu!";
-            }
-            return lastMenu.ExpressionsMenu.name;
-        }
-
-        return lastMenu.ExpressionsMenu.name + " (" + lastMenu.MandatedParam.name + " = " + lastMenu.MandatedParam.value + ")";
-    }
-
-    private void FromToggle(VRCExpressionsMenu.Control control, string labelType)
-    {
-        var menu = (LyumaAv3Menu)target;
-
-        var parameterName = control.parameter.name;
-        var controlValue = control.value;
-
-        var isActive = menu.IsVisualActive(parameterName, controlValue);
-
-        EditorGUILayout.BeginHorizontal();
-        EditorGUI.BeginDisabledGroup(menu.HasActiveControl());
-        if (GreenBackground(isActive, () => ParameterizedButton(control, parameterName, controlValue)))
-        {
-            menu.UserToggle(parameterName, controlValue);
-        }
-        EditorGUI.EndDisabledGroup();
-        LabelType(labelType);
-        EditorGUILayout.EndHorizontal();
-    }
-
-    private void FromSubMenu(VRCExpressionsMenu.Control control)
-    {
-        var menu = (LyumaAv3Menu)target;
-
-        var parameterName = control.parameter.name;
-        var wantedValue = control.value;
-
-        EditorGUILayout.BeginHorizontal();
-        EditorGUI.BeginDisabledGroup(menu.HasActiveControl());
-        if (ParameterizedButton(control, parameterName, wantedValue))
-        {
-            if (IsValidParameterName(parameterName))
+            var menu = (LyumaAv3Menu)target;
+            if (menu.Runtime == null) return;
+            if (menu.RootMenu == null)
             {
-                menu.UserSubMenu(control.subMenu, parameterName, wantedValue);
+                menu.RootMenu = (VRCExpressionsMenu)EditorGUILayout.ObjectField(new GUIContent("Expressions Menu"), null, typeof(VRCExpressionsMenu), false);
+                return;
             }
-            else
+
+            var isInRootMenu = menu.MenuStack.Count == 0;
+
+            GUILayout.Label(
+                (isInRootMenu ? "Expressions" : LabelizeMenu()) +
+                (menu.IsMenuOpen ? "" : " [Menu is closed]"),
+                EditorStyles.boldLabel);
+
+            if (!menu.IsMenuOpen) {
+                return;
+            }
+
+            _currentMenu = menu.MenuStack.Count == 0 ? menu.RootMenu : menu.MenuStack.Last().ExpressionsMenu;
+
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUILayout.ObjectField(_currentMenu, typeof(VRCExpressionsMenu), false);
+            EditorGUI.EndDisabledGroup();
+
+            EditorGUI.BeginDisabledGroup(isInRootMenu || menu.HasActiveControl());
+            if (GUILayout.Button("Back"))
             {
-                menu.UserSubMenu(control.subMenu);
+                menu.UserBack();
+            }
+            EditorGUI.EndDisabledGroup();
+            if (_currentMenu == null) {
+                EditorGUILayout.LabelField("(This submenu is null)");
+                return;
+            }
+            for (var controlIndex = 0; controlIndex < _currentMenu.controls.Count; controlIndex++)
+            {
+                var control = _currentMenu.controls[controlIndex];
+                switch (control.type)
+                {
+                    case VRCExpressionsMenu.Control.ControlType.Button:
+                        FromToggle(control, "Button");
+                        break;
+                    case VRCExpressionsMenu.Control.ControlType.Toggle:
+                        FromToggle(control, "Toggle");
+                        break;
+                    case VRCExpressionsMenu.Control.ControlType.SubMenu:
+                        FromSubMenu(control);
+                        break;
+                    case VRCExpressionsMenu.Control.ControlType.TwoAxisPuppet:
+                        FromTwoAxis(control, controlIndex);
+                        break;
+                    case VRCExpressionsMenu.Control.ControlType.FourAxisPuppet:
+                        FromFourAxis(control, controlIndex);
+                        break;
+                    case VRCExpressionsMenu.Control.ControlType.RadialPuppet:
+                        FromRadial(control, controlIndex);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+
+            if (_currentMenu.controls.Count == 0)
+            {
+                EditorGUILayout.LabelField("(This menu has no controls)");
             }
         }
-        EditorGUI.EndDisabledGroup();
-        LabelType("SubMenu");
-        EditorGUILayout.EndHorizontal();
-    }
 
-    private void FromRadial(VRCExpressionsMenu.Control control, int controlIndex)
-    {
-        var menu = (LyumaAv3Menu)target;
-
-        SubControl(control, controlIndex, menu, "Radial");
-
-        if (menu.IsActiveControl(controlIndex))
+        private static void OpenMenuForTwoHandedSupport(LyumaAv3Menu menu)
         {
-            if (control.subParameters.Length > 0)
-            {
-                SliderFloat(menu, control.subParameters[0], "Rotation", 0f, 1f);
-            }
+            var mainMenu = menu.Runtime.gameObject.AddComponent<LyumaAv3Menu>();
+            mainMenu.useLegacyMenu = menu.useLegacyMenu;
+            mainMenu.Runtime = menu.Runtime;
+            mainMenu.RootMenu = menu.RootMenu;
         }
-    }
 
-    private void FromTwoAxis(VRCExpressionsMenu.Control control, int controlIndex)
-    {
-        var menu = (LyumaAv3Menu)target;
-
-        SubControl(control, controlIndex, menu, "TwoAxis");
-
-        if (menu.IsActiveControl(controlIndex))
+        private string LabelizeMenu()
         {
-            var sanitySubParamLength = control.subParameters.Length;
-            if (sanitySubParamLength > 0) SliderFloat(menu, control.subParameters[0], "Horizontal", -1f, 1f);
-            if (sanitySubParamLength > 1) SliderFloat(menu, control.subParameters[1], "Vertical", -1f, 1f);
+            var menu = (LyumaAv3Menu)target;
 
-            var oldColor = Color.HSVToRGB(
-                0,
-                sanitySubParamLength > 0 ? menu.FindFloat(control.subParameters[0].name) * 0.5f + 0.5f : 0,
-                sanitySubParamLength > 1 ? menu.FindFloat(control.subParameters[1].name) * 0.5f + 0.5f : 0);
-            var newColor = EditorGUILayout.ColorField(oldColor);
-            if (oldColor.r != newColor.r || oldColor.g != newColor.g || oldColor.b != newColor.b)
+            var lastMenu = menu.MenuStack.Last();
+            if (lastMenu.MandatedParam == null)
             {
-                Color.RGBToHSV(newColor, out _, out var s, out var v);
-                if (sanitySubParamLength > 0) menu.UserFloat(control.subParameters[0].name, s  * 2 - 1);
-                if (sanitySubParamLength > 1) menu.UserFloat(control.subParameters[1].name, v * 2 - 1);
+                if (lastMenu.ExpressionsMenu == null) {
+                    return "SubMenu linked to null menu!";
+                }
+                return lastMenu.ExpressionsMenu.name;
             }
+
+            return lastMenu.ExpressionsMenu.name + " (" + lastMenu.MandatedParam.name + " = " + lastMenu.MandatedParam.value + ")";
         }
-    }
 
-    private void FromFourAxis(VRCExpressionsMenu.Control control, int controlIndex)
-    {
-        var menu = (LyumaAv3Menu)target;
-
-        SubControl(control, controlIndex, menu, "FourAxis");
-
-        if (menu.IsActiveControl(controlIndex))
+        private void FromToggle(VRCExpressionsMenu.Control control, string labelType)
         {
-            var sanitySubParamLength = control.subParameters.Length;
-            if (sanitySubParamLength > 0) SliderFloat(menu, control.subParameters[0], "Up", 0f, 1f);
-            if (sanitySubParamLength > 1) SliderFloat(menu, control.subParameters[1], "Right", 0f, 1f);
-            if (sanitySubParamLength > 2) SliderFloat(menu, control.subParameters[2], "Down", 0f, 1f);
-            if (sanitySubParamLength > 3) SliderFloat(menu, control.subParameters[3], "Left", 0f, 1f);
+            var menu = (LyumaAv3Menu)target;
 
-            var oldColor = Color.HSVToRGB(
-                0,
-                (sanitySubParamLength > 0 ? menu.FindFloat(control.subParameters[0].name) : 0) * 0.5f + 0.5f
-                -(sanitySubParamLength > 2 ? menu.FindFloat(control.subParameters[2].name) : 0) * 0.5f + 0.5f,
-                (sanitySubParamLength > 1 ? menu.FindFloat(control.subParameters[1].name) : 0) * 0.5f + 0.5f
-                -(sanitySubParamLength > 3 ? menu.FindFloat(control.subParameters[3].name) : 0) * 0.5f + 0.5f);
-            var newColor = EditorGUILayout.ColorField(oldColor);
-            if (oldColor.r != newColor.r || oldColor.g != newColor.g || oldColor.b != newColor.b)
+            var parameterName = control.parameter.name;
+            var controlValue = control.value;
+
+            var isActive = menu.IsVisualActive(parameterName, controlValue);
+
+            EditorGUILayout.BeginHorizontal();
+            EditorGUI.BeginDisabledGroup(menu.HasActiveControl());
+            if (GreenBackground(isActive, () => ParameterizedButton(control, parameterName, controlValue)))
             {
-                Color.RGBToHSV(newColor, out _, out var s, out var v);
-                if (sanitySubParamLength > 0) menu.UserFloat(control.subParameters[0].name, Mathf.Clamp(v  * 2 - 1, 0f, 1f));
-                if (sanitySubParamLength > 1) menu.UserFloat(control.subParameters[1].name, Mathf.Clamp(s  * 2 - 1, 0f, 1f));
-                if (sanitySubParamLength > 2) menu.UserFloat(control.subParameters[2].name, -Mathf.Clamp(v  * 2 - 1, -1f, 0f));
-                if (sanitySubParamLength > 3) menu.UserFloat(control.subParameters[3].name, -Mathf.Clamp(s  * 2 - 1, -1f, 0f));
+                menu.UserToggle(parameterName, controlValue);
             }
+            EditorGUI.EndDisabledGroup();
+            LabelType(labelType);
+            EditorGUILayout.EndHorizontal();
         }
-    }
 
-    private void SubControl(VRCExpressionsMenu.Control control, int controlIndex, LyumaAv3Menu menu, string labelType)
-    {
-        var parameterName = control.parameter.name;
-        var intValue = (int) control.value;
-
-        var isActive = menu.IsVisualActive(parameterName, intValue);
-
-        EditorGUILayout.BeginHorizontal();
-        EditorGUI.BeginDisabledGroup(menu.HasActiveControl() && !menu.IsActiveControl(controlIndex));
-        if (GreenBackground(isActive || menu.IsActiveControl(controlIndex), () => ParameterizedButton(control, parameterName, intValue)))
+        private void FromSubMenu(VRCExpressionsMenu.Control control)
         {
-            if (!menu.IsActiveControl(controlIndex))
+            var menu = (LyumaAv3Menu)target;
+
+            var parameterName = control.parameter.name;
+            var wantedValue = control.value;
+
+            EditorGUILayout.BeginHorizontal();
+            EditorGUI.BeginDisabledGroup(menu.HasActiveControl());
+            if (ParameterizedButton(control, parameterName, wantedValue))
             {
                 if (IsValidParameterName(parameterName))
                 {
-                    menu.UserControlEnter(controlIndex, parameterName, intValue);
+                    menu.UserSubMenu(control.subMenu, parameterName, wantedValue);
                 }
                 else
                 {
-                    menu.UserControlEnter(controlIndex);
+                    menu.UserSubMenu(control.subMenu);
                 }
             }
-            else
+            EditorGUI.EndDisabledGroup();
+            LabelType("SubMenu");
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void FromRadial(VRCExpressionsMenu.Control control, int controlIndex)
+        {
+            var menu = (LyumaAv3Menu)target;
+
+            SubControl(control, controlIndex, menu, "Radial");
+
+            if (menu.IsActiveControl(controlIndex))
             {
-                menu.UserControlExit();
+                if (control.subParameters.Length > 0)
+                {
+                    SliderFloat(menu, control.subParameters[0], "Rotation", 0f, 1f);
+                }
             }
         }
 
-        EditorGUI.EndDisabledGroup();
-        LabelType(labelType);
-        EditorGUILayout.EndHorizontal();
-    }
-
-    private static void SliderFloat(LyumaAv3Menu menu, VRCExpressionsMenu.Control.Parameter subParam, string intent, float left, float right)
-    {
-        if (subParam == null || subParam.name == "")
+        private void FromTwoAxis(VRCExpressionsMenu.Control control, int controlIndex)
         {
-            EditorGUI.BeginDisabledGroup(true);
-            EditorGUILayout.Slider(intent, 0, left, right);
+            var menu = (LyumaAv3Menu)target;
+
+            SubControl(control, controlIndex, menu, "TwoAxis");
+
+            if (menu.IsActiveControl(controlIndex))
+            {
+                var sanitySubParamLength = control.subParameters.Length;
+                if (sanitySubParamLength > 0) SliderFloat(menu, control.subParameters[0], "Horizontal", -1f, 1f);
+                if (sanitySubParamLength > 1) SliderFloat(menu, control.subParameters[1], "Vertical", -1f, 1f);
+
+                var oldColor = Color.HSVToRGB(
+                    0,
+                    sanitySubParamLength > 0 ? menu.FindFloat(control.subParameters[0].name) * 0.5f + 0.5f : 0,
+                    sanitySubParamLength > 1 ? menu.FindFloat(control.subParameters[1].name) * 0.5f + 0.5f : 0);
+                var newColor = EditorGUILayout.ColorField(oldColor);
+                if (oldColor.r != newColor.r || oldColor.g != newColor.g || oldColor.b != newColor.b)
+                {
+                    Color.RGBToHSV(newColor, out _, out var s, out var v);
+                    if (sanitySubParamLength > 0) menu.UserFloat(control.subParameters[0].name, s  * 2 - 1);
+                    if (sanitySubParamLength > 1) menu.UserFloat(control.subParameters[1].name, v * 2 - 1);
+                }
+            }
+        }
+
+        private void FromFourAxis(VRCExpressionsMenu.Control control, int controlIndex)
+        {
+            var menu = (LyumaAv3Menu)target;
+
+            SubControl(control, controlIndex, menu, "FourAxis");
+
+            if (menu.IsActiveControl(controlIndex))
+            {
+                var sanitySubParamLength = control.subParameters.Length;
+                if (sanitySubParamLength > 0) SliderFloat(menu, control.subParameters[0], "Up", 0f, 1f);
+                if (sanitySubParamLength > 1) SliderFloat(menu, control.subParameters[1], "Right", 0f, 1f);
+                if (sanitySubParamLength > 2) SliderFloat(menu, control.subParameters[2], "Down", 0f, 1f);
+                if (sanitySubParamLength > 3) SliderFloat(menu, control.subParameters[3], "Left", 0f, 1f);
+
+                var oldColor = Color.HSVToRGB(
+                    0,
+                    (sanitySubParamLength > 0 ? menu.FindFloat(control.subParameters[0].name) : 0) * 0.5f + 0.5f
+                    -(sanitySubParamLength > 2 ? menu.FindFloat(control.subParameters[2].name) : 0) * 0.5f + 0.5f,
+                    (sanitySubParamLength > 1 ? menu.FindFloat(control.subParameters[1].name) : 0) * 0.5f + 0.5f
+                    -(sanitySubParamLength > 3 ? menu.FindFloat(control.subParameters[3].name) : 0) * 0.5f + 0.5f);
+                var newColor = EditorGUILayout.ColorField(oldColor);
+                if (oldColor.r != newColor.r || oldColor.g != newColor.g || oldColor.b != newColor.b)
+                {
+                    Color.RGBToHSV(newColor, out _, out var s, out var v);
+                    if (sanitySubParamLength > 0) menu.UserFloat(control.subParameters[0].name, Mathf.Clamp(v  * 2 - 1, 0f, 1f));
+                    if (sanitySubParamLength > 1) menu.UserFloat(control.subParameters[1].name, Mathf.Clamp(s  * 2 - 1, 0f, 1f));
+                    if (sanitySubParamLength > 2) menu.UserFloat(control.subParameters[2].name, -Mathf.Clamp(v  * 2 - 1, -1f, 0f));
+                    if (sanitySubParamLength > 3) menu.UserFloat(control.subParameters[3].name, -Mathf.Clamp(s  * 2 - 1, -1f, 0f));
+                }
+            }
+        }
+
+        private void SubControl(VRCExpressionsMenu.Control control, int controlIndex, LyumaAv3Menu menu, string labelType)
+        {
+            var parameterName = control.parameter.name;
+            var intValue = (int) control.value;
+
+            var isActive = menu.IsVisualActive(parameterName, intValue);
+
+            EditorGUILayout.BeginHorizontal();
+            EditorGUI.BeginDisabledGroup(menu.HasActiveControl() && !menu.IsActiveControl(controlIndex));
+            if (GreenBackground(isActive || menu.IsActiveControl(controlIndex), () => ParameterizedButton(control, parameterName, intValue)))
+            {
+                if (!menu.IsActiveControl(controlIndex))
+                {
+                    if (IsValidParameterName(parameterName))
+                    {
+                        menu.UserControlEnter(controlIndex, parameterName, intValue);
+                    }
+                    else
+                    {
+                        menu.UserControlEnter(controlIndex);
+                    }
+                }
+                else
+                {
+                    menu.UserControlExit();
+                }
+            }
+
             EditorGUI.EndDisabledGroup();
-            return;
+            LabelType(labelType);
+            EditorGUILayout.EndHorizontal();
         }
 
-        menu.UserFloat(subParam.name, EditorGUILayout.Slider(intent + " (" + subParam.name + ")", menu.FindFloat(subParam.name), left, right));
-    }
-
-    private bool ParameterizedButton(VRCExpressionsMenu.Control control, string parameterName, float wantedValue)
-    {
-        var hasParameter = IsValidParameterName(parameterName);
-        GUIStyle style = GUI.skin.button;
-        style.richText = true;
-        return GUILayout.Button(new GUIContent(control.name + (hasParameter ? " (" + parameterName + " = " + wantedValue + ")" : ""), control.icon), style, GUILayout.Height(36),GUILayout.MinWidth(40));
-    }
-
-    private static T GreenBackground<T>(bool isActive, Func<T> inside)
-    {
-        var col = GUI.color;
-        try
+        private static void SliderFloat(LyumaAv3Menu menu, VRCExpressionsMenu.Control.Parameter subParam, string intent, float left, float right)
         {
-            if (isActive) GUI.color = Color.green;
-            return inside();
+            if (subParam == null || subParam.name == "")
+            {
+                EditorGUI.BeginDisabledGroup(true);
+                EditorGUILayout.Slider(intent, 0, left, right);
+                EditorGUI.EndDisabledGroup();
+                return;
+            }
+
+            menu.UserFloat(subParam.name, EditorGUILayout.Slider(intent + " (" + subParam.name + ")", menu.FindFloat(subParam.name), left, right));
         }
-        finally
+
+        private bool ParameterizedButton(VRCExpressionsMenu.Control control, string parameterName, float wantedValue)
         {
-            GUI.color = col;
+            var hasParameter = IsValidParameterName(parameterName);
+            GUIStyle style = GUI.skin.button;
+            style.richText = true;
+            return GUILayout.Button(new GUIContent(control.name + (hasParameter ? " (" + parameterName + " = " + wantedValue + ")" : ""), control.icon), style, GUILayout.Height(36),GUILayout.MinWidth(40));
         }
-    }
 
-    private static void LabelType(string toggle)
-    {
-        EditorGUILayout.LabelField(toggle, GUILayout.Width(70), GUILayout.ExpandHeight(true));
-    }
+        private static T GreenBackground<T>(bool isActive, Func<T> inside)
+        {
+            var col = GUI.color;
+            try
+            {
+                if (isActive) GUI.color = Color.green;
+                return inside();
+            }
+            finally
+            {
+                GUI.color = col;
+            }
+        }
 
-    private static bool IsValidParameterName(string parameterName)
-    {
-        return !string.IsNullOrEmpty(parameterName);
+        private static void LabelType(string toggle)
+        {
+            EditorGUILayout.LabelField(toggle, GUILayout.Width(70), GUILayout.ExpandHeight(true));
+        }
+
+        private static bool IsValidParameterName(string parameterName)
+        {
+            return !string.IsNullOrEmpty(parameterName);
+        }
     }
 }
