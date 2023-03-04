@@ -49,7 +49,7 @@ public static class LyumaAv3EditorSupport
         {VRCAvatarDescriptor.AnimLayerType.Sitting, "1268460c14f873240981bf15aa88b21a"},
         {VRCAvatarDescriptor.AnimLayerType.Additive, "573a1373059632b4d820876efe2d277f"},
         {VRCAvatarDescriptor.AnimLayerType.FX, "d40be620cf6c698439a2f0a5144919fe"},
-        {VRCAvatarDescriptor.AnimLayerType.Action, "d5aeb52dc5e89244abdb9da8296fad0b"},
+        {VRCAvatarDescriptor.AnimLayerType.Action, "3e479eeb9db24704a828bffb15406520"},
         {VRCAvatarDescriptor.AnimLayerType.Gesture, "404d228aeae421f4590305bc4cdaba16"},
     };
     
