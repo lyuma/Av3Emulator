@@ -2,9 +2,20 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
-## Planned features for 3.0:
+### New features in v 3.0:
 
-* Unity Package support
+3.0:
+
+* **If you import this package, it will import to the Packages folder. If you have the old (Assets folder) version, delete it or you won't have access to the new features.**
+* Added VCC/VPM Support.
+  * This means added compatibility with the VCC GestureManager, but removed compatibility with the pre-VCC GestureManager.
+  * You can still import the unitypackage as usual, but it will be unpacked to the Packages folder, not the Assets folder.
+  * You can also copy the created lyuma.av3emulator folder to another location, add that folder to the VCC in the settings menu, and install the emulator with a single click for any of your other projects.
+* Added parameter mismatch support.
+* Added rich text support for VRCExpressionMenus.
+* Fixed mirrorclone and shadowclone having IsLocal set to false.
+* Fixed the wrong guid being used for the Action controller. Thanks, ShingenPizza.
+
 
 ### **New features in v 2.9.11:**
 
