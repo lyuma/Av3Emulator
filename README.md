@@ -2,9 +2,9 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
-### New features in v 3.0:
+### New features in v 3.0.0:
 
-3.0:
+3.0.0:
 
 * **If you import this package, it will import to the Packages folder. If you have the old (Assets folder) version, delete it or you won't have access to the new features.**
 * Added VCC/VPM Support.
