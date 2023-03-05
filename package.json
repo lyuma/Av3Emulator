@@ -7,7 +7,9 @@
   "vpmDependencies": {
     "com.vrchat.avatars": "3.1.10"
   },
-  "legacyFolders": {},
+  "legacyFolders": {
+    "Assets/Lyuma/Av3Emulator" : "e42c5d0b3e2b3f64e8a88c225b3cef62"
+  },
   "legacyFiles": {},
   "localPath": ".\\Packages\\lyuma.av3emulator",
   "type": "tool",
