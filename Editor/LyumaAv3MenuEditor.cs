@@ -30,6 +30,13 @@ public class LyumaAv3MenuEditor : Editor
 {
     private VRCExpressionsMenu _currentMenu;
 
+    static class Styles
+    {
+        public static readonly GUIStyle ParameterizedButtonStyle = new GUIStyle(GUI.skin.button)
+            { richText = true };
+    }
+
+
     public override void OnInspectorGUI()
     {
         var menu = (LyumaAv3Menu)target;
@@ -314,9 +321,9 @@ public class LyumaAv3MenuEditor : Editor
     private bool ParameterizedButton(VRCExpressionsMenu.Control control, string parameterName, float wantedValue)
     {
         var hasParameter = IsValidParameterName(parameterName);
-        GUIStyle style = GUI.skin.button;
-        style.richText = true;
-        return GUILayout.Button(new GUIContent(control.name + (hasParameter ? " (" + parameterName + " = " + wantedValue + ")" : ""), control.icon), style, GUILayout.Height(36),GUILayout.MinWidth(40));
+        return GUILayout.Button(
+            new GUIContent(control.name + (hasParameter ? " (" + parameterName + " = " + wantedValue + ")" : ""),
+                control.icon), Styles.ParameterizedButtonStyle, GUILayout.Height(36), GUILayout.MinWidth(40));
     }
 
     private static T GreenBackground<T>(bool isActive, Func<T> inside)
