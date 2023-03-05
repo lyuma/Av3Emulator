@@ -7,8 +7,8 @@ using UnityEngine;
 
 namespace Lyuma.Av3Emulator.Editor
 {
-    // based on https://github.com/lilxyzw/lilToon/blob/master/Assets/lilToon/Editor/lilStartup.cs
-    // Copyright (c) 2020-2021 lilxyzw
+    // based on https://github.com/lilxyzw/lilToon/blob/36ff295b41cc4c398b95419d513adeecb0b322d4/Assets/lilToon/Editor/lilStartup.cs
+    // Copyright (c) 2020-2021 lilxyzw originally published under MIT License
 
     [InitializeOnLoad]
     public static class WarningOnImportingUnityPackage
