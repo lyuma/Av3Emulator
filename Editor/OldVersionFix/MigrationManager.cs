@@ -50,8 +50,11 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 					}
 				}
 			}
-			GameObject[] objects = SceneManager.GetActiveScene().GetRootGameObjects();
-			ReplaceEmulatorOnObjects(objects);
+
+			for (var i = 0; i < SceneManager.sceneCount; i++)
+			{
+				ReplaceEmulatorOnObjects(SceneManager.GetSceneAt(i).GetRootGameObjects());
+			}
 		}
 		
 		private static void ScanAndReplace(Scene scene, LoadSceneMode mode)
