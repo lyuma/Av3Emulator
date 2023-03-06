@@ -61,7 +61,7 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
                         // replacing m_Script is not allowed in most case but if the script is missing, it's allowed.
                         // replacing m_Script is is better than re-creating behaviour because it keeps all configuration.
                         script.objectReferenceValue = newMonoScript;
-                        componentSerialized.ApplyModifiedPropertiesWithoutUndo();
+                        componentSerialized.ApplyModifiedProperties();
                         modified = true;
                     }
                 }
