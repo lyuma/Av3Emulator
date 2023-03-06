@@ -50,25 +50,19 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 			if (Directory.Exists("Assets/Lyuma/Av3Emulator"))
 				return "Assets/Lyuma/Av3Emulator";
 
-			Type emulatorType = Type.GetType("LyumaAv3Emulator, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
-			if (emulatorType != null)
+			foreach (var assetPath in AssetDatabase.FindAssets("LyumaAv3Emulator t:MonoScript", new[] { "Assets" })
+				         .Select(AssetDatabase.GUIDToAssetPath)
+				         .Where(x => AssetDatabase.LoadAssetAtPath<MonoScript>(x)?.GetClass() != null))
 			{
-				string[] guids = AssetDatabase.FindAssets("LyumaAv3Emulator", new[] { "Assets" });
-				string[] assetPaths = guids.Select(AssetDatabase.GUIDToAssetPath).ToArray();
-				foreach (var assetPath in assetPaths)
-				{
-					string absolutePath = Application.dataPath + "/" + assetPath.Substring(7);
-					string absoluteParentPath = new System.IO.DirectoryInfo(absolutePath).Parent.Parent.FullName;
-					string parentPath = "Assets" + Path.DirectorySeparatorChar +
-					                    absoluteParentPath.Substring(Application.dataPath.Length + 1);
-
-					return parentPath;
-				}
+				// '/' is the only path separator in unity.
+				var pathComponents = assetPath.Split('/');
+				var parentPath = string.Join("/", pathComponents.Take(pathComponents.Length - 2));
+				return parentPath;
 			}
 
 			return null;
 		}
-		
+
 		private static void ScanAndReplace(Scene scene)
 		{
 			GameObject[] objects = scene.GetRootGameObjects();
