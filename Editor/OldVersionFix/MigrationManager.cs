@@ -64,40 +64,13 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 		{
 			foreach (var root in objects)
 			{
-				ReplaceEmulatorRecursive(root.transform);
-			}
-		}
-		private static void ReplaceEmulatorRecursive(Transform parent)
-		{
-			ReplaceEmulator(parent);
-			foreach (Transform child in parent)
-			{
-				ReplaceEmulator(child);
-				ReplaceEmulatorRecursive(child);
-			}
-		}
-
-		private static void ReplaceEmulator(Transform transform)
-		{
-			if (transform.name.ToLower().Contains("emulator"))
-			{
-				Component[] components = transform.GetComponents<Component>();
-				bool found = false;
-				foreach (var component in components)
+				// little hack: every GameObject always have Transform as their components so I can iterate
+				//    all GameObjects using GetComponentsInChildren<Transform>(true).
+				foreach (var childTransform in root.GetComponentsInChildren<Transform>(true))
 				{
-					if (component == null)
-					{
-						GameObjectUtility.RemoveMonoBehavioursWithMissingScript(transform.gameObject); 
-						found = true;
-					}
+					ScriptGuidMigrator.DoMigration(childTransform.gameObject);
 				}
-
-				if (found)
-				{
-					transform.gameObject.AddComponent<Runtime.LyumaAv3Emulator>();
-					transform.gameObject.AddComponent<Runtime.LyumaAv3Osc>();
-				}
-			};
+			}
 		}
 	}
 }
