@@ -9,7 +9,7 @@ using Object = UnityEngine.Object;
 
 namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 {
-    public class ScriptGuidMigrator
+    public abstract class ScriptGuidMigrator
     {
         private static ActiveEditorTracker _tracker;
 
