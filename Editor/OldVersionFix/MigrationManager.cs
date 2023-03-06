@@ -2,10 +2,10 @@
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Directory = UnityEngine.Windows.Directory;
-using Object = System.Object;
 
 namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 {
@@ -13,7 +13,7 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 	{
 		static MigrationManager()
 		{
-			SceneManager.sceneLoaded += ScanAndReplace;
+			EditorSceneManager.sceneOpened += (scene, _) => ScanAndReplace(scene);
 		}
 
 		[InitializeOnLoadMethod]
@@ -57,7 +57,7 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 			}
 		}
 		
-		private static void ScanAndReplace(Scene scene, LoadSceneMode mode)
+		private static void ScanAndReplace(Scene scene)
 		{
 			GameObject[] objects = scene.GetRootGameObjects();
 			ReplaceEmulatorOnObjects(objects);
@@ -77,3 +77,4 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 		}
 	}
 }
+
