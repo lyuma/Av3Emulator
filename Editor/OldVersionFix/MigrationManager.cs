@@ -7,11 +7,11 @@ using UnityEngine.SceneManagement;
 using Directory = UnityEngine.Windows.Directory;
 using Object = System.Object;
 
-namespace Lyuma.Av3Emulator.Editor
+namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 {
-	public class OldVersionFix
+	public static class MigrationManager
 	{
-		static OldVersionFix()
+		static MigrationManager()
 		{
 			SceneManager.sceneLoaded += ScanAndReplace;
 		}
