@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using JetBrains.Annotations;
 using UnityEditor;
@@ -24,6 +25,11 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 
             // according to https://github.com/Unity-Technologies/UnityCsReference/blob/b22fe1bb369565ac8ba0f6dd1ae49aee56d63070/Editor/Mono/ActiveEditorTracker.bindings.cs#L14-L15,
             // ActiveEditorTracker is big overhead for native side so I cache this instance.
+
+            // if all components are live, we don't need to migrate GameObject
+            if (gameObject.GetComponents<Component>().All(x => x))
+                return false;
+
             var tracker = _tracker ?? (_tracker = NewActiveEditorTracker());
             tracker.ForceRebuild();
 
