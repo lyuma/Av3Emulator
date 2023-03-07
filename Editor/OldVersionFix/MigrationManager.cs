@@ -45,7 +45,7 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 			var foundByGuid = AssetDatabase.GUIDToAssetPath("e42c5d0b3e2b3f64e8a88c225b3cef62");
 
 			if (!string.IsNullOrEmpty(foundByGuid))
-				return foundByGuid;
+				return Directory.Exists(foundByGuid) ? foundByGuid : null;
 
 			if (Directory.Exists("Assets/Lyuma/Av3Emulator"))
 				return "Assets/Lyuma/Av3Emulator";
