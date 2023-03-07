@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -38,6 +39,8 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 			{
 				ReplaceEmulatorOnObjects(SceneManager.GetSceneAt(i).GetRootGameObjects());
 			}
+
+			AutoMigratePrefabs();
 		}
 
 		private static string FindOldAv3Emulator()
@@ -80,6 +83,184 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 					ScriptGuidMigrator.DoMigration(childTransform.gameObject);
 				}
 			}
+		}
+
+		private static void AutoMigratePrefabs()
+		{
+			try
+			{
+				var prefabs = GetPrefabs();
+
+				// there's nothing to migrate
+				if (prefabs.Count == 0) return;
+
+				if (!EditorUtility.DisplayDialog("Av3Emulator",
+					    "We found prefabs might have old Av3Emulator.\n" +
+					    "We need to upgrade Av3Emulator to make it work well.\n" +
+					    "Do you want to migrate prefabs?",
+					    "Yes", "Cancel"))
+					return;
+
+				MigratePrefabs(prefabs, (name, i) => EditorUtility.DisplayProgressBar(
+					"Migrating Prefabs",
+					$"{name ?? "Migration Finished"} ({i} / {prefabs.Count})",
+					i / (float)prefabs.Count));
+			}
+			catch
+			{
+				EditorUtility.DisplayDialog("Av3Emulator", "Error in prefab migration process!", "OK");
+				throw;
+			}
+			finally
+			{
+				EditorUtility.ClearProgressBar();
+			}
+		}
+
+		private static void MigratePrefabs(List<GameObject> prefabAssets, Action<string, int> progressCallback)
+		{
+			for (var i = 0; i < prefabAssets.Count; i++)
+			{
+				var prefabAsset = prefabAssets[i];
+				progressCallback(prefabAsset.name, i);
+
+				var modified = false;
+
+				try
+				{
+					foreach (var childTransform in prefabAsset.GetComponentsInChildren<Transform>(true))
+						modified |= ScriptGuidMigrator.DoMigration(childTransform.gameObject);
+				}
+				catch (Exception e)
+				{
+					throw new Exception($"Migrating Prefab {prefabAsset.name}: {e.Message}", e);
+				}
+
+				if (modified)
+					PrefabUtility.SavePrefabAsset(prefabAsset);
+			}
+			progressCallback(null, prefabAssets.Count);
+		}
+
+		// based on https://github.com/anatawa12/AvatarOptimizer/blob/bfec145ec6b71055a274cbf72accf0e8f95cffdf/Editor/Migration/Migration.cs#L452-L564
+		// Copyright (c) anatawa12 2023 originally published under MIT License
+
+		private class PrefabInfo
+		{
+			public readonly GameObject Prefab;
+			public readonly List<PrefabInfo> Children = new List<PrefabInfo>();
+			public readonly List<PrefabInfo> Parents = new List<PrefabInfo>();
+
+			public PrefabInfo(GameObject prefab)
+			{
+				Prefab = prefab;
+			}
+		}
+
+		/// <returns>List of prefab assets. parent prefab -> child prefab</returns>
+		private static List<GameObject> GetPrefabs()
+		{
+			bool CheckPrefabType(PrefabAssetType type) =>
+				type != PrefabAssetType.MissingAsset && type != PrefabAssetType.Model &&
+				type != PrefabAssetType.NotAPrefab;
+
+			var allPrefabRoots = AssetDatabase.FindAssets("t:prefab")
+				.Select(AssetDatabase.GUIDToAssetPath)
+				.Select(AssetDatabase.LoadAssetAtPath<GameObject>)
+				.Where(x => x)
+				.Where(x => CheckPrefabType(PrefabUtility.GetPrefabAssetType(x)))
+				.Where(x => x.GetComponentsInChildren<Component>().Any(y => y == null))
+				// ensure missing script os old Av3Emulator because many avatars still have DynamicBone version of
+				// prefabs and it's likely to be missing
+				.Where(x => x.GetComponentsInChildren<Transform>()
+					.Any(y => ScriptGuidMigrator.NeedsMigration(y.gameObject)))
+				.ToArray();
+
+			var sortedVertices = new List<GameObject>();
+
+			var vertices = new LinkedList<PrefabInfo>(allPrefabRoots.Select(prefabRoot => new PrefabInfo(prefabRoot)));
+
+			// assign Parents and Children here.
+			{
+				var vertexLookup = vertices.ToDictionary(x => x.Prefab, x => x);
+				foreach (var vertex in vertices)
+				{
+					foreach (var parentPrefab in vertex.Prefab
+						         .GetComponentsInChildren<Transform>(true)
+						         .Select(x => x.gameObject)
+						         .Where(PrefabUtility.IsAnyPrefabInstanceRoot)
+						         .Select(PrefabUtility.GetCorrespondingObjectFromSource)
+						         .Select(x => x.transform.root.gameObject))
+					{
+						if (vertexLookup.TryGetValue(parentPrefab, out var parent))
+						{
+							vertex.Parents.Add(parent);
+							parent.Children.Add(vertex);
+						}
+					}
+				}
+			}
+
+			// Orphaned nodes with no parents or children go first
+			{
+				var it = vertices.First;
+				while (it != null)
+				{
+					var cur = it;
+					it = it.Next;
+					if (cur.Value.Children.Count != 0 || cur.Value.Parents.Count != 0) continue;
+					sortedVertices.Add(cur.Value.Prefab);
+					vertices.Remove(cur);
+				}
+			}
+
+			var openSet = new Queue<PrefabInfo>();
+
+			// Find root nodes with no parents
+			foreach (var vertex in vertices.Where(vertex => vertex.Parents.Count == 0))
+				openSet.Enqueue(vertex);
+
+			var visitedVertices = new HashSet<PrefabInfo>();
+			while (openSet.Count > 0)
+			{
+				var vertex = openSet.Dequeue();
+
+				if (visitedVertices.Contains(vertex))
+				{
+					continue;
+				}
+
+				if (vertex.Parents.Count > 0)
+				{
+					var neededParentVisit = false;
+
+					foreach (var vertexParent in vertex.Parents.Where(vertexParent =>
+						         !visitedVertices.Contains(vertexParent)))
+					{
+						neededParentVisit = true;
+						openSet.Enqueue(vertexParent);
+					}
+
+					if (neededParentVisit)
+					{
+						// Re-queue to visit after we have traversed the node's parents
+						openSet.Enqueue(vertex);
+						continue;
+					}
+				}
+
+				visitedVertices.Add(vertex);
+				sortedVertices.Add(vertex.Prefab);
+
+				foreach (var vertexChild in vertex.Children)
+					openSet.Enqueue(vertexChild);
+			}
+
+			// Sanity check
+			foreach (var vertex in vertices.Where(vertex => !visitedVertices.Contains(vertex)))
+				throw new Exception($"Invalid DAG state: node '{vertex.Prefab}' was not visited.");
+
+			return sortedVertices;
 		}
 	}
 }

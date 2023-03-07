@@ -15,6 +15,23 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 
         public static bool DoMigration(GameObject gameObject)
         {
+            var modified = false;
+
+            IterateMissing(gameObject, (script, newMonoScript) =>
+            {
+                script.objectReferenceValue = newMonoScript;
+                script.serializedObject.ApplyModifiedProperties();
+                modified = true;
+                return false;
+            });
+
+            return modified;
+        }
+
+        public static bool NeedsMigration(GameObject gameObject) => IterateMissing(gameObject, (_0, _1) => true);
+
+        public static bool IterateMissing(GameObject gameObject, Func<SerializedProperty, MonoScript, bool> callback)
+        {
             // Because we cannot get instance of MonoBehaviour of missing script using GameObject.GetComponents<Component>()
             // I get MonoBehaviour instance from Editor created by ActiveEditorTracker.
             // (Unity unnecessarily replaces invalid object to actual null in mono side.)
@@ -36,8 +53,6 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
             // update tracker to 
             SetObjectsLockedByThisTracker.Invoke(tracker, new object[] { new List<Object> { gameObject } });
             tracker.ForceRebuild();
-
-            var modified = false;
 
             var editors = tracker.activeEditors;
 
@@ -61,13 +76,13 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
                         // replacing m_Script is not allowed in most case but if the script is missing, it's allowed.
                         // replacing m_Script is is better than re-creating behaviour because it keeps all configuration.
                         script.objectReferenceValue = newMonoScript;
-                        componentSerialized.ApplyModifiedProperties();
-                        modified = true;
+                        if (callback(script, newMonoScript))
+                            return true;
                     }
                 }
             }
 
-            return modified;
+            return false;
         }
 
         private static ActiveEditorTracker NewActiveEditorTracker()
