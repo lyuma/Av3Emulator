@@ -66,22 +66,94 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 			return null;
 		}
 
-		private static void ScanAndReplace(Scene scene)
+		private static bool ScanAndReplace(Scene scene)
 		{
 			GameObject[] objects = scene.GetRootGameObjects();
-			ReplaceEmulatorOnObjects(objects);
+			return ReplaceEmulatorOnObjects(objects);
 		}
 
-		private static void ReplaceEmulatorOnObjects(GameObject[] objects)
+		private static bool ReplaceEmulatorOnObjects(GameObject[] objects)
 		{
+			bool modified = false;
 			foreach (var root in objects)
 			{
 				// little hack: every GameObject always have Transform as their components so I can iterate
 				//    all GameObjects using GetComponentsInChildren<Transform>(true).
 				foreach (var childTransform in root.GetComponentsInChildren<Transform>(true))
 				{
-					ScriptGuidMigrator.DoMigration(childTransform.gameObject);
+					modified |= ScriptGuidMigrator.DoMigration(childTransform.gameObject);
 				}
+			}
+
+			return modified;
+		}
+
+		[MenuItem("Tools/Avatars 3.0 Emulator/Migrate Scenes")]
+		private static void ManualMigrateScenes()
+		{
+			try
+			{
+				var scenePaths = AssetDatabase.FindAssets("t:scene").Select(AssetDatabase.GUIDToAssetPath).ToList();
+
+				// load each scene and migrate scene
+				for (var i = 0; i < scenePaths.Count; i++)
+				{
+					var scenePath = scenePaths[i];
+					var scene = EditorSceneManager.OpenScene(scenePath);
+
+					EditorUtility.DisplayProgressBar("Migrating Scenes", $"{scene.name} ({i} / {scenePaths.Count})",
+						i / (float)scenePaths.Count);
+
+					var modified = false;
+
+					try
+					{
+						modified |= ScanAndReplace(scene);
+					}
+					catch (Exception e)
+					{
+						throw new Exception($"Migrating Scene {scene.name}: {e.Message}", e);
+					}
+
+					if (modified)
+						EditorSceneManager.SaveScene(scene);
+				}
+				EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+			}
+			catch
+			{
+				EditorUtility.DisplayDialog("Error!", "Error in migration process!", "OK");
+				throw;
+			}
+			finally
+			{
+				EditorUtility.ClearProgressBar();
+			}
+		}
+
+		[MenuItem("Tools/Avatars 3.0 Emulator/Migrate Prefabs")]
+		private static void ManualMigratePrefabs()
+		{
+			try
+			{
+				var prefabs = GetPrefabs();
+
+				// there's nothing to migrate
+				if (prefabs.Count == 0) return;
+
+				MigratePrefabs(prefabs, (name, i) => EditorUtility.DisplayProgressBar(
+					"Migrating Prefabs",
+					$"{name ?? "Migration Finished"} ({i} / {prefabs.Count})",
+					i / (float)prefabs.Count));
+			}
+			catch
+			{
+				EditorUtility.DisplayDialog("Av3Emulator", "Error in prefab migration process!", "OK");
+				throw;
+			}
+			finally
+			{
+				EditorUtility.ClearProgressBar();
 			}
 		}
 
