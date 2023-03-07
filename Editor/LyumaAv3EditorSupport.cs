@@ -271,6 +271,7 @@ namespace Lyuma.Av3Emulator.Editor
                 go = new GameObject("Avatars 3.0 Emulator Control");
             }
             Selection.SetActiveObjectWithContext(go, go);
+            GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
             go.GetOrAddComponent<LyumaAv3Emulator>();
             go.GetOrAddComponent<LyumaAv3Osc>();
             EditorGUIUtility.PingObject(go);
