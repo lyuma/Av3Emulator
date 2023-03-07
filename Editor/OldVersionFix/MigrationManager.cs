@@ -88,7 +88,7 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 			return modified;
 		}
 
-		[MenuItem("Tools/Avatars 3.0 Emulator/Migrate Scenes")]
+		[MenuItem("Tools/Avatars 3.0 Emulator Migrations/Migrate Scenes")]
 		private static void ManualMigrateScenes()
 		{
 			try
@@ -122,7 +122,7 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 			}
 		}
 
-		[MenuItem("Tools/Avatars 3.0 Emulator/Migrate Prefabs")]
+		[MenuItem("Tools/Avatars 3.0 Emulator Migrations/Migrate Prefabs")]
 		private static void ManualMigratePrefabs()
 		{
 			try
