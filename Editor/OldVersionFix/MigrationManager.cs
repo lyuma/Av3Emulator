@@ -99,23 +99,14 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 				for (var i = 0; i < scenePaths.Count; i++)
 				{
 					var scenePath = scenePaths[i];
-					var scene = EditorSceneManager.OpenScene(scenePath);
 
-					EditorUtility.DisplayProgressBar("Migrating Scenes", $"{scene.name} ({i} / {scenePaths.Count})",
+					EditorUtility.DisplayProgressBar("Migrating Scenes",
+						$"{scenePath.Substring(scenePath.LastIndexOf('/'))} ({i} / {scenePaths.Count})",
 						i / (float)scenePaths.Count);
 
-					var modified = false;
-
-					try
-					{
-						modified |= ScanAndReplace(scene);
-					}
-					catch (Exception e)
-					{
-						throw new Exception($"Migrating Scene {scene.name}: {e.Message}", e);
-					}
-
-					if (modified)
+					// opening scene will perform migration with 'sceneOpened' callback.
+					var scene = EditorSceneManager.OpenScene(scenePath);
+					if (scene.isDirty)
 						EditorSceneManager.SaveScene(scene);
 				}
 				EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
