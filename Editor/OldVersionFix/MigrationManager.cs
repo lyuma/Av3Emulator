@@ -20,19 +20,26 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 		[InitializeOnLoadMethod]
 		private static void ReplaceObjectsInCurrentScene()
 		{
-			var oldAv3EmulatorPath = FindOldAv3Emulator();
-			if (oldAv3EmulatorPath != null)
+			if (FindOldAv3EmulatorForDeletion() is string oldAv3EmulatorPathForDeletion)
 			{
 				if (EditorUtility.DisplayDialog("Av3Emulator",
 					    "You still have an old version of the Av3Emulator Installed.\n" +
 					    "This could cause unwanted behaviour. Remove it?\n" +
 					    "This would delete the following folder:\n" +
-					    oldAv3EmulatorPath,
+					    oldAv3EmulatorPathForDeletion,
 					    "Yes", "No"))
 				{
-					Directory.Delete(oldAv3EmulatorPath);
+					Directory.Delete(oldAv3EmulatorPathForDeletion);
 					AssetDatabase.Refresh();
 				}
+			}
+			else if (FindOldAv3EmulatorForAsking() is string oldAv3EmulatorPathForAsking)
+			{
+				EditorUtility.DisplayDialog("Av3Emulator",
+					"You still have an old version of the Av3Emulator Installed.\n" +
+					"This could cause unwanted behaviour. Please remove them.\n" +
+					"We found Av3Emulator here: " + oldAv3EmulatorPathForAsking,
+					"Yes");
 			}
 
 			for (var i = 0; i < SceneManager.sceneCount; i++)
@@ -43,7 +50,7 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 			AutoMigratePrefabs();
 		}
 
-		private static string FindOldAv3Emulator()
+		private static string FindOldAv3EmulatorForDeletion()
 		{
 			var foundByGuid = AssetDatabase.GUIDToAssetPath("e42c5d0b3e2b3f64e8a88c225b3cef62");
 
@@ -53,6 +60,11 @@ namespace Lyuma.Av3Emulator.Editor.OldVersionFix
 			if (Directory.Exists("Assets/Lyuma/Av3Emulator"))
 				return "Assets/Lyuma/Av3Emulator";
 
+			return null;
+		}
+
+		private static string FindOldAv3EmulatorForAsking()
+		{
 			foreach (var assetPath in AssetDatabase.FindAssets("LyumaAv3Emulator t:MonoScript", new[] { "Assets" })
 				         .Select(AssetDatabase.GUIDToAssetPath)
 				         .Where(x => AssetDatabase.LoadAssetAtPath<MonoScript>(x)?.GetClass() != null))
