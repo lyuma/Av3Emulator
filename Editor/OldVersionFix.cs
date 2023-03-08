@@ -18,22 +18,24 @@ namespace Lyuma.Av3Emulator.Editor
 		}
 
 		[InitializeOnLoadMethod]
-		private static void ReplaceObjectsInCurrentScene()
+		private static void ScanForOldEmulator()
 		{
-			bool EmulatorFound = Directory.Exists("Assets/Lyuma/Av3Emulator"); 
-			if (EmulatorFound)
+			string emulatorDir = GetEmulatorPath();
+			if (emulatorDir != null)
 			{
 				if (EditorUtility.DisplayDialog("Av3Emulator",
 					    "You still have an old version of the Av3Emulator Installed.\n"
-						+"This could cause unwanted behaviour. Remove it?",
+					    + "This could cause unwanted behaviour. Remove it?",
 					    "Yes", "No"))
 				{
-					Directory.Delete("Assets/Lyuma/Av3Emulator");
+					Directory.Delete(emulatorDir);
 					AssetDatabase.Refresh();
 				}
 			}
+
+			
 			Type emulatorType = Type.GetType("LyumaAv3Emulator, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
-			if (emulatorType != null && !EmulatorFound)
+			if (emulatorType != null && emulatorDir == null)
 			{
 				foreach (var assetPath in AssetDatabase.FindAssets("LyumaAv3Emulator t:MonoScript", new[] { "Assets" })
 					         .Select(AssetDatabase.GUIDToAssetPath)
@@ -41,18 +43,27 @@ namespace Lyuma.Av3Emulator.Editor
 				{
 					var pathComponents = assetPath.Split('/');
 					var parentPath = string.Join("/", pathComponents.Take(pathComponents.Length - 2));
-					if (EditorUtility.DisplayDialog("Av3Emulator",
-						    "You still have an old version of the Av3Emulator Installed.\n"
-							+"This could cause unwanted behaviour. Remove it?\n"
-						    + "This would delete the following folder:\n" + parentPath,
-						    "Yes", "No"))
-					{
-						Directory.Delete(parentPath); 
-						AssetDatabase.Refresh();
-					}
+					EditorUtility.DisplayDialog("Av3Emulator",
+						"You still have an old version of the Av3Emulator Installed.\n"
+						+ "This could cause unwanted behaviour.\n"
+						+ "Please remove the old Av3Emulator install\n" 
+						+ "This install seems to be located at: " + parentPath,
+						"Ok");
 				}
 			}
 			ReplaceEmulator();
+		}
+
+		private static string GetEmulatorPath()
+		{
+			var foundByGuid = AssetDatabase.GUIDToAssetPath("e42c5d0b3e2b3f64e8a88c225b3cef62");
+
+			if (!string.IsNullOrEmpty(foundByGuid))
+				return Directory.Exists(foundByGuid) ? foundByGuid : null;
+
+			if (Directory.Exists("Assets/Lyuma/Av3Emulator"))
+				return "Assets/Lyuma/Av3Emulator";
+			return null;
 		}
 		
 		private static void ReplaceEmulator()
