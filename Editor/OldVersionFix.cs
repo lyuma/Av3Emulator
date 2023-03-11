@@ -24,7 +24,7 @@ namespace Lyuma.Av3Emulator.Editor
 			if (emulatorDir != null)
 			{
 				if (EditorUtility.DisplayDialog("Av3Emulator",
-					    "You still have an old version of the Av3Emulator Installed.\n"
+					    "You still have an old version of the Av3Emulator installed.\n"
 					    + "This could cause unwanted behaviour. Remove it?",
 					    "Yes", "No"))
 				{
@@ -44,7 +44,7 @@ namespace Lyuma.Av3Emulator.Editor
 					var pathComponents = assetPath.Split('/');
 					var parentPath = string.Join("/", pathComponents.Take(pathComponents.Length - 2));
 					EditorUtility.DisplayDialog("Av3Emulator",
-						"You still have an old version of the Av3Emulator Installed.\n"
+						"You still have an old version of the Av3Emulator installed.\n"
 						+ "This could cause unwanted behaviour.\n"
 						+ "Please remove the old Av3Emulator install\n" 
 						+ "This install seems to be located at: " + parentPath,
