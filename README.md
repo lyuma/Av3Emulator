@@ -14,6 +14,7 @@
 * Added parameter mismatch support.
 * Added rich text support for VRCExpressionMenus.
 * Fixed mirrorclone and shadowclone having IsLocal set to false.
+* Fixed one instance of "Can't remove component" error appearing
 * Fixed the wrong guid being used for the Action controller. Thanks, ShingenPizza.
 
 
