@@ -20,6 +20,7 @@ SOFTWARE. */
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -293,13 +294,16 @@ namespace Lyuma.Av3Emulator.Runtime
 		public static HashSet<string> BUILTIN_PARAMETERS = new HashSet<string> {
 			"Viseme", "Voice", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "Upright", "AngularY", "Grounded", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation"
 		};
-		public static readonly HashSet<Type> MirrorCloneComponentBlacklist = new HashSet<Type> {
+		public static readonly Type[] MirrorCloneComponentBlacklist = new Type[] {
 			typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Rigidbody), typeof(Joint)
 		};
-		public static readonly HashSet<Type> ShadowCloneComponentBlacklist = new HashSet<Type> {
+        public static readonly Type[] ShadowCloneComponentBlacklist = new Type[] {
 			typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Light), typeof(ParticleSystemRenderer), typeof(Rigidbody), typeof(Joint)
+		
 		};
-		[Header("Built-in inputs / Viseme")]
+        public static readonly HashSet<string> CloneStringComponentBlacklist = new HashSet<string>() { "DynamicBone", "VRCContact", "VRCPhysBone", "VRCSpatialAudioSource" };
+
+        [Header("Built-in inputs / Viseme")]
 		public VisemeIndex Viseme;
 		[Range(0, 15)] public int VisemeIdx;
 		private int VisemeInt;
@@ -986,23 +990,28 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		public void CreateMirrorClone() {
-			if (AvatarSyncSource == this && GetComponent<PipelineSaver>() == null) {
-				OriginalSourceClone.IsMirrorClone = true;
-				MirrorClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
-				MirrorClone.GetComponent<Animator>().avatar = null;
-				OriginalSourceClone.IsMirrorClone = false;
-				GameObject o = MirrorClone.gameObject;
-				o.name = gameObject.name + " (MirrorReflection)";
-				o.SetActive(true);
-				allMirrorTransforms = MirrorClone.gameObject.GetComponentsInChildren<Transform>(true);
-				foreach (Component component in MirrorClone.gameObject.GetComponentsInChildren<Component>(true)) {
-					if (MirrorCloneComponentBlacklist.Contains(component.GetType()) || component.GetType().ToString().Contains("DynamicBone")
-							 || component.GetType().ToString().Contains("VRCContact") || component.GetType().ToString().Contains("VRCPhysBone")) {
-						UnityEngine.Object.Destroy(component);
-					}
-				}
-			}
-		}
+            if (AvatarSyncSource == this && GetComponent<PipelineSaver>() == null)
+            {
+                OriginalSourceClone.IsMirrorClone = true;
+                MirrorClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
+                MirrorClone.GetComponent<Animator>().avatar = null;
+                OriginalSourceClone.IsMirrorClone = false;
+                GameObject o = MirrorClone.gameObject;
+                o.name = gameObject.name + " (MirrorReflection)";
+                o.SetActive(true);
+                allMirrorTransforms = MirrorClone.gameObject.GetComponentsInChildren<Transform>(true);
+                foreach (Transform t in allMirrorTransforms)
+                {
+                    foreach (Component component in t.GetComponents<Component>().Reverse())
+                    {
+                        if (!component || CloneComponentIsBlacklisted(component, MirrorCloneComponentBlacklist))
+                        {
+                            DestroyImmediate(component);
+                        }
+                    }
+                }
+            }
+        }
 
 		public void CreateShadowClone() {
 			if (AvatarSyncSource == this && GetComponent<PipelineSaver>() == null) {
@@ -1014,22 +1023,31 @@ namespace Lyuma.Av3Emulator.Runtime
 				o.name = gameObject.name + " (ShadowClone)";
 				o.SetActive(true);
 				allShadowTransforms = ShadowClone.gameObject.GetComponentsInChildren<Transform>(true);
-				foreach (Component component in ShadowClone.gameObject.GetComponentsInChildren<Component>(true)) {
-					if (ShadowCloneComponentBlacklist.Contains(component.GetType()) || component.GetType().ToString().Contains("DynamicBone")
-							 || component.GetType().ToString().Contains("VRCContact") || component.GetType().ToString().Contains("VRCPhysBone")) {
-						UnityEngine.Object.Destroy(component);
-						continue;
-					}
-					if (component.GetType() == typeof(SkinnedMeshRenderer) || component.GetType() == typeof(MeshRenderer)) {
-						Renderer renderer = component as Renderer;
-						renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly; // ShadowCastingMode.TwoSided isn't accounted for and does not work locally
-					}
-				}
+                foreach (Transform t in allShadowTransforms)
+                {
+					foreach(Component component in t.GetComponents<Component>().Reverse())
+                        if (!component || CloneComponentIsBlacklisted(component, ShadowCloneComponentBlacklist))
+                        {
+                            DestroyImmediate(component);
+                        }
+                        else if (component.GetType() == typeof(SkinnedMeshRenderer) || component.GetType() == typeof(MeshRenderer))
+                        {
+                            Renderer renderer = component as Renderer;
+                            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly; // ShadowCastingMode.TwoSided isn't accounted for and does not work locally
+                        }
+                }
+
 				foreach (Renderer renderer in gameObject.GetComponentsInChildren<Renderer>(true)) {
 					renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; // ShadowCastingMode.TwoSided isn't accounted for and does not work locally
 				}
 			}
 		}
+
+        public bool CloneComponentIsBlacklisted(Component component, Type[] typeBlacklist)
+        {
+            var type = component.GetType();
+            return typeBlacklist.Any(bt => type.IsSubclassOf(bt) || type == bt) || CloneStringComponentBlacklist.Any(bt => type.ToString().Contains(bt));
+        }
 
 		private void InitializeAnimator()
 		{
