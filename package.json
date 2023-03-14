@@ -1,5 +1,5 @@
 {
-  "name": "lyuma.av3emulator",
+  "name": "com.lyuma.av3emulator",
   "displayName": "Av3Emulator",
   "version": "2.9.11",
   "description": "An Emulator for VRChat's Avatar 3.0 System",
@@ -9,7 +9,7 @@
   },
   "legacyFolders": {},
   "legacyFiles": {},
-  "localPath": ".\\Packages\\lyuma.av3emulator",
+  "localPath": ".\\Packages\\com.lyuma.av3emulator",
   "type": "tool",
   "unity": "2019.4"
 }
