@@ -2,9 +2,27 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
-## Planned features for 3.0:
+## This is a Legacy branch for non-VPM usage.
 
-* Unity Package support
+* Please use master branch (releases 3.0 and newer) for VPM Package support!
+
+### **New features in v 2.9.12:**
+
+2.9.12:
+
+**This will likely be the last and final non-VPM release in the 2.9 series.**
+
+You are encouraged to install the 3.0 release, which includes VPM support (for VCC), and installs into the Packages directory.
+
+Version 3.0 should work even in a non-VCC project, but I am releasing this version in case some people still wish to avoid this change.
+
+Cherry-picked useful changes from 3.0. Thanks, Shingen, jellejurre, anatawa12 and Dreadrith for your help!
+
+* Fixed GUID for Action playable layer.
+* Generate AvatarMask in code instead of using assets.
+* Implement parameter mismatch, so bool parameters can be coerced into floats, for example for usage in blend trees.
+* Rich text support for simple parameter menu.
+* Filter components to more accurately emulate shadow and mirror clones.
 
 ### **New features in v 2.9.11:**
 
