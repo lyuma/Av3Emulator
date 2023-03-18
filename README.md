@@ -4,7 +4,7 @@
 
 ### **New features in v 3.0.0:**
 
-* Finally, VPM support for VRChat Creator Compnaion! Thanks to jellejurre and anatawa13 for your hard work in making this happen!
+* Finally, VPM support for VRChat Creator Compnaion! Thanks to jellejurre and anatawa12 for your hard work in making this happen!
 * Installs in Packages with unique GUIDs. you are free to remove the old Lyuma/Av3Emulator directory after upgrading.
 * Fixed GUID for Action playable layer.
 * Generate AvatarMask in code instead of using assets.
