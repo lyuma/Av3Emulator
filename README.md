@@ -2,11 +2,19 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
-## This is a Legacy branch for non-VPM usage.
+### **New features in v 3.0.0:**
 
-* Please use master branch (releases 3.0 and newer) for VPM Package support!
+* Finally, VPM support for VRChat Creator Compnaion! Thanks to jellejurre and anatawa13 for your hard work in making this happen!
+* Installs in Packages with unique GUIDs. you are free to remove the old Lyuma/Av3Emulator directory after upgrading.
+* Fixed GUID for Action playable layer.
+* Generate AvatarMask in code instead of using assets.
+* Implement parameter mismatch, so bool parameters can be coerced into floats, for example for usage in blend trees.
+* Rich text support for simple parameter menu.
+* Filter components to more accurately emulate shadow and mirror clones.
 
 ### **New features in v 2.9.12:**
+
+Old 2.9 versions are available in the **legacy-emulator-v2.9** branch.
 
 2.9.12:
 
