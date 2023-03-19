@@ -2,15 +2,28 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
-### **New features in v 3.0.0:**
+### New features in v 3.0.1:
 
+3.0.1:
+
+* **If you import this package, it will import to the Packages folder. If you have the old (Assets folder) version, delete it or you won't have access to the new features.**
 * Finally, VPM support for VRChat Creator Compnaion! Thanks to jellejurre and anatawa12 for your hard work in making this happen!
+* Added VCC/VPM Support.
+  * This means added compatibility with the VCC GestureManager, but removed compatibility with the pre-VCC GestureManager.
+  * You can still import the unitypackage as usual, but it will be unpacked to the Packages folder, not the Assets folder.
+  * You can also copy the created lyuma.av3emulator folder to another location, add that folder to the VCC in the settings menu, and install the emulator with a single click for any of your other projects.
+
 * Installs in Packages with unique GUIDs. you are free to remove the old Lyuma/Av3Emulator directory after upgrading.
-* Fixed GUID for Action playable layer.
+* Fixed the wrong guid being used for the Action controller. Thanks, ShingenPizza.
 * Generate AvatarMask in code instead of using assets.
 * Implement parameter mismatch, so bool parameters can be coerced into floats, for example for usage in blend trees.
-* Rich text support for simple parameter menu.
-* Filter components to more accurately emulate shadow and mirror clones.
+* Added rich text support for VRCExpressionMenus in the simple parameter menu.
+* Fixed one instance of "Can't remove component" error appearing when filtering components to emulate shadow and mirror clones.
+* Fixed mirrorclone and shadowclone having IsLocal set to false.
+
+3.0.0:
+
+* A merge commit was lost, so some of the above bugfixes were missing. Please use 3.0.1 instaed.
 
 ### **New features in v 2.9.12:**
 
