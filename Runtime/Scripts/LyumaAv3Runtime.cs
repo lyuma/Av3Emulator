@@ -1486,22 +1486,15 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		void CreateAv3MenuComponent() {
-			System.Type gestureManagerMenu = System.Type.GetType("GestureManagerAv3Menu");
-			if (gestureManagerMenu != null) {
-				foreach (var comp in avadesc.gameObject.GetComponents(gestureManagerMenu)) {
-					UnityEngine.Object.Destroy(comp);
-				}
+			foreach (var comp in avadesc.gameObject.GetComponents<GestureManagerAv3Menu>()) {
+				UnityEngine.Object.Destroy(comp);
 			}
 			foreach (var comp in avadesc.gameObject.GetComponents<LyumaAv3Menu>()) {
 				UnityEngine.Object.Destroy(comp);
 			}
 			LyumaAv3Menu mainMenu;
-			if (gestureManagerMenu != null) {
-				mainMenu = (LyumaAv3Menu)avadesc.gameObject.AddComponent(gestureManagerMenu);
-				mainMenu.useLegacyMenu = legacyMenuGUI;
-			} else {
-				mainMenu = avadesc.gameObject.AddComponent<LyumaAv3Menu>();
-			}
+			mainMenu = avadesc.gameObject.AddComponent<GestureManagerAv3Menu>();
+			mainMenu.useLegacyMenu = legacyMenuGUI;
 			mainMenu.Runtime = this;
 			mainMenu.RootMenu = avadesc.expressionsMenu;
 		}
