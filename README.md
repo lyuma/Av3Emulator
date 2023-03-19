@@ -142,7 +142,7 @@ Grabbing and posing should work more reliably now. Make sure not to leave your b
 
 **Release note**: Lyuma's Av3 Emulator now comes in two versions: lite/classic version with a basic menu; and the other which includes VRC-Gesture-Manager and the radial menu.
 
-<br clear="all"><img align="right" src="Screenshots/av3_radial_menu.png" width="30%">
+<br clear="all"><img align="right" src="Runtime/Screenshots/av3_radial_menu.png" width="30%">
 
 * New! Integration with the Avatar 3.0 Menu when [VRC Gesture Manager by BlackStartx](https://github.com/BlackStartx/VRC-Gesture-Manager) is installed.
 * Support for MirrorReflection duplicate with only FX playable (can choose which version to show/hide).
@@ -199,9 +199,9 @@ What is Avatars 3.0? Read the VRChat documentation here: https://docs.vrchat.com
 This is an emulator for Avatars 3.0 reimplemented in the unity editor on top the the unity [PlayableGraph](https://docs.unity3d.com/Manual/Playables-Graph.html) API, using the [AnimationControllerPlayable](https://docs.unity3d.com/2018.4/Documentation/ScriptReference/Animations.AnimatorControllerPlayable.html) and [AnimationLayerMixerPlayable](https://docs.unity3d.com/2018.4/Documentation/ScriptReference/Animations.AnimationLayerMixerPlayable.html) APIs.
 
 ## Av3 Emulator Overview:
-![Avatar 3.0 overview](Screenshots/a3_example.png)
-![Avatar 3.0 explanation](Screenshots/avatar3emu_tutorial.png)
-[(Open the above full explanation image)](Screenshots/avatar3emu_tutorial.png)
+![Avatar 3.0 overview](Runtime/Screenshots/a3_example.png)
+![Avatar 3.0 explanation](Runtime/Screenshots/avatar3emu_tutorial.png)
+[(Open the above full explanation image)](Runtime/Screenshots/avatar3emu_tutorial.png)
 
 ## Features:
 * Should emulate most features of Avatar3.
@@ -278,6 +278,6 @@ If you're having unexplained issues, they might happen in game too. The most com
 
 ## Helpful guides
 
-![Lock your inspector to allow investigating other objects](Screenshots/lock_inspector_tutorial.png)![Checklist for turning off Write Defaults.](Screenshots/write_defaults_off.png)
-[(View full lock inspector explanation)](Screenshots/lock_inspector_tutorial.png) [(View full write defaults off checklist)](Screenshots/write_defaults_off.png)
+![Lock your inspector to allow investigating other objects](Runtime/Screenshots/lock_inspector_tutorial.png)![Checklist for turning off Write Defaults.](Runtime/Screenshots/write_defaults_off.png)
+[(View full lock inspector explanation)](Runtime/Screenshots/lock_inspector_tutorial.png) [(View full write defaults off checklist)](Runtime/Screenshots/write_defaults_off.png)
 
