@@ -303,7 +303,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		};
         public static readonly HashSet<string> CloneStringComponentBlacklist = new HashSet<string>() { "DynamicBone", "VRCContact", "VRCPhysBone", "VRCSpatialAudioSource" };
 
-        [Header("Built-in inputs / Viseme")]
+		[Header("Built-in inputs / Viseme")]
 		public VisemeIndex Viseme;
 		[Range(0, 15)] public int VisemeIdx;
 		private int VisemeInt;
@@ -1500,6 +1500,61 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 
+		private (MeshRenderer, MeshRenderer, MeshRenderer)[] rendererCache;
+		private (SkinnedMeshRenderer, SkinnedMeshRenderer, SkinnedMeshRenderer)[] skinnedRendererCache;
+
+		public void SetupCloneCaches()
+		{
+			if (rendererCache != null)
+			{
+				return;
+			}
+			List<(MeshRenderer, MeshRenderer, MeshRenderer)> renderers = new List<(MeshRenderer, MeshRenderer, MeshRenderer)>();
+			List<(SkinnedMeshRenderer, SkinnedMeshRenderer, SkinnedMeshRenderer)> skinnedRenderers = new List<(SkinnedMeshRenderer, SkinnedMeshRenderer, SkinnedMeshRenderer)>();
+			for (int i = 0; i < allTransforms.Length; i++)
+			{
+				MeshRenderer baseRenderer = allTransforms[i].GetComponent<MeshRenderer>();
+				if (baseRenderer != null)
+				{
+					MeshRenderer mirrorRenderer = null;
+					if (allMirrorTransforms != null) {
+						mirrorRenderer = allMirrorTransforms[i].GetComponent<MeshRenderer>();
+					}
+					MeshRenderer shadowRenderer = null;
+					if (allShadowTransforms != null)
+					{
+						shadowRenderer = allShadowTransforms[i].GetComponent<MeshRenderer>();
+					}
+
+					if (mirrorRenderer != null || shadowRenderer != null)
+					{
+						renderers.Add((baseRenderer, mirrorRenderer, shadowRenderer));
+					}
+				}
+				
+				SkinnedMeshRenderer skinnedBaseRenderer = allTransforms[i].GetComponent<SkinnedMeshRenderer>();
+				if (skinnedBaseRenderer != null)
+				{
+					SkinnedMeshRenderer skinnedMirrorRenderer = null;
+					if (allMirrorTransforms != null) {
+						skinnedMirrorRenderer = allMirrorTransforms[i].GetComponent<SkinnedMeshRenderer>();
+					}
+					SkinnedMeshRenderer skinnedShadowRenderer = null;
+					if (allShadowTransforms != null)
+					{
+						skinnedShadowRenderer = allShadowTransforms[i].GetComponent<SkinnedMeshRenderer>();
+					}
+
+					if (skinnedMirrorRenderer != null || skinnedShadowRenderer != null)
+					{
+						skinnedRenderers.Add((skinnedBaseRenderer, skinnedMirrorRenderer, skinnedShadowRenderer));
+					}
+				}
+			}
+			rendererCache = renderers.ToArray();
+			skinnedRendererCache = skinnedRenderers.ToArray();
+		}
+		
 		private bool isResetting;
 		private bool isResettingHold;
 		private bool isResettingSel;
@@ -1531,13 +1586,6 @@ namespace Lyuma.Av3Emulator.Runtime
 							if (allXTransforms[i] == null || allTransforms[i] == this.transform) {
 								continue;
 							}
-							MeshRenderer mr = allTransforms[i].GetComponent<MeshRenderer>();
-							MeshRenderer xmr = allXTransforms[i].GetComponent<MeshRenderer>();
-							if (mr != null && xmr != null) {
-								for (int mri = 0; mri < mr.sharedMaterials.Length && mri < xmr.sharedMaterials.Length; mri++) {
-									xmr.sharedMaterials[mri] = mr.sharedMaterials[mri];
-								}
-							}
 							allXTransforms[i].localPosition = allTransforms[i].localPosition;
 							allXTransforms[i].localRotation = allTransforms[i].localRotation;
 							if(allTransforms[i] == head && EnableHeadScaling) {
@@ -1551,6 +1599,52 @@ namespace Lyuma.Av3Emulator.Runtime
 							}
 						}
 					}
+				}
+				
+				foreach (var (baseR, shadowR, mirrorR) in rendererCache)
+				{
+					Material[] baseMaterials = baseR.sharedMaterials;
+					if (shadowR != null)
+					{
+						Material[] shadowMaterials = shadowR.sharedMaterials;
+						for (int mri = 0; mri < shadowMaterials.Length && mri < baseMaterials.Length; mri++)
+						{
+							shadowMaterials[mri] = baseMaterials[mri];
+						}
+						shadowR.sharedMaterials = shadowMaterials;
+					}
+					if (mirrorR != null)
+					{
+						Material[] mirrorMaterials = mirrorR.sharedMaterials;
+						for (int mri = 0; mri < mirrorMaterials.Length && mri < baseMaterials.Length; mri++)
+						{
+							mirrorMaterials[mri] = baseMaterials[mri];
+						}
+						mirrorR.sharedMaterials = mirrorMaterials;
+					} 
+				}
+				
+				foreach (var (baseR, shadowR, mirrorR) in skinnedRendererCache)
+				{
+					Material[] baseMaterials = baseR.sharedMaterials;
+					if (shadowR != null)
+					{
+						Material[] shadowMaterials = shadowR.sharedMaterials;
+						for (int mri = 0; mri < shadowMaterials.Length && mri < baseMaterials.Length; mri++)
+						{
+							shadowMaterials[mri] = baseMaterials[mri];
+						}
+						shadowR.sharedMaterials = shadowMaterials;
+					}
+					if (mirrorR != null)
+					{
+						Material[] mirrorMaterials = mirrorR.sharedMaterials;
+						for (int mri = 0; mri < mirrorMaterials.Length && mri < baseMaterials.Length; mri++)
+						{
+							mirrorMaterials[mri] = baseMaterials[mri];
+						}
+						mirrorR.sharedMaterials = mirrorMaterials;
+					} 
 				}
 			}
 		}
@@ -1724,6 +1818,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (!DisableMirrorAndShadowClones && MirrorClone == null && ShadowClone == null) {
 				CreateMirrorClone();
 				CreateShadowClone();
+				SetupCloneCaches();
 			}
 			if (emulator != null && AvatarSyncSource == null) {
 				if (LastViewMirrorReflection != ViewMirrorReflection) {
