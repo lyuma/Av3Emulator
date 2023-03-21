@@ -46,6 +46,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		public static UpdateSceneLayersFunc updateSceneLayersDelegate;
 		public delegate void ApplyOnEnableWorkaroundDelegateType();
 		public static ApplyOnEnableWorkaroundDelegateType ApplyOnEnableWorkaroundDelegate;
+		public delegate void ForceUpdateDescriptorCollidersFunc(VRCAvatarDescriptor descriptor);
+		public static ForceUpdateDescriptorCollidersFunc forceUpdateDescriptorColliders;
 
 		// This is injected by Editor-scope scripts to give us access to VRCBuildPipelineCallbacks.
 		public static Action<GameObject> InvokeOnPreProcessAvatar = (_) => { };
@@ -934,6 +936,14 @@ namespace Lyuma.Av3Emulator.Runtime
 				if (avadesc.VisemeBlendShapes != null) {
 					for (int i = 0; i < avadesc.VisemeBlendShapes.Length; i++) {
 						visemeBlendShapeIdxs[i] = avadesc.VisemeSkinnedMesh.sharedMesh.GetBlendShapeIndex(avadesc.VisemeBlendShapes[i]);
+					}
+				}
+			}
+			if (!IsMirrorClone && !IsShadowClone && AvatarSyncSource == this) {
+				if (this.emulator != null) {
+					if (this.emulator.DescriptorColliders != DescriptorCollidersSendersHelper.DescriptorExtractionType.None) {
+						forceUpdateDescriptorColliders(avadesc);
+						DescriptorCollidersSendersHelper.ExtractDescriptorColliders(avadesc, this.emulator.DescriptorColliders);
 					}
 				}
 			}

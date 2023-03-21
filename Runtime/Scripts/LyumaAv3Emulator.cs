@@ -19,7 +19,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. */
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 using VRC.SDK3.Avatars.Components;
+using UnityEditor;
+using VRC.Dynamics;
+using VRC.SDK3.Dynamics.Contact.Components;
+using VRC.SDK3.Dynamics.PhysBone.Components;
 
 namespace Lyuma.Av3Emulator.Runtime
 {
@@ -33,7 +38,8 @@ namespace Lyuma.Av3Emulator.Runtime
         public DefaultPoseOptions DefaultPose = DefaultPoseOptions.Standing;
 		public LyumaAv3Runtime.TrackingTypeIndex DefaultTrackingType = LyumaAv3Runtime.TrackingTypeIndex.HeadHands;
 		[Header("Emulation")]
-		public VRCAvatarDescriptor.AnimLayerType DefaultAnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base;
+		public VRCAvatarDescriptor.AnimLayerType DefaultAnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base; 
+        public DescriptorCollidersSendersHelper.DescriptorExtractionType DescriptorColliders = DescriptorCollidersSendersHelper.DescriptorExtractionType.CollidersAndSenders;
 		public bool RestartEmulator;
 		private bool RestartingEmulator;
 		[Tooltip("Simulate behavior with sub-animator parameter drivers prior to the 2021.1.1 patch (19 Jan 2021)")]
@@ -143,7 +149,8 @@ namespace Lyuma.Av3Emulator.Runtime
 						runtime.SetupCloneCaches();
 					}
 					runtime.DisableMirrorAndShadowClones = DisableShadowClone && DisableMirrorClone;
-				} catch (System.Exception e) {
+
+                } catch (System.Exception e) {
 					Debug.LogException(e);
 				}
 			}
@@ -206,6 +213,5 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 			}
 		}
-
 	}
 }

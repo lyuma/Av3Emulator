@@ -19,6 +19,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. */
 
 using System.Collections.Generic;
+using System.Reflection;
 using Lyuma.Av3Emulator.Runtime;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -199,6 +200,26 @@ namespace Lyuma.Av3Emulator.Editor
                 GUI.Label(pos, str, style);
                 UnityEditor.Handles.EndGUI();
                 GUI.color = origColor;
+            };
+            LyumaAv3Runtime.forceUpdateDescriptorColliders = (VRCAvatarDescriptor descriptor) => {
+                UnityEditor.Editor tempEditor = null;
+                try
+                {
+                    var descriptorEditor = System.Type.GetType("AvatarDescriptorEditor3, Assembly-CSharp-Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
+                    if (descriptorEditor == null) descriptorEditor = System.Type.GetType("AvatarDescriptorEditor3, VRC.SDK3A.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
+                    var editorAvatarField = descriptorEditor.GetField("avatarDescriptor", BindingFlags.NonPublic | BindingFlags.Instance);
+                    var updateMethod = descriptorEditor.GetMethod("UpdateAutoColliders", BindingFlags.NonPublic | BindingFlags.Instance);
+
+                    tempEditor = UnityEditor.Editor.CreateEditor(descriptor, descriptorEditor);
+                    editorAvatarField.SetValue(tempEditor, descriptor);
+                    updateMethod.Invoke(tempEditor, null);
+                    Object.DestroyImmediate(tempEditor);
+                }
+                catch
+                {
+                    Debug.LogError("Failed to force update Descriptor Colliders through reflection.");
+                    if (tempEditor != null) Object.DestroyImmediate(tempEditor);
+                }
             };
         }
 
