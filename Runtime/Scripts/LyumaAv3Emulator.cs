@@ -107,6 +107,11 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (!alreadyHadComponent && !DisableMirrorClone) {
 						runtime.CreateMirrorClone();
 					}
+
+					if (!alreadyHadComponent && (!DisableMirrorClone || !DisableShadowClone))
+					{
+						runtime.SetupCloneCaches();
+					}
 					runtime.DisableMirrorAndShadowClones = DisableShadowClone && DisableMirrorClone;
 				} catch (System.Exception e) {
 					Debug.LogException(e);
