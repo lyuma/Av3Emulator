@@ -214,8 +214,8 @@ namespace Lyuma.Av3Emulator.Runtime
         public enum DescriptorExtractionType
         {
             None = 0,
-            Colliders = 1 << 0,
-			Senders = 1 << 1,
+            CollidersOnly = 1 << 0,
+			SendersOnly = 1 << 1,
             CollidersAndSenders = ~0,
         }
         private void ExtractDescriptorColliders(VRCAvatarDescriptor descriptor, DescriptorExtractionType extractionType)
@@ -265,10 +265,10 @@ namespace Lyuma.Av3Emulator.Runtime
                         if (HasMirrorBone(matchedBone))
                             sender.collisionTags.Add(collisionName + (IsLeftBone(matchedBone) ? "L" : "R"));
 
-                        if (isSenderOnly || !extractionType.HasFlag(DescriptorExtractionType.Colliders)) DestroyImmediate(collider);
+                        if (isSenderOnly || !extractionType.HasFlag(DescriptorExtractionType.CollidersOnly)) DestroyImmediate(collider);
                         else createdColliders.Add(collider);
 
-						if (!extractionType.HasFlag(DescriptorExtractionType.Senders)) 
+						if (!extractionType.HasFlag(DescriptorExtractionType.SendersOnly)) 
                             DestroyImmediate(sender);
                     }
                 }
@@ -289,7 +289,7 @@ namespace Lyuma.Av3Emulator.Runtime
             ExtractCollider(descriptor.collider_fingerMiddleL, HumanBodyBones.LeftMiddleIntermediate, "FingerMiddle");
             ExtractCollider(descriptor.collider_fingerRingL, HumanBodyBones.LeftRingIntermediate, "FingerRing");
 
-            if (extractionType.HasFlag( DescriptorExtractionType.Colliders))
+            if (extractionType.HasFlag( DescriptorExtractionType.CollidersOnly))
                 foreach (var p in collidingBones)
                     p.colliders.AddRange(createdColliders);
         }
