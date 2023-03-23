@@ -185,6 +185,8 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 		}
 
+
+        #region Descriptor Colliders & Senders emulation
         private void ForceUpdateDescriptorColliders(VRCAvatarDescriptor descriptor)
         {
             Editor tempEditor = null;
@@ -318,6 +320,6 @@ namespace Lyuma.Av3Emulator.Runtime
             string name = bone.ToString();
             return name.Contains("Left") || name.Contains("Right");
         }
-
-    }
+		#endregion
+	}
 }
