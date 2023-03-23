@@ -30,7 +30,7 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		[Header("Fake VR or Desktop mode selection")]
 		public bool DefaultToVR = false;
-		public bool DefaultTestInStation = false;
+        public DefaultPoseOptions DefaultPose = DefaultPoseOptions.Standing;
 		public LyumaAv3Runtime.TrackingTypeIndex DefaultTrackingType = LyumaAv3Runtime.TrackingTypeIndex.HeadHands;
 		[Header("Emulation")]
 		public VRCAvatarDescriptor.AnimLayerType DefaultAnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base;
@@ -59,6 +59,16 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		public List<LyumaAv3Runtime> runtimes = new List<LyumaAv3Runtime>();
 		public LinkedList<LyumaAv3Runtime> forceActiveRuntimes = new LinkedList<LyumaAv3Runtime>();
+
+		public enum DefaultPoseOptions
+        {
+			Standing,
+			TPose,
+			IKPose,
+			AFK,
+			InStationAndSeated,
+			InStation
+        }
 
 		private void Awake()
 		{
@@ -94,13 +104,33 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (oml != null) {
 						GameObject.DestroyImmediate(oml);
 					}
+
+                    switch (DefaultPose)
+                    {
+						case DefaultPoseOptions.TPose:
+							runtime.TPoseCalibration = true;
+							break;
+						case DefaultPoseOptions.IKPose:
+                            runtime.IKPoseCalibration = true;
+							break;
+						case DefaultPoseOptions.AFK:
+							runtime.AFK = true;
+							break;
+						case DefaultPoseOptions.InStationAndSeated:
+							runtime.Seated = true;
+							runtime.InStation = true;
+							break;
+						case DefaultPoseOptions.InStation:
+							runtime.InStation = true;
+							break;
+                    }
+
 					runtime.emulator = this;
 					runtime.VRMode = DefaultToVR;
 					runtime.TrackingType = DefaultTrackingType;
-					runtime.InStation = DefaultTestInStation;
 					runtime.DebugDuplicateAnimator = DefaultAnimatorToDebug;
 					runtime.EnableHeadScaling = EnableHeadScaling;
-					runtimes.Add(runtime);
+                    runtimes.Add(runtime);
 					if (!alreadyHadComponent && !DisableShadowClone) {
 						runtime.CreateShadowClone();
 					}
