@@ -21,6 +21,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -1344,7 +1345,13 @@ namespace Lyuma.Av3Emulator.Runtime
 				foreach (var stageParam in stageParameters.parameters)
 				{
 					stageId++; // one-indexed
-					if (stageParam.name == null || stageParam.name.Length == 0) {
+					bool networkSynced = true;
+					FieldInfo field = stageParam.GetType().GetField("networkSynced");
+					if (field != null)
+					{
+						networkSynced = (bool) field.GetValue(stageParam);
+					}
+					if (stageParam.name == null || stageParam.name.Length == 0 || !networkSynced) {
 						continue;
 					}
 					string stageName = stageParam.name + (stageParam.saved ? " (saved/SYNCED)" : " (SYNCED)"); //"Stage" + stageId;
