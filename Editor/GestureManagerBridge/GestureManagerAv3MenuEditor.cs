@@ -121,7 +121,7 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
                 }
             }
             private LyumaAv3Runtime _runtime;
-            public StubAv3Module(LyumaAv3Runtime runtime, VRCAvatarDescriptor avatarDescriptor) : base(null, avatarDescriptor)
+            public StubAv3Module(LyumaAv3Runtime runtime, VRCAvatarDescriptor avatarDescriptor) : base(avatarDescriptor)
             {
                 _runtime = runtime;
             }
