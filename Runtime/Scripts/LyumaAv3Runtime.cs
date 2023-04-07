@@ -1868,16 +1868,12 @@ namespace Lyuma.Av3Emulator.Runtime
 				go.transform.position = go.transform.position + AvatarSyncSource.CloneCount * new Vector3(0.4f, 0.0f, 0.4f);
 				go.SetActive(true);
 			}
-			if (IsMirrorClone || IsShadowClone) {
-				NonLocalSyncInterval = 0.0f;
-			} else {
-				NonLocalSyncInterval = AvatarSyncSource.NonLocalSyncInterval;
-			}
+			NonLocalSyncInterval = AvatarSyncSource.NonLocalSyncInterval;
 			if (nextUpdateTime == 0.0f) {
 				nextUpdateTime = Time.time + NonLocalSyncInterval;
 			}
 			bool ShouldSyncThisFrame = (AvatarSyncSource != this && (Time.time >= nextUpdateTime || NonLocalSyncInterval <= 0.0f));
-			if (AvatarSyncSource != this) {
+			if (AvatarSyncSource != this && !IsMirrorClone && !IsShadowClone) {
 				IKSyncRadialMenu = AvatarSyncSource.IKSyncRadialMenu;
 				LyumaAv3Menu[] menus = AvatarSyncSource.GetComponents<LyumaAv3Menu>();
 				for (int i = 0; i < Ints.Count; i++) {
@@ -1910,6 +1906,21 @@ namespace Lyuma.Av3Emulator.Runtime
 					nextUpdateTime = Time.time + NonLocalSyncInterval;
 				}
 			}
+
+			if (IsShadowClone || IsMirrorClone)
+			{
+				for (int i = 0; i < Ints.Count; i++)
+				{
+					Ints[i].value = AvatarSyncSource.Ints[i].value;
+				}
+				for (int i = 0; i < Floats.Count; i++) { 
+					Floats[i].value = AvatarSyncSource.Floats[i].value;
+				}
+				for (int i = 0; i < Bools.Count; i++) {
+					Bools[i].value = AvatarSyncSource.Bools[i].value;
+				}
+			}
+			
 			if (AvatarSyncSource != this) {
 				// Simulate more continuous "IK sync" of these parameters.
 				VisemeInt = VisemeIdx = AvatarSyncSource.VisemeInt;
