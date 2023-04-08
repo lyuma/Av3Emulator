@@ -21,7 +21,7 @@
     "versionDefines": [
         {
             "name": "vrchat.blackstartx.gesture-manager",
-            "expression": "",
+            "expression": "3.8.3",
             "define": "GESTURE_MANAGER"
         }
     ],
