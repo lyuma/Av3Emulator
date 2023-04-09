@@ -85,7 +85,14 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (runtime != null) {
 						runtime.PreCullVisualOffset(cam);
 						if (runtime.MirrorClone != null) {
+							Vector3 oldOffset = runtime.MirrorClone.VisualOffset;
+							if (ViewBothRealAndMirror) {
+								if (runtime.MirrorClone.VisualOffset == new Vector3()) {
+									runtime.MirrorClone.VisualOffset = new Vector3(0, 0.5f + runtime.IKTrackingOutputData.ViewPosition.y * 1.01f, 0);
+								}
+							}
 							runtime.MirrorClone.PreCullVisualOffset(cam);
+							runtime.MirrorClone.VisualOffset = oldOffset;
 						}
 						if (runtime.ShadowClone != null) {
 							runtime.ShadowClone.PreCullVisualOffset(cam);

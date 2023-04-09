@@ -1745,26 +1745,28 @@ namespace Lyuma.Av3Emulator.Runtime
 		// Update is called once per frame
 		void NormalUpdate()
 		{
-			if (OSCConfigurationFile.OSCAvatarID == null) {
-				OSCConfigurationFile.OSCAvatarID = A3EOSCConfiguration.AVTR_EMULATOR_PREFIX + "Default";
-			}
-			if ((OSCConfigurationFile.UseRealPipelineIdJSONFile && OSCConfigurationFile.OSCAvatarID.StartsWith(A3EOSCConfiguration.AVTR_EMULATOR_PREFIX)) ||
-					(!OSCConfigurationFile.UseRealPipelineIdJSONFile && !OSCConfigurationFile.OSCAvatarID.StartsWith(A3EOSCConfiguration.AVTR_EMULATOR_PREFIX))) {
-				var pipelineManager = avadesc.GetComponent<VRC.Core.PipelineManager>();
-				string avatarid = pipelineManager != null ? pipelineManager.blueprintId : null;
-				OSCConfigurationFile.EnsureOSCJSONConfig(avadesc.expressionParameters, avatarid, this.gameObject.name);
-			}
-			if (OSCConfigurationFile.SaveOSCConfig) {
-				OSCConfigurationFile.SaveOSCConfig = false;
-				A3EOSCConfiguration.WriteJSON(OSCConfigurationFile.OSCFilePath, OSCConfigurationFile.OSCJsonConfig);
-			}
-			if (OSCConfigurationFile.LoadOSCConfig) {
-				OSCConfigurationFile.LoadOSCConfig = false;
-				OSCConfigurationFile.OSCJsonConfig = A3EOSCConfiguration.ReadJSON(OSCConfigurationFile.OSCFilePath);
-			}
-			if (OSCConfigurationFile.GenerateOSCConfig) {
-				OSCConfigurationFile.GenerateOSCConfig = false;
-				OSCConfigurationFile.OSCJsonConfig = A3EOSCConfiguration.GenerateOuterJSON(avadesc.expressionParameters, OSCConfigurationFile.OSCAvatarID, this.gameObject.name);
+			if (AvatarSyncSource == this) {
+				if (OSCConfigurationFile.OSCAvatarID == null) {
+					OSCConfigurationFile.OSCAvatarID = A3EOSCConfiguration.AVTR_EMULATOR_PREFIX + "Default";
+				}
+				if ((OSCConfigurationFile.UseRealPipelineIdJSONFile && OSCConfigurationFile.OSCAvatarID.StartsWith(A3EOSCConfiguration.AVTR_EMULATOR_PREFIX)) ||
+						(!OSCConfigurationFile.UseRealPipelineIdJSONFile && !OSCConfigurationFile.OSCAvatarID.StartsWith(A3EOSCConfiguration.AVTR_EMULATOR_PREFIX))) {
+					var pipelineManager = avadesc.GetComponent<VRC.Core.PipelineManager>();
+					string avatarid = pipelineManager != null ? pipelineManager.blueprintId : null;
+					OSCConfigurationFile.EnsureOSCJSONConfig(avadesc.expressionParameters, avatarid, this.gameObject.name);
+				}
+				if (OSCConfigurationFile.SaveOSCConfig) {
+					OSCConfigurationFile.SaveOSCConfig = false;
+					A3EOSCConfiguration.WriteJSON(OSCConfigurationFile.OSCFilePath, OSCConfigurationFile.OSCJsonConfig);
+				}
+				if (OSCConfigurationFile.LoadOSCConfig) {
+					OSCConfigurationFile.LoadOSCConfig = false;
+					OSCConfigurationFile.OSCJsonConfig = A3EOSCConfiguration.ReadJSON(OSCConfigurationFile.OSCFilePath);
+				}
+				if (OSCConfigurationFile.GenerateOSCConfig) {
+					OSCConfigurationFile.GenerateOSCConfig = false;
+					OSCConfigurationFile.OSCJsonConfig = A3EOSCConfiguration.GenerateOuterJSON(avadesc.expressionParameters, OSCConfigurationFile.OSCAvatarID, this.gameObject.name);
+				}
 			}
 			if (lastLegacyMenuGUI != legacyMenuGUI && AvatarSyncSource == this) {
 				lastLegacyMenuGUI = legacyMenuGUI;
@@ -1867,7 +1869,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				CreateShadowClone();
 				SetupCloneCaches();
 			}
-			if (emulator != null && AvatarSyncSource == null) {
+			if (emulator != null && AvatarSyncSource == this) {
 				if (LastViewMirrorReflection != ViewMirrorReflection) {
 					emulator.ViewMirrorReflection = ViewMirrorReflection;
 				} else {
