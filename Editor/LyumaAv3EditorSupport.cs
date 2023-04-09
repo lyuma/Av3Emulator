@@ -221,6 +221,16 @@ namespace Lyuma.Av3Emulator.Editor
 					if (tempEditor != null) Object.DestroyImmediate(tempEditor);
 				}
 			};
+			LyumaAv3Runtime.convertDynamicBones = (GameObject avatarObj) => {
+					var avatarDynamicsSetup = typeof(VRCExpressionsMenuEditor).Assembly.GetType("VRC.SDK3.Avatars.AvatarDynamicsSetup");
+					if (avatarDynamicsSetup != null) {
+						var ConvertToPhysBones = avatarDynamicsSetup.GetMethod("ConvertToPhysBones", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+						if (ConvertToPhysBones != null) {
+							Debug.Log("Convert dyn bone to phys");
+							ConvertToPhysBones.Invoke(null, new object[1]{avatarObj});
+						}
+					}
+			};
 		}
 
 		public static void OnPlayModeStateChange(UnityEditor.PlayModeStateChange pmsc) {

@@ -48,6 +48,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		public static ApplyOnEnableWorkaroundDelegateType ApplyOnEnableWorkaroundDelegate;
 		public delegate void ForceUpdateDescriptorCollidersFunc(VRCAvatarDescriptor descriptor);
 		public static ForceUpdateDescriptorCollidersFunc forceUpdateDescriptorColliders;
+		public delegate void ConvertDynamicBonesFunc (GameObject avatarObj);
+		public static ConvertDynamicBonesFunc convertDynamicBones;
 
 		// This is injected by Editor-scope scripts to give us access to VRCBuildPipelineCallbacks.
 		public static Action<GameObject> InvokeOnPreProcessAvatar = (_) => { };
@@ -940,6 +942,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 			}
 			if (!IsMirrorClone && !IsShadowClone && AvatarSyncSource == this) {
+				convertDynamicBones(this.gameObject);
 				if (this.emulator != null) {
 					if (this.emulator.DescriptorColliders != DescriptorCollidersSendersHelper.DescriptorExtractionType.None) {
 						forceUpdateDescriptorColliders(avadesc);
@@ -1526,6 +1529,12 @@ namespace Lyuma.Av3Emulator.Runtime
 			{
 				return;
 			}
+			if (MirrorClone != null) {
+				allMirrorTransforms = MirrorClone.gameObject.GetComponentsInChildren<Transform>(true);
+			}
+			if (ShadowClone != null) {
+				allShadowTransforms = ShadowClone.gameObject.GetComponentsInChildren<Transform>(true);
+			}
 			List<(MeshRenderer, MeshRenderer, MeshRenderer)> renderers = new List<(MeshRenderer, MeshRenderer, MeshRenderer)>();
 			List<(SkinnedMeshRenderer, SkinnedMeshRenderer, SkinnedMeshRenderer)> skinnedRenderers = new List<(SkinnedMeshRenderer, SkinnedMeshRenderer, SkinnedMeshRenderer)>();
 			for (int i = 0; i < allTransforms.Length; i++)
@@ -1534,11 +1543,11 @@ namespace Lyuma.Av3Emulator.Runtime
 				if (baseRenderer != null)
 				{
 					MeshRenderer mirrorRenderer = null;
-					if (allMirrorTransforms != null) {
+					if (allMirrorTransforms != null && allMirrorTransforms.Length > i) {
 						mirrorRenderer = allMirrorTransforms[i].GetComponent<MeshRenderer>();
 					}
 					MeshRenderer shadowRenderer = null;
-					if (allShadowTransforms != null)
+					if (allShadowTransforms != null && allShadowTransforms.Length > i)
 					{
 						shadowRenderer = allShadowTransforms[i].GetComponent<MeshRenderer>();
 					}
@@ -1553,11 +1562,11 @@ namespace Lyuma.Av3Emulator.Runtime
 				if (skinnedBaseRenderer != null)
 				{
 					SkinnedMeshRenderer skinnedMirrorRenderer = null;
-					if (allMirrorTransforms != null) {
+					if (allMirrorTransforms != null && allMirrorTransforms.Length > i) {
 						skinnedMirrorRenderer = allMirrorTransforms[i].GetComponent<SkinnedMeshRenderer>();
 					}
 					SkinnedMeshRenderer skinnedShadowRenderer = null;
-					if (allShadowTransforms != null)
+					if (allShadowTransforms != null && allShadowTransforms.Length > i)
 					{
 						skinnedShadowRenderer = allShadowTransforms[i].GetComponent<SkinnedMeshRenderer>();
 					}
@@ -1595,6 +1604,9 @@ namespace Lyuma.Av3Emulator.Runtime
 					ShadowClone.transform.localRotation = transform.localRotation;
 					ShadowClone.transform.localScale = transform.localScale;
 					ShadowClone.transform.position = transform.position;
+				}
+				if (rendererCache == null || rendererCache.Length == 0) {
+					SetupCloneCaches();
 				}
 				foreach (Transform[] allXTransforms in new Transform[][]{allMirrorTransforms, allShadowTransforms}) {
 					if (allXTransforms != null) {
