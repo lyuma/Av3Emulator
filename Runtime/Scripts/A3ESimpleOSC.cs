@@ -680,6 +680,6 @@ namespace Lyuma.Av3Emulator.Runtime
 			udpThreadState.SendBytes(buffer, encodedLength, unconnectedEndpoint);
 		}
 
-    // udpServer.Send(new byte[] { 1 }, 1); // if data is received reply letting the client know that we got his data          
-    }
+	// udpServer.Send(new byte[] { 1 }, 1); // if data is received reply letting the client know that we got his data          
+	}
 }

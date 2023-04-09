@@ -25,30 +25,30 @@ using VRC.SDK3.Avatars.ScriptableObjects;
 
 namespace Lyuma.Av3Emulator.Runtime
 {
-    public class GestureManagerAv3Menu : LyumaAv3Menu
-    {
+	public class GestureManagerAv3Menu : LyumaAv3Menu
+	{
 
-        // public LyumaAv3Runtime Runtime;
-        // public VRCExpressionsMenu RootMenu;
-        // public bool IsMenuOpen { get; private set; }
-        // private int? _activeControlIndex = null;
-        // private string _activeControlParameterName;
-        public bool compact = true;
+		// public LyumaAv3Runtime Runtime;
+		// public VRCExpressionsMenu RootMenu;
+		// public bool IsMenuOpen { get; private set; }
+		// private int? _activeControlIndex = null;
+		// private string _activeControlParameterName;
+		public bool compact = true;
 
-        private void Awake()
-        {
-            IsMenuOpen = true;
+		private void Awake()
+		{
+			IsMenuOpen = true;
 
-        if (LyumaAv3Runtime.addRuntimeDelegate != null) {
-                LyumaAv3Runtime.addRuntimeDelegate(this);
-            }
-        }
+		if (LyumaAv3Runtime.addRuntimeDelegate != null) {
+				LyumaAv3Runtime.addRuntimeDelegate(this);
+			}
+		}
 
-        // public void ToggleMenu()
-        // {
+		// public void ToggleMenu()
+		// {
 
-        //     IsMenuOpen = !IsMenuOpen;
-        // }
+		//	 IsMenuOpen = !IsMenuOpen;
+		// }
 
-    }
+	}
 }

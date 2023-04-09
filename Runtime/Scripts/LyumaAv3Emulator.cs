@@ -35,11 +35,11 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		[Header("Fake VR or Desktop mode selection")]
 		public bool DefaultToVR = false;
-        public DefaultPoseOptions DefaultPose = DefaultPoseOptions.Standing;
+		public DefaultPoseOptions DefaultPose = DefaultPoseOptions.Standing;
 		public LyumaAv3Runtime.TrackingTypeIndex DefaultTrackingType = LyumaAv3Runtime.TrackingTypeIndex.HeadHands;
 		[Header("Emulation")]
 		public VRCAvatarDescriptor.AnimLayerType DefaultAnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base; 
-        public DescriptorCollidersSendersHelper.DescriptorExtractionType DescriptorColliders = DescriptorCollidersSendersHelper.DescriptorExtractionType.CollidersAndSenders;
+		public DescriptorCollidersSendersHelper.DescriptorExtractionType DescriptorColliders = DescriptorCollidersSendersHelper.DescriptorExtractionType.CollidersAndSenders;
 		public bool RestartEmulator;
 		private bool RestartingEmulator;
 		[Tooltip("Simulate behavior with sub-animator parameter drivers prior to the 2021.1.1 patch (19 Jan 2021)")]
@@ -67,14 +67,14 @@ namespace Lyuma.Av3Emulator.Runtime
 		public LinkedList<LyumaAv3Runtime> forceActiveRuntimes = new LinkedList<LyumaAv3Runtime>();
 
 		public enum DefaultPoseOptions
-        {
+		{
 			Standing,
 			TPose,
 			IKPose,
 			AFK,
 			InStationAndSeated,
 			InStation
-        }
+		}
 
 		private void Awake()
 		{
@@ -111,13 +111,13 @@ namespace Lyuma.Av3Emulator.Runtime
 						GameObject.DestroyImmediate(oml);
 					}
 
-                    switch (DefaultPose)
-                    {
+					switch (DefaultPose)
+					{
 						case DefaultPoseOptions.TPose:
 							runtime.TPoseCalibration = true;
 							break;
 						case DefaultPoseOptions.IKPose:
-                            runtime.IKPoseCalibration = true;
+							runtime.IKPoseCalibration = true;
 							break;
 						case DefaultPoseOptions.AFK:
 							runtime.AFK = true;
@@ -129,14 +129,14 @@ namespace Lyuma.Av3Emulator.Runtime
 						case DefaultPoseOptions.InStation:
 							runtime.InStation = true;
 							break;
-                    }
+					}
 
 					runtime.emulator = this;
 					runtime.VRMode = DefaultToVR;
 					runtime.TrackingType = DefaultTrackingType;
 					runtime.DebugDuplicateAnimator = DefaultAnimatorToDebug;
 					runtime.EnableHeadScaling = EnableHeadScaling;
-                    runtimes.Add(runtime);
+					runtimes.Add(runtime);
 					if (!alreadyHadComponent && !DisableShadowClone) {
 						runtime.CreateShadowClone();
 					}
@@ -150,7 +150,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					}
 					runtime.DisableMirrorAndShadowClones = DisableShadowClone && DisableMirrorClone;
 
-                } catch (System.Exception e) {
+				} catch (System.Exception e) {
 					Debug.LogException(e);
 				}
 			}

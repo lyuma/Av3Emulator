@@ -300,11 +300,11 @@ namespace Lyuma.Av3Emulator.Runtime
 		public static readonly Type[] MirrorCloneComponentBlacklist = new Type[] {
 			typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Rigidbody), typeof(Joint)
 		};
-        public static readonly Type[] ShadowCloneComponentBlacklist = new Type[] {
+		public static readonly Type[] ShadowCloneComponentBlacklist = new Type[] {
 			typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Light), typeof(ParticleSystemRenderer), typeof(Rigidbody), typeof(Joint)
 		
 		};
-        public static readonly HashSet<string> CloneStringComponentBlacklist = new HashSet<string>() { "DynamicBone", "VRCContact", "VRCPhysBone", "VRCSpatialAudioSource" };
+		public static readonly HashSet<string> CloneStringComponentBlacklist = new HashSet<string>() { "DynamicBone", "VRCContact", "VRCPhysBone", "VRCSpatialAudioSource" };
 
 		[Header("Built-in inputs / Viseme")]
 		public VisemeIndex Viseme;
@@ -1001,28 +1001,28 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		public void CreateMirrorClone() {
-            if (AvatarSyncSource == this && GetComponent<PipelineSaver>() == null)
-            {
-                OriginalSourceClone.IsMirrorClone = true;
-                MirrorClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
-                MirrorClone.GetComponent<Animator>().avatar = null;
-                OriginalSourceClone.IsMirrorClone = false;
-                GameObject o = MirrorClone.gameObject;
-                o.name = gameObject.name + " (MirrorReflection)";
-                o.SetActive(true);
-                allMirrorTransforms = MirrorClone.gameObject.GetComponentsInChildren<Transform>(true);
-                foreach (Transform t in allMirrorTransforms)
-                {
-                    foreach (Component component in t.GetComponents<Component>().Reverse())
-                    {
-                        if (!component || CloneComponentIsBlacklisted(component, MirrorCloneComponentBlacklist))
-                        {
-                            DestroyImmediate(component);
-                        }
-                    }
-                }
-            }
-        }
+			if (AvatarSyncSource == this && GetComponent<PipelineSaver>() == null)
+			{
+				OriginalSourceClone.IsMirrorClone = true;
+				MirrorClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
+				MirrorClone.GetComponent<Animator>().avatar = null;
+				OriginalSourceClone.IsMirrorClone = false;
+				GameObject o = MirrorClone.gameObject;
+				o.name = gameObject.name + " (MirrorReflection)";
+				o.SetActive(true);
+				allMirrorTransforms = MirrorClone.gameObject.GetComponentsInChildren<Transform>(true);
+				foreach (Transform t in allMirrorTransforms)
+				{
+					foreach (Component component in t.GetComponents<Component>().Reverse())
+					{
+						if (!component || CloneComponentIsBlacklisted(component, MirrorCloneComponentBlacklist))
+						{
+							DestroyImmediate(component);
+						}
+					}
+				}
+			}
+		}
 
 		public void CreateShadowClone() {
 			if (AvatarSyncSource == this && GetComponent<PipelineSaver>() == null) {
@@ -1034,19 +1034,19 @@ namespace Lyuma.Av3Emulator.Runtime
 				o.name = gameObject.name + " (ShadowClone)";
 				o.SetActive(true);
 				allShadowTransforms = ShadowClone.gameObject.GetComponentsInChildren<Transform>(true);
-                foreach (Transform t in allShadowTransforms)
-                {
+				foreach (Transform t in allShadowTransforms)
+				{
 					foreach(Component component in t.GetComponents<Component>().Reverse())
-                        if (!component || CloneComponentIsBlacklisted(component, ShadowCloneComponentBlacklist))
-                        {
-                            DestroyImmediate(component);
-                        }
-                        else if (component.GetType() == typeof(SkinnedMeshRenderer) || component.GetType() == typeof(MeshRenderer))
-                        {
-                            Renderer renderer = component as Renderer;
-                            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly; // ShadowCastingMode.TwoSided isn't accounted for and does not work locally
-                        }
-                }
+						if (!component || CloneComponentIsBlacklisted(component, ShadowCloneComponentBlacklist))
+						{
+							DestroyImmediate(component);
+						}
+						else if (component.GetType() == typeof(SkinnedMeshRenderer) || component.GetType() == typeof(MeshRenderer))
+						{
+							Renderer renderer = component as Renderer;
+							renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly; // ShadowCastingMode.TwoSided isn't accounted for and does not work locally
+						}
+				}
 
 				foreach (Renderer renderer in gameObject.GetComponentsInChildren<Renderer>(true)) {
 					renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; // ShadowCastingMode.TwoSided isn't accounted for and does not work locally
@@ -1054,11 +1054,11 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 		}
 
-        public bool CloneComponentIsBlacklisted(Component component, Type[] typeBlacklist)
-        {
-            var type = component.GetType();
-            return typeBlacklist.Any(bt => type.IsSubclassOf(bt) || type == bt) || CloneStringComponentBlacklist.Any(bt => type.ToString().Contains(bt));
-        }
+		public bool CloneComponentIsBlacklisted(Component component, Type[] typeBlacklist)
+		{
+			var type = component.GetType();
+			return typeBlacklist.Any(bt => type.IsSubclassOf(bt) || type == bt) || CloneStringComponentBlacklist.Any(bt => type.ToString().Contains(bt));
+		}
 
 		private void InitializeAnimator()
 		{
@@ -1094,14 +1094,14 @@ namespace Lyuma.Av3Emulator.Runtime
 			VRCAvatarDescriptor.CustomAnimLayer[] speciallayers = avadesc.specialAnimationLayers;
 			List<VRCAvatarDescriptor.CustomAnimLayer> allLayers = new List<VRCAvatarDescriptor.CustomAnimLayer>();
 			// foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
-			//     if (AnimatorToDebug == cal.type) {
-			//         allLayers.Add(cal);
-			//     }
+			//	 if (AnimatorToDebug == cal.type) {
+			//		 allLayers.Add(cal);
+			//	 }
 			// }
 			// foreach (VRCAvatarDescriptor.CustomAnimLayer cal in speciallayers) {
-			//     if (AnimatorToDebug == cal.type) {
-			//         allLayers.Add(cal);
-			//     }
+			//	 if (AnimatorToDebug == cal.type) {
+			//		 allLayers.Add(cal);
+			//	 }
 			// }
 			int i = 0;
 			if (DebugDuplicateAnimator != VRCAvatarDescriptor.AnimLayerType.Base && !IsMirrorClone && !IsShadowClone) {
@@ -2875,7 +2875,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					GestureLeftWeight = argFloat;
 					break;
 				case "GestureLeft":
-					GestureLeftIdx = argInt;                             
+					GestureLeftIdx = argInt;
 					break;
 				case "Voice":
 					Voice = argFloat;
@@ -2934,7 +2934,7 @@ namespace Lyuma.Av3Emulator.Runtime
 						if (msgPath.StartsWith("/avatar/parameters/")) {
 							ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
 						}
-						if (BUILTIN_PARAMETERS.Contains( ParamName ) ) {                     
+						if (BUILTIN_PARAMETERS.Contains( ParamName ) ) {
 							processOSCVRCInputMessage( ParamName, arguments[0]);
 						} else if (!IntToIndex.ContainsKey(ParamName) && !BoolToIndex.ContainsKey(ParamName) && !FloatToIndex.ContainsKey(ParamName)) {
 							if (LogOSCWarnings) { //if (!ParamName.EndsWith("_Angle") && !ParamName.EndsWith("_IsGrabbed") && !ParamName.EndsWith("_Stretch")) {
@@ -2969,10 +2969,10 @@ namespace Lyuma.Av3Emulator.Runtime
 						if (FloatToIndex.TryGetValue(ParamName, out idx)) {
 							Floats[idx].value = (float)(arguments[0]);
 							Floats[idx].exportedValue = Floats[idx].value;
-                        }
-                    }
-                }
-            }
-        }
-    }
+						}
+					}
+				}
+			}
+		}
+	}
 }
