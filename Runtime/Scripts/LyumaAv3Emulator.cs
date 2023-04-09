@@ -57,8 +57,11 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool DisableShadowClone;
 		private bool lastHead;
 		public bool EnableHeadScaling;
+		[Header("Clone visualization and position offset")]
 		public bool ViewMirrorReflection;
 		public bool ViewBothRealAndMirror;
+		public bool VisuallyOffsetClonesOnly = true;
+		public bool ApplyClonePositionOffset = false;
 
 		static public LyumaAv3Emulator emulatorInstance;
 		static public RuntimeAnimatorController EmptyController;
@@ -76,8 +79,55 @@ namespace Lyuma.Av3Emulator.Runtime
 			InStation
 		}
 
+		private void PreCull(Camera cam) {
+			if (ApplyClonePositionOffset || VisuallyOffsetClonesOnly) {
+				foreach (var runtime in runtimes) {
+					if (runtime != null) {
+						runtime.PreCullVisualOffset(cam);
+						if (runtime.MirrorClone != null) {
+							runtime.MirrorClone.PreCullVisualOffset(cam);
+						}
+						if (runtime.ShadowClone != null) {
+							runtime.ShadowClone.PreCullVisualOffset(cam);
+						}
+					}
+					if (runtime != null && runtime.NonLocalClones != null) {
+						foreach (LyumaAv3Runtime nonLocalClone in runtime.NonLocalClones) {
+							if (nonLocalClone != null) {
+								nonLocalClone.PreCullVisualOffset(cam);
+							}
+						}
+					}
+				}
+			}
+		}
+		private void PostRender(Camera cam) {
+			if (!ApplyClonePositionOffset) {
+				foreach (var runtime in runtimes) {
+					if (runtime != null) {
+						runtime.PostRenderVisualOffset(cam);
+						if (runtime.MirrorClone != null) {
+							runtime.MirrorClone.PostRenderVisualOffset(cam);
+						}
+						if (runtime.ShadowClone != null) {
+							runtime.ShadowClone.PostRenderVisualOffset(cam);
+						}
+					}
+					if (runtime != null && runtime.NonLocalClones != null) {
+						foreach (LyumaAv3Runtime nonLocalClone in runtime.NonLocalClones) {
+							if (nonLocalClone != null) {
+								nonLocalClone.PostRenderVisualOffset(cam);
+							}
+						}
+					}
+				}
+			}
+		}
+
 		private void Awake()
 		{
+			Camera.onPreCull += PreCull;
+			Camera.onPostRender += PostRender;
 			Animator animator = gameObject.GetOrAddComponent<Animator>();
 			animator.enabled = false;
 			animator.runtimeAnimatorController = EmptyController;
@@ -160,6 +210,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		private void OnDestroy() {
+			Camera.onPreCull -= PreCull;
+			Camera.onPostRender -= PostRender;
 			foreach (var runtime in runtimes) {
 				Destroy(runtime);
 			}

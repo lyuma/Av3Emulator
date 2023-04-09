@@ -94,11 +94,15 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool DisableMirrorAndShadowClones;
 		[HideInInspector] public LyumaAv3Runtime MirrorClone;
 		[HideInInspector] public LyumaAv3Runtime ShadowClone;
+		[HideInInspector] public List<LyumaAv3Runtime> NonLocalClones = new List<LyumaAv3Runtime>();
 		[Tooltip("To view both copies at once")] public bool DebugOffsetMirrorClone = false;
 		public bool ViewMirrorReflection;
 		private bool LastViewMirrorReflection;
 		public bool ViewBothRealAndMirror;
 		private bool LastViewBothRealAndMirror;
+		public Vector3 VisualOffset;
+		private Vector3 SavedPosition;
+		private bool IsCurrentlyVisuallyOffset = false;
 		[HideInInspector] public VRCAvatarDescriptor avadesc;
 		Avatar animatorAvatar;
 		Animator animator;
@@ -1678,6 +1682,20 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 		}
 
+		public void PreCullVisualOffset(Camera cam) {
+			if (!IsCurrentlyVisuallyOffset) {
+				SavedPosition = transform.position;
+				transform.position += VisualOffset;
+				IsCurrentlyVisuallyOffset = true;
+			}
+		}
+		public void PostRenderVisualOffset(Camera cam) {
+			if (IsCurrentlyVisuallyOffset) {
+				transform.position = SavedPosition;
+				IsCurrentlyVisuallyOffset = false;
+			}
+		}
+
 		void FixedUpdate() {
 			if (Jump && !WasJump && Grounded) {
 				JumpingVelocity = new Vector3(0.0f, JumpPower, 0.0f);
@@ -1883,12 +1901,15 @@ namespace Lyuma.Av3Emulator.Runtime
 
 			if (CreateNonLocalClone) {
 				CreateNonLocalClone = false;
+				AvatarSyncSource.CloneCount++;
+				Vector3 oldOffset = VisualOffset;
+				OriginalSourceClone.VisualOffset = AvatarSyncSource.CloneCount * new Vector3(0.4f, 0.0f, 0.4f);
 				GameObject go = GameObject.Instantiate(OriginalSourceClone.gameObject);
 				go.hideFlags = 0;
-				AvatarSyncSource.CloneCount++;
 				go.name = go.name.Substring(0, go.name.Length - 7) + " (Non-Local " + AvatarSyncSource.CloneCount + ")";
-				go.transform.position = go.transform.position + AvatarSyncSource.CloneCount * new Vector3(0.4f, 0.0f, 0.4f);
 				go.SetActive(true);
+				OriginalSourceClone.VisualOffset = new Vector3(0,0,0);
+				NonLocalClones.Add(go.GetComponent<LyumaAv3Runtime>());
 			}
 			NonLocalSyncInterval = AvatarSyncSource.NonLocalSyncInterval;
 			if (nextUpdateTime == 0.0f) {
