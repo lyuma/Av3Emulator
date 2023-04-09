@@ -2,6 +2,20 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
+### New features in v 3.1.0:
+
+3.1.0:
+
+* Make clone offset purely visual (from preCull until postRender). This may make testing network sync with contacts easier.
+* Perform conversion of DynamicBone for legacy avatars that still use them.
+* Implement descriptor colliders & senders emulation. Thanks, Dreadrith.
+* Add local expression parameter support
+* Add option for default poses. Thanks, Dreadrith.
+* Add direct syncing between local and shadow/mirror clone. OSC now only initializes once.
+* Performance optimizations for update loop. Thanks, jellejurre.
+* Add renderer caching, fix skinned renderer mirror/shadow toggles. Thanks, jellejurre
+* Compatibiltiy with GestureManager 3.8.3 only. Will enable GM menu by default if installed.
+
 ### New features in v 3.0.1:
 
 3.0.1:
