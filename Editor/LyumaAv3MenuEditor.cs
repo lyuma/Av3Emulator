@@ -59,6 +59,7 @@ namespace Lyuma.Av3Emulator.Editor
 			GUILayout.EndHorizontal();
 
 			RenderButtonMenu();
+			EditorGUILayout.LabelField("Install Gesture Manager from VCC to use as radial menu.");
 		}
 
 		protected void RenderButtonMenu() {

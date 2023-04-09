@@ -44,8 +44,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		private bool RestartingEmulator;
 		[Tooltip("Simulate behavior with sub-animator parameter drivers prior to the 2021.1.1 patch (19 Jan 2021)")]
 		public bool legacySubAnimatorParameterDriverMode = false;
-		public bool legacyMenuGUI = true;
-		private bool lastLegacyMenuGUI = true;
+		public bool legacyMenuGUI = false;
+		private bool lastLegacyMenuGUI = false;
 		[Header("Unity Integrations")]
 		public bool RunPreprocessAvatarHook = false;
 		public bool DisableAvatarDynamicsIntegration;

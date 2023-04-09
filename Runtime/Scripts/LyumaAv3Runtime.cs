@@ -64,7 +64,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool RefreshExpressionParams;
 		[Tooltip("Simulates saving and reloading the avatar")]
 		public bool KeepSavedParametersOnReset = true;
-		[HideInInspector] public bool legacyMenuGUI = true;
+		[HideInInspector] public bool legacyMenuGUI = false;
 		private bool lastLegacyMenuGUI = true;
 		[Header("Animator to Debug. Unity is glitchy when not 'Base'.")]
 		[Tooltip("Selects the playable layer to be visible with parameters in the Animator. If you view any other playable in the Animator window, parameters will say 0 and will not update.")]

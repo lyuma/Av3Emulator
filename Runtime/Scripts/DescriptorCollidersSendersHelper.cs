@@ -50,7 +50,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 
 			List<VRCPhysBoneCollider> createdColliders = new List<VRCPhysBoneCollider>();
-			var collidingBones = descriptor.GetComponentsInChildren<VRCPhysBone>().Where(p => p.allowCollision);
+			var collidingBones = descriptor.GetComponentsInChildren<VRCPhysBone>().Where(p => 0 != (int)p.allowCollision);
 
 			void ExtractCollider(VRCAvatarDescriptor.ColliderConfig config, HumanBodyBones matchedBone, string collisionName, bool isSenderOnly = false)
 			{
