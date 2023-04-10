@@ -22,7 +22,6 @@ using System.Collections.Generic;
 using System.Linq;
 using VRC.SDK3.Avatars.Components;
 using System.Reflection;
-using UnityEditor;
 using VRC.Dynamics;
 using VRC.SDK3.Dynamics.Contact.Components;
 using VRC.SDK3.Dynamics.PhysBone.Components;
@@ -49,28 +48,26 @@ namespace Lyuma.Av3Emulator.Runtime
 				return;
 			}
 
-			List<VRCPhysBoneCollider> createdColliders = new List<VRCPhysBoneCollider>();
-			var collidingBones = descriptor.GetComponentsInChildren<VRCPhysBone>().Where(p =>
-			{
-				using (var so = new SerializedObject(p))
-				{
-					var allowCollision = so.FindProperty("allowCollision");
-					if (allowCollision.propertyType == SerializedPropertyType.Boolean)
-						return allowCollision.boolValue;
+			FieldInfo allowCollisionField = typeof(VRCPhysBoneBase).GetField("allowCollision");
+			FieldInfo collisionFilterField = typeof(VRCPhysBoneBase).GetField("collisionFilter");
+			FieldInfo filterAllowSelfField = collisionFilterField != null ? collisionFilterField.FieldType.GetField("allowSelf") : null;
 
-					switch (allowCollision.enumValueIndex)
-					{
-						default: return false;
-						case 1: return true;
-						case 2:
-						{
-							var collisionFilter = so.FindProperty("collisionFilter");
-							return collisionFilter.FindPropertyRelative("allowSelf").boolValue;
-						}
-					}
+			bool AllowsSelfCollision(VRCPhysBone pb)
+			{
+				if (collisionFilterField == null)
+					return (bool) allowCollisionField.GetValue(pb);
+
+				switch ((int) allowCollisionField.GetValue(pb))
+				{
+					default: return false;
+					case 1: return true;
+					case 2: return (bool) filterAllowSelfField.GetValue(collisionFilterField.GetValue(pb));
 
 				}
-			});
+			}
+
+			List<VRCPhysBoneCollider> createdColliders = new List<VRCPhysBoneCollider>();
+			var collidingBones = descriptor.GetComponentsInChildren<VRCPhysBone>().Where(AllowsSelfCollision);
 
 			void ExtractCollider(VRCAvatarDescriptor.ColliderConfig config, HumanBodyBones matchedBone, string collisionName, bool isSenderOnly = false)
 			{
