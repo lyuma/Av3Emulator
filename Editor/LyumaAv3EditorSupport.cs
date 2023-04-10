@@ -54,18 +54,6 @@ namespace Lyuma.Av3Emulator.Editor
 			{VRCAvatarDescriptor.AnimLayerType.Gesture, "404d228aeae421f4590305bc4cdaba16"},
 		};
 	
-		static Dictionary<VRCAvatarDescriptor.AnimLayerType, AvatarMask> animLayerToDefaultAvaMaskFile = new Dictionary<VRCAvatarDescriptor.AnimLayerType, AvatarMask>
-		{
-			{VRCAvatarDescriptor.AnimLayerType.TPose, LyumaAv3Masks.musclesOnly},
-			{VRCAvatarDescriptor.AnimLayerType.IKPose, LyumaAv3Masks.musclesOnly},
-			{VRCAvatarDescriptor.AnimLayerType.Base, null},//"LyumaFullMask"},
-			{VRCAvatarDescriptor.AnimLayerType.Sitting, null},//"LyumaFullMask"},
-			{VRCAvatarDescriptor.AnimLayerType.Additive, null},//"LyumaFullMask"},
-			{VRCAvatarDescriptor.AnimLayerType.FX, LyumaAv3Masks.emptyMask}, // TODO
-			{VRCAvatarDescriptor.AnimLayerType.Action, null},//"vrc_MusclesOnly"},
-			{VRCAvatarDescriptor.AnimLayerType.Gesture, LyumaAv3Masks.handsOnly},
-		};
-
 		static void InitDefaults() {
 			foreach (var kv in animLayerToDefaultFile) {
 				if (kv.Value == null) {
@@ -88,9 +76,6 @@ namespace Lyuma.Av3Emulator.Editor
 					}
 					LyumaAv3Runtime.animLayerToDefaultController[kv.Key] = ac;
 				}
-			}
-			foreach (var kv in animLayerToDefaultAvaMaskFile) {
-				LyumaAv3Runtime.animLayerToDefaultAvaMask[kv.Key] = kv.Value;
 			}
 
 			AnimatorController emptycontroller = new AnimatorController();

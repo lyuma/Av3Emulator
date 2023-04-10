@@ -7,14 +7,46 @@ namespace Lyuma.Av3Emulator.Runtime
 	public class LyumaAv3Masks
 	{
 		private static AvatarMask _emptyMask = null;
-		public static AvatarMask emptyMask => _emptyMask ?? InitializeMasks() ?? _emptyMask;
+		public static AvatarMask emptyMask {
+			get {
+				if (_emptyMask != null) {
+					return _emptyMask;
+				}
+				InitializeMasks();
+				return _emptyMask;
+			}
+		}
 
 		public static AvatarMask _fullMask;
-		public static AvatarMask fullMask => _fullMask ?? InitializeMasks() ?? _fullMask;
+		public static AvatarMask fullMask {
+			get {
+				if (_fullMask != null) {
+					return _fullMask;
+				}
+				InitializeMasks();
+				return _fullMask;
+			}
+		}
 		public static AvatarMask _handsOnly;
-		public static AvatarMask handsOnly => _handsOnly ?? InitializeMasks() ?? _handsOnly;
+		public static AvatarMask handsOnly {
+			get {
+				if (_handsOnly != null) {
+					return _handsOnly;
+				}
+				InitializeMasks();
+				return _handsOnly;
+			}
+		}
 		public static AvatarMask _musclesOnly;
-		public static AvatarMask musclesOnly => _musclesOnly ?? InitializeMasks() ?? _musclesOnly;
+		public static AvatarMask musclesOnly {
+			get {
+				if (_musclesOnly != null) {
+					return _musclesOnly;
+				}
+				InitializeMasks();
+				return _musclesOnly;
+			}
+		}
 
 		static AvatarMask InitializeMasks() // always returns null to workaround stupid c# syntax issue
 		{

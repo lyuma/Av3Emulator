@@ -37,7 +37,6 @@ namespace Lyuma.Av3Emulator.Runtime
 	public class LyumaAv3Runtime : MonoBehaviour
 	{
 		static public Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController> animLayerToDefaultController = new Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController>();
-		static public Dictionary<VRCAvatarDescriptor.AnimLayerType, AvatarMask> animLayerToDefaultAvaMask = new Dictionary<VRCAvatarDescriptor.AnimLayerType, AvatarMask>();
 		public delegate void UpdateSelectionFunc(UnityEngine.Object obj);
 		public static UpdateSelectionFunc updateSelectionDelegate;
 		public delegate void AddRuntime(Component runtime);
@@ -1216,16 +1215,22 @@ namespace Lyuma.Av3Emulator.Runtime
 				i++; // Ignore zeroth layer.
 				bool additive = (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.Additive);
 				RuntimeAnimatorController ac = null;
-				AvatarMask mask;
+				AvatarMask mask = null;
 				if (vrcAnimLayer.isDefault) {
 					ac = animLayerToDefaultController[vrcAnimLayer.type];
-					mask = animLayerToDefaultAvaMask[vrcAnimLayer.type];
 				} else
 				{
 					ac = vrcAnimLayer.animatorController;
 					mask = vrcAnimLayer.mask;
-					if (mask == null && vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.FX) {
-						mask = animLayerToDefaultAvaMask[vrcAnimLayer.type]; // When empty, defaults to a mask that prevents muscle overrides.
+				}
+				if (vrcAnimLayer.isDefault || (mask == null && vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.FX)) {
+					//defaults to a mask that prevents muscle overrides.
+					if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.FX) {
+						mask = LyumaAv3Masks.emptyMask;
+					} else if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.Gesture) {
+						mask = LyumaAv3Masks.handsOnly;
+					} else if (vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.TPose || vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.IKPose) {
+						mask = LyumaAv3Masks.musclesOnly;
 					}
 				}
 				if (ac == null) {
