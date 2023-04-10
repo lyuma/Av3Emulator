@@ -31,7 +31,7 @@ namespace Lyuma.Av3Emulator.Runtime
 	[RequireComponent(typeof(Animator))]
 	public class LyumaAv3Emulator : MonoBehaviour
 	{
-		static readonly ulong EMULATOR_VERSION = 0x2_09_08_00;
+		static readonly ulong EMULATOR_VERSION = 0x3_01_03_00;
 
 		[Header("Fake VR or Desktop mode selection")]
 		public bool DefaultToVR = false;
@@ -44,8 +44,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		private bool RestartingEmulator;
 		[Tooltip("Simulate behavior with sub-animator parameter drivers prior to the 2021.1.1 patch (19 Jan 2021)")]
 		public bool legacySubAnimatorParameterDriverMode = false;
-		public bool legacyMenuGUI = false;
-		private bool lastLegacyMenuGUI = false;
+		public bool disableRadialMenu = false;
+		private bool lastDisableRadialMenu = false;
 		[Header("Unity Integrations")]
 		public bool RunPreprocessAvatarHook = false;
 		public bool DisableAvatarDynamicsIntegration;
@@ -267,10 +267,12 @@ namespace Lyuma.Av3Emulator.Runtime
 					runtime.EnableHeadScaling = EnableHeadScaling;
 				}
 			}
-			if (lastLegacyMenuGUI != legacyMenuGUI) {
-				lastLegacyMenuGUI = legacyMenuGUI;
+			if (lastDisableRadialMenu != disableRadialMenu) {
+				lastDisableRadialMenu = disableRadialMenu;
 				foreach (var runtime in runtimes) {
-					runtime.legacyMenuGUI = legacyMenuGUI;
+					foreach (var av3MenuComponent in runtime.GetComponents<LyumaAv3Menu>()) {
+						av3MenuComponent.useLegacyMenu = disableRadialMenu;
+					}
 				}
 			}
 			if (CreateNonLocalClone) {

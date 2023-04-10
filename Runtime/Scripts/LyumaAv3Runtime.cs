@@ -63,8 +63,6 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool RefreshExpressionParams;
 		[Tooltip("Simulates saving and reloading the avatar")]
 		public bool KeepSavedParametersOnReset = true;
-		[HideInInspector] public bool legacyMenuGUI = false;
-		private bool lastLegacyMenuGUI = true;
 		[Header("Animator to Debug. Unity is glitchy when not 'Base'.")]
 		[Tooltip("Selects the playable layer to be visible with parameters in the Animator. If you view any other playable in the Animator window, parameters will say 0 and will not update.")]
 		public VRCAvatarDescriptor.AnimLayerType DebugDuplicateAnimator;
@@ -99,9 +97,6 @@ namespace Lyuma.Av3Emulator.Runtime
 		private bool LastViewMirrorReflection;
 		public bool ViewBothRealAndMirror;
 		private bool LastViewBothRealAndMirror;
-		public Vector3 VisualOffset;
-		private Vector3 SavedPosition;
-		private bool IsCurrentlyVisuallyOffset = false;
 		[HideInInspector] public VRCAvatarDescriptor avadesc;
 		Avatar animatorAvatar;
 		Animator animator;
@@ -353,6 +348,9 @@ namespace Lyuma.Av3Emulator.Runtime
 		private bool MuteTogglerOn;
 		public bool InStation;
 		[HideInInspector] public int AvatarVersion = 3;
+		public Vector3 VisualOffset;
+		private Vector3 SavedPosition;
+		private bool IsCurrentlyVisuallyOffset = false;
 
 		[Header("Output State (Read-only)")]
 		public bool IsLocal;
@@ -1523,7 +1521,9 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			LyumaAv3Menu mainMenu;
 			mainMenu = avadesc.gameObject.AddComponent<GestureManagerAv3Menu>();
-			mainMenu.useLegacyMenu = legacyMenuGUI;
+			if (emulator != null) {
+				mainMenu.useLegacyMenu = emulator.disableRadialMenu;
+			}
 			mainMenu.Runtime = this;
 			mainMenu.RootMenu = avadesc.expressionsMenu;
 		}
@@ -1771,12 +1771,6 @@ namespace Lyuma.Av3Emulator.Runtime
 				if (OSCConfigurationFile.GenerateOSCConfig) {
 					OSCConfigurationFile.GenerateOSCConfig = false;
 					OSCConfigurationFile.OSCJsonConfig = A3EOSCConfiguration.GenerateOuterJSON(avadesc.expressionParameters, OSCConfigurationFile.OSCAvatarID, this.gameObject.name);
-				}
-			}
-			if (lastLegacyMenuGUI != legacyMenuGUI && AvatarSyncSource == this) {
-				lastLegacyMenuGUI = legacyMenuGUI;
-				foreach (var av3MenuComponent in GetComponents<LyumaAv3Menu>()) {
-					av3MenuComponent.useLegacyMenu = legacyMenuGUI;
 				}
 			}
 			if (isResettingSel) {
