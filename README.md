@@ -7,9 +7,10 @@
 3.1.1:
 
 * Fix error when DynamicBone is not present in project.
-* Fix one cause of random bicycle pose when using experimental editor features. Thanks for reporting, DorCoMaNdO
+* Fix one cause of random bicycle pose when using experimental editor features. Thanks for reporting, DorCoMaNdO (Fixes #92 and #99)
   (In general, experimental features can lead to editor instability or crashes. Use at your own risk.)
-* Deduplicate OSC warnings to avoid logspam. Thanks, Razgriz
+* Deduplicate OSC warnings to avoid logspam. Thanks, Razgriz (Fixes #74)
+* Allow emulating avatars in additively loaded scenes (PR #73). Thanks, SenkyDragon.
 
 3.1.0:
 
