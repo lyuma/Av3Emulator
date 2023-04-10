@@ -6,7 +6,9 @@
 
 3.1.1:
 
-* Fix error when DynamicBone is not present in project. Thanks, DorCoMaNdO
+* Fix error when DynamicBone is not present in project.
+* Fix one cause of random bicycle pose when using experimental editor features. Thanks for reporting, DorCoMaNdO
+  (In general, experimental features can lead to editor instability or crashes. Use at your own risk.)
 
 3.1.0:
 
