@@ -2,11 +2,13 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
-### New features in v 3.1.2:
+### New features in v 3.1.3:
 
-3.1.2:
+3.1.2, 3.1.3:
 
+* Fix uploading issue caused by VRCSDK reflection fix.
 * Fix compatibility with VRCSDK <= 3.1.11
+* Fix disable radial menu button
 
 3.1.1:
 
