@@ -2,7 +2,11 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
-### New features in v 3.1.0:
+### New features in v 3.1.1:
+
+3.1.1:
+
+* Fix error when DynamicBone is not present in project. Thanks, DorCoMaNdO
 
 3.1.0:
 

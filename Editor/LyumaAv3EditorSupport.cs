@@ -223,7 +223,9 @@ namespace Lyuma.Av3Emulator.Editor
 			};
 			LyumaAv3Runtime.convertDynamicBones = (GameObject avatarObj) => {
 					var avatarDynamicsSetup = typeof(VRCExpressionsMenuEditor).Assembly.GetType("VRC.SDK3.Avatars.AvatarDynamicsSetup");
-					if (avatarDynamicsSetup != null) {
+					var TypeDynamicBone = System.Type.GetType("DynamicBone, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
+					var TypeDynamicBoneCollider = System.Type.GetType("DynamicBoneCollider, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
+					if (TypeDynamicBone != null && TypeDynamicBoneCollider != null && avatarDynamicsSetup != null) {
 						var ConvertToPhysBones = avatarDynamicsSetup.GetMethod("ConvertToPhysBones", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 						if (ConvertToPhysBones != null) {
 							Debug.Log("Convert dyn bone to phys");
