@@ -2639,6 +2639,8 @@ namespace Lyuma.Av3Emulator.Runtime
 			return false;
 		}
 
+		private HashSet<string> warnedParams = new HashSet<string>();
+
 		public void GetOSCDataInto(List<A3ESimpleOSC.OSCMessage> messages) {
 			messages.Add(new A3ESimpleOSC.OSCMessage {
 				arguments = new object[1] {(object)OSCConfigurationFile.OSCAvatarID},
@@ -2762,7 +2764,10 @@ namespace Lyuma.Av3Emulator.Runtime
 									outputf = VisemeInt;
 									break;
 								default:
-									Debug.LogWarning("Unrecognized built in param");
+									if (!warnedParams.Contains(prop.name)) {
+										Debug.LogWarning("Unrecognized OSC param " + prop.name);
+										warnedParams.Add(prop.name);
+									}
 									break;
 							}
 						}
@@ -2855,7 +2860,10 @@ namespace Lyuma.Av3Emulator.Runtime
 				MuteTogglerOn = argBool;
 				break;
 			default:
-				Debug.LogWarning("Unrecognized OSC input command " + ParamName);
+				if (!warnedParams.Contains(ParamName)) {
+					Debug.LogWarning("Unrecognized OSC input command " + ParamName);
+					warnedParams.Add(ParamName);
+				}
 				break;
 			}
 		}
@@ -2919,7 +2927,10 @@ namespace Lyuma.Av3Emulator.Runtime
 					VisemeIdx = argInt;
 					break;
 				default:
-					Debug.LogWarning("Unrecognized built in VRC param");
+					if (!warnedParams.Contains(ParamName)) {
+						Debug.LogWarning("Unrecognized built in VRC param " + ParamName);
+						warnedParams.Add(ParamName);
+					}
 					break;
 			}
 		}

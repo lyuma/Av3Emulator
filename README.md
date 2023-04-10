@@ -9,6 +9,7 @@
 * Fix error when DynamicBone is not present in project.
 * Fix one cause of random bicycle pose when using experimental editor features. Thanks for reporting, DorCoMaNdO
   (In general, experimental features can lead to editor instability or crashes. Use at your own risk.)
+* Deduplicate OSC warnings to avoid logspam. Thanks, Razgriz
 
 3.1.0:
 
