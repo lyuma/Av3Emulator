@@ -102,28 +102,40 @@ namespace Lyuma.Av3Emulator.Editor
 			for (var controlIndex = 0; controlIndex < _currentMenu.controls.Count; controlIndex++)
 			{
 				var control = _currentMenu.controls[controlIndex];
-				switch (control.type)
+				bool parametersIncorrect = menu.Runtime.expressionParamNames != null &&
+				                           ((control.parameter.name != "" &&
+				                             !menu.Runtime.expressionParamNames.Contains(control.parameter.name))
+				                            || !control.subParameters.All(x =>
+					                            x == null || x.name == "" || menu.Runtime.expressionParamNames.Contains(x.name)));
+				if (parametersIncorrect)
 				{
-					case VRCExpressionsMenu.Control.ControlType.Button:
-						FromToggle(control, "Button");
-						break;
-					case VRCExpressionsMenu.Control.ControlType.Toggle:
-						FromToggle(control, "Toggle");
-						break;
-					case VRCExpressionsMenu.Control.ControlType.SubMenu:
-						FromSubMenu(control);
-						break;
-					case VRCExpressionsMenu.Control.ControlType.TwoAxisPuppet:
-						FromTwoAxis(control, controlIndex);
-						break;
-					case VRCExpressionsMenu.Control.ControlType.FourAxisPuppet:
-						FromFourAxis(control, controlIndex);
-						break;
-					case VRCExpressionsMenu.Control.ControlType.RadialPuppet:
-						FromRadial(control, controlIndex);
-						break;
-					default:
-						throw new ArgumentOutOfRangeException();
+					GUILayout.Label(new GUIContent("Parameter not found in expression parameters for: " + control.name), Styles.ParameterizedButtonStyle, GUILayout.Height(36), GUILayout.MinWidth(40));
+				}
+				else
+				{
+					switch (control.type)
+					{
+						case VRCExpressionsMenu.Control.ControlType.Button:
+							FromToggle(control, "Button");
+							break;
+						case VRCExpressionsMenu.Control.ControlType.Toggle:
+							FromToggle(control, "Toggle");
+							break;
+						case VRCExpressionsMenu.Control.ControlType.SubMenu:
+							FromSubMenu(control);
+							break;
+						case VRCExpressionsMenu.Control.ControlType.TwoAxisPuppet:
+							FromTwoAxis(control, controlIndex);
+							break;
+						case VRCExpressionsMenu.Control.ControlType.FourAxisPuppet:
+							FromFourAxis(control, controlIndex);
+							break;
+						case VRCExpressionsMenu.Control.ControlType.RadialPuppet:
+							FromRadial(control, controlIndex);
+							break;
+						default:
+							throw new ArgumentOutOfRangeException();
+					}
 				}
 			}
 

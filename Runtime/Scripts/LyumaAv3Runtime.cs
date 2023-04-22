@@ -102,6 +102,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		Animator animator;
 		private RuntimeAnimatorController origAnimatorController;
 		public Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController> allControllers = new Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController>();
+		public HashSet<string> expressionParamNames = new HashSet<string>();
 
 		private Transform[] allTransforms;
 		private Transform[] allMirrorTransforms;
@@ -1519,6 +1520,12 @@ namespace Lyuma.Av3Emulator.Runtime
 			foreach (var comp in avadesc.gameObject.GetComponents<LyumaAv3Menu>()) {
 				UnityEngine.Object.Destroy(comp);
 			}
+
+			if (stageParameters != null)
+			{
+				expressionParamNames = new HashSet<string>(stageParameters.parameters.Select(x => x.name));
+			}
+
 			LyumaAv3Menu mainMenu;
 			mainMenu = avadesc.gameObject.AddComponent<GestureManagerAv3Menu>();
 			if (emulator != null) {
