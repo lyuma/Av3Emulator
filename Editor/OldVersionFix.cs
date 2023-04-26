@@ -5,6 +5,7 @@ using Lyuma.Av3Emulator.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using VRC.Core;
 using Directory = UnityEngine.Windows.Directory;
 using Object = System.Object;
 

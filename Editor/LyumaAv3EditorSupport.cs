@@ -25,6 +25,7 @@ using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.Compilation;
 using UnityEngine;
+using VRC.Core;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDKBase.Editor.BuildPipeline;
 

@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.Linq;
 using VRC.SDK3.Avatars.Components;
 using UnityEngine.SceneManagement;
+using VRC.Core;
 using VRC.Dynamics;
 using VRC.SDK3.Dynamics.Contact.Components;
 using VRC.SDK3.Dynamics.PhysBone.Components;
