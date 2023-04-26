@@ -26,6 +26,7 @@ using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 using VRC.Core;
+using VRC.Dynamics;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using VRC.SDK3.Dynamics.Contact.Components;
@@ -251,6 +252,26 @@ namespace Lyuma.Av3Emulator.Runtime
 					accessInst.paramName = parameter + VRCPhysBone.PARAM_STRETCH;
 					mb.param_Stretch = accessInst;
 					accessInst.floatVal = mb.param_StretchValue;
+					
+					FieldInfo posedParam = typeof(VRCPhysBoneBase).GetField("PARAM_ISPOSED", BindingFlags.Public | BindingFlags.Static);
+					if (posedParam != null)
+					{
+						accessInst = new Av3EmuParameterAccess();
+						accessInst.runtime = this;
+						accessInst.paramName = parameter + posedParam.GetValue(null);
+						typeof(VRCPhysBoneBase).GetField("param_IsPosed").SetValue(mb, accessInst);
+						accessInst.boolVal = (bool)typeof(VRCPhysBoneBase).GetField("param_IsPosedValue").GetValue(mb);
+					}
+					
+					FieldInfo squishParam = typeof(VRCPhysBoneBase).GetField("PARAM_SQUISH", BindingFlags.Public | BindingFlags.Static);
+					if (squishParam != null)
+					{
+						accessInst = new Av3EmuParameterAccess();
+						accessInst.runtime = this;
+						accessInst.paramName = parameter + squishParam.GetValue(null);
+						typeof(VRCPhysBoneBase).GetField("param_Squish").SetValue(mb, accessInst);
+						accessInst.floatVal = (float)typeof(VRCPhysBoneBase).GetField("param_SquishValue").GetValue(mb);
+					}
 					// Debug.Log("Assigned strech access " + physBoneState.param_Stretch.GetValue(mb) + " to param " + parameter + ": was " + old_value);
 				}
 			}
