@@ -136,7 +136,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		{
 			Camera.onPreCull += PreCull;
 			Camera.onPostRender += PostRender;
-			Animator animator = gameObject.GetOrAddComponent<Animator>();
+			Animator animator = GetOrAddComponent<Animator>(gameObject);
 			animator.enabled = false;
 			animator.runtimeAnimatorController = EmptyController;
 			emulatorInstance = this;
@@ -175,9 +175,9 @@ namespace Lyuma.Av3Emulator.Runtime
 						avadesc.gameObject.SetActive(true);
 					}
 
-					var oml = avadesc.gameObject.GetOrAddComponent<UnityEngine.AI.OffMeshLink>();
+					var oml = GetOrAddComponent<UnityEngine.AI.OffMeshLink>(avadesc.gameObject);
 					oml.startTransform = this.transform;
-					var runtime = avadesc.gameObject.GetOrAddComponent<LyumaAv3Runtime>();
+					var runtime = GetOrAddComponent<LyumaAv3Runtime>(avadesc.gameObject);
 					if (RunPreprocessAvatarHook && !alreadyHadComponent) {
 						forceActiveRuntimes.AddLast(runtime);
 					}
@@ -289,5 +289,14 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 			}
 		}
+		
+		public static T GetOrAddComponent<T>(GameObject go) where T : Component
+		{
+			T component = go.GetComponent<T>();
+			if (component == null)
+				component = go.AddComponent<T>();
+			return component;
+		}
+		
 	}
 }
