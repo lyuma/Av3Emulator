@@ -25,7 +25,7 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
-using VRC.Core;
+using static Lyuma.Av3Emulator.Runtime.LyumaAv3Emulator;
 using VRC.Dynamics;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
@@ -937,7 +937,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				ViewAnimatorOnlyNoParams = this.emulator.DefaultAnimatorToDebug;
 			}
 
-			animator = this.gameObject.GetOrAddComponent<Animator>();
+			animator = GetOrAddComponent<Animator>(this.gameObject);
 			if (animatorAvatar != null && animator.avatar == null) {
 				animator.avatar = animatorAvatar;
 			} else {
@@ -1092,7 +1092,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			PrevAnimatorToDebug = (char)(int)DebugDuplicateAnimator;
 			ViewAnimatorOnlyNoParams = DebugDuplicateAnimator;
 
-			animator = this.gameObject.GetOrAddComponent<Animator>();
+			animator = GetOrAddComponent<Animator>(this.gameObject);
 			animator.avatar = animatorAvatar;
 			animator.applyRootMotion = false;
 			animator.updateMode = AnimatorUpdateMode.Normal;
@@ -1913,7 +1913,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					OSCController = null;
 				}
 				if (OSCController == null && EnableAvatarOSC) {
-					osc = emulator.gameObject.GetOrAddComponent<LyumaAv3Osc>();
+					osc = GetOrAddComponent<LyumaAv3Osc>(emulator.gameObject);
 					osc.openSocket = true;
 					osc.avatarDescriptor = avadesc;
 					osc.enabled = true;

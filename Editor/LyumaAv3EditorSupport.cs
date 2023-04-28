@@ -25,7 +25,7 @@ using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.Compilation;
 using UnityEngine;
-using VRC.Core;
+using static Lyuma.Av3Emulator.Runtime.LyumaAv3Emulator;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDKBase.Editor.BuildPipeline;
 
@@ -286,8 +286,8 @@ namespace Lyuma.Av3Emulator.Editor
 			}
 			Selection.SetActiveObjectWithContext(go, go);
 			GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
-			go.GetOrAddComponent<LyumaAv3Emulator>();
-			go.GetOrAddComponent<LyumaAv3Osc>();
+			GetOrAddComponent<LyumaAv3Emulator>(go);
+			GetOrAddComponent<LyumaAv3Osc>(go);
 			EditorGUIUtility.PingObject(go);
 		}
 	}
