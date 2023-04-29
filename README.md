@@ -2,7 +2,11 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
-### New features in v 3.1.3:
+### New features in v 3.1.4:
+
+3.1.4:
+
+* Support for beta SDK 3.2.x including squish parameter.
 
 3.1.2, 3.1.3:
 
