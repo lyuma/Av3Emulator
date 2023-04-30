@@ -1401,6 +1401,17 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (AvatarSyncSource == this || !networkSynced) {
 						lastDefault = (stageParam.saved && KeepSavedParametersOnReset && stageNameToValue.ContainsKey(stageName) ? stageNameToValue[stageName] : stageParam.defaultValue);
 					}
+
+					if (StageParamterToBuiltin.Keys.Any(p => p
+						    .Replace(" (saved/SYNCED)", "")
+						    .Replace(" (SYNCED)", "")
+						    .Replace(" (saved/local)", "")
+						    .Replace(" (local)", "").Equals(stageParam.name)))
+					{
+						Debug.LogWarning("Duplicate Expression Parameter Found: " + stageParam.name + ", using the first one in the Expression Parameters.");
+						continue;
+					}
+					
 					StageParamterToBuiltin.Add(stageName, stageParam.name);
 					if ((int)stageParam.valueType == 0)
 					{
