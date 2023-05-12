@@ -56,7 +56,7 @@ jobs:
         uses: softprops/action-gh-release@v0.1.15
         with:
           name: "Av3Emulator ${{ steps.version.outputs.prop }}"
-          tag_name: ${{ steps.version.outputs.prop }}
+          tag_name: v${{ steps.version.outputs.prop }}
           files: |
             ${{ env.zipFile }}
             ${{ env.unityPackage }}
