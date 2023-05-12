@@ -219,6 +219,10 @@ namespace Lyuma.Av3Emulator.Runtime
 		public void assignContactParameters(VRCContactReceiver[] behaviours) {
 			AvDynamicsContactReceivers = behaviours;
 			foreach (var mb in AvDynamicsContactReceivers) {
+				if (!IsLocal && mb.localOnly)
+				{
+					continue;
+				}				
 				var old_value = mb.paramAccess;
 				if (old_value == null || old_value.GetType() != typeof(Av3EmuParameterAccess)) {
 					string parameter = mb.parameter;
