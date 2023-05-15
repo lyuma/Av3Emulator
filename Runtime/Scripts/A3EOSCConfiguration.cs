@@ -38,6 +38,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			new string[]{"VelocityZ","Float"},
 			new string[]{"VelocityY","Float"},
 			new string[]{"VelocityX","Float"},
+			new string[]{"VelocityMagnitude","Float"},
 			new string[]{"InStation","Bool"},
 			new string[]{"Seated","Bool"},
 			new string[]{"AFK","Bool"},

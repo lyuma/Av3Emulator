@@ -317,7 +317,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			Uninitialized, GenericRig, NoFingers, HeadHands, HeadHandsHip, HeadHandsHipFeet = 6
 		}
 		public static HashSet<string> BUILTIN_PARAMETERS = new HashSet<string> {
-			"Viseme", "Voice", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "Upright", "AngularY", "Grounded", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation"
+			"Viseme", "Voice", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "VelocityMagnitude", "Upright", "AngularY", "Grounded", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation"
 		};
 		public static readonly Type[] MirrorCloneComponentBlacklist = new Type[] {
 			typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Rigidbody), typeof(Joint)
@@ -2342,6 +2342,19 @@ namespace Lyuma.Av3Emulator.Runtime
 					SetTypeWithMismatch(playable, paramid, Velocity.z, inType);
 					paramterFloats[paramid] = Velocity.z;
 				}
+				if (parameterIndices.TryGetValue("VelocityMagnitude", out paramid))
+				{
+					AnimatorControllerParameterType inType = parameterTypes["VelocityMagnitude"];
+					if (paramterFloats.TryGetValue(paramid, out fparam)) {
+						float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
+						if (fparam != f)
+						{
+							Velocity = Velocity.normalized * f;
+						}
+					}
+					SetTypeWithMismatch(playable, paramid, Velocity.magnitude, inType);
+					paramterFloats[paramid] = Velocity.magnitude;
+				}
 				if (parameterIndices.TryGetValue("AngularY", out paramid))
 				{
 					AnimatorControllerParameterType inType = parameterTypes["AngularY"];
@@ -2739,6 +2752,9 @@ namespace Lyuma.Av3Emulator.Runtime
 								case "VelocityX":
 									outputf = Velocity.x;
 									break;
+								case "VelocityMagnitude":
+									outputf = Velocity.magnitude;
+									break;
 								case "InStation":
 									outputf = InStation ? 1.0f : 0.0f;
 									break;
@@ -2900,6 +2916,9 @@ namespace Lyuma.Av3Emulator.Runtime
 					Velocity.y = argFloat;
 					break;
 				case "VelocityX":
+					Velocity.x = argFloat;
+					break;
+				case "VelocityMagnitude":
 					Velocity.x = argFloat;
 					break;
 				case "InStation":
