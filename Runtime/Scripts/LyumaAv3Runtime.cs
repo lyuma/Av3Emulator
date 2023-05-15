@@ -2044,6 +2044,11 @@ namespace Lyuma.Av3Emulator.Runtime
 				playableBlendingStates[ikposeIndex].StartBlend(playableMixer.GetInputWeight(ikposeIndex + 1), IKPoseCalibration ? 1f : 0f, 0.0f);
 				PrevIKPoseCalibration = IKPoseCalibration;
 			}
+			if (IKTrackingOutputData.trackingMouthAndJaw == VRC_AnimatorTrackingControl.TrackingType.Animation)
+			{
+				Viseme = (VisemeIndex)VisemeInt;
+				VisemeIdx = VisemeInt;
+			}
 			if (VisemeIdx != VisemeInt) {
 				VisemeInt = VisemeIdx;
 				Viseme = (VisemeIndex)VisemeInt;
