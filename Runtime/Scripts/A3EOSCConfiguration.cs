@@ -46,6 +46,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			new string[]{"AngularY","Float"},
 			new string[]{"Grounded","Bool"},
 			new string[]{"MuteSelf","Bool"},
+			new string[]{"Earmuffs","Bool"},
 			new string[]{"VRMode","Int"},
 			new string[]{"TrackingType","Int"},
 			new string[]{"GestureRightWeight","Float"},

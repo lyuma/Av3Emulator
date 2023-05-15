@@ -317,7 +317,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			Uninitialized, GenericRig, NoFingers, HeadHands, HeadHandsHip, HeadHandsHipFeet = 6
 		}
 		public static HashSet<string> BUILTIN_PARAMETERS = new HashSet<string> {
-			"Viseme", "Voice", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "VelocityMagnitude", "Upright", "AngularY", "Grounded", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation"
+			"Viseme", "Voice", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "VelocityMagnitude", "Upright", "AngularY", "Grounded", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation", "Earmuffs"
 		};
 		public static readonly Type[] MirrorCloneComponentBlacklist = new Type[] {
 			typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Rigidbody), typeof(Joint)
@@ -368,6 +368,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool VRMode;
 		public bool MuteSelf;
 		private bool MuteTogglerOn;
+		public bool Earmuffs;
 		public bool InStation;
 		[HideInInspector] public int AvatarVersion = 3;
 		public Vector3 VisualOffset;
@@ -2010,6 +2011,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				TrackingTypeIdxInt = AvatarSyncSource.TrackingTypeIdxInt;
 				VRMode = AvatarSyncSource.VRMode;
 				MuteSelf = AvatarSyncSource.MuteSelf;
+				Earmuffs = AvatarSyncSource.Earmuffs;
 				InStation = AvatarSyncSource.InStation;
 			}
 			for (int i = 0; i < Floats.Count; i++) {
@@ -2480,6 +2482,19 @@ namespace Lyuma.Av3Emulator.Runtime
 					SetTypeWithMismatch(playable, paramid, InStation, inType);
 					paramterInts[paramid] = InStation ? 1 : 0;
 				}
+				if (parameterIndices.TryGetValue("Earmuffs", out paramid))
+				{
+					AnimatorControllerParameterType inType = parameterTypes["Earmuffs"];
+					if (paramterInts.TryGetValue(paramid, out iparam)) {
+						int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
+						if (iparam != i)
+						{
+							Earmuffs = i == 1;
+						}
+					}
+					SetTypeWithMismatch(playable, paramid, Earmuffs, inType);
+					paramterInts[paramid] = Earmuffs ? 1 : 0;
+				}
 				if (parameterIndices.TryGetValue("AvatarVersion", out paramid)) {
 					AnimatorControllerParameterType inType = parameterTypes["AvatarVersion"];
 					SetTypeWithMismatch(playable, paramid, AvatarVersion, inType);
@@ -2776,6 +2791,9 @@ namespace Lyuma.Av3Emulator.Runtime
 								case "MuteSelf":
 									outputf = MuteSelf ? 1.0f : 0.0f;
 									break;
+								case "Earmuffs":
+									outputf = Earmuffs ? 1.0f : 0.0f;
+									break;
 								case "VRMode":
 									outputf = VRMode ? 1.0f : 0.0f;
 									break;
@@ -2940,6 +2958,9 @@ namespace Lyuma.Av3Emulator.Runtime
 					Grounded = argBool;
 					break;
 				case "MuteSelf":
+					MuteSelf = argBool;
+					break;
+				case "Earmuffs":
 					MuteSelf = argBool;
 					break;
 				case "VRMode":
