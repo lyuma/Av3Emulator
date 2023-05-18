@@ -31,6 +31,7 @@ using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using VRC.SDK3.Dynamics.Contact.Components;
 using VRC.SDK3.Dynamics.PhysBone.Components;
+using VRC.SDKBase;
 using static VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
 
 namespace Lyuma.Av3Emulator.Runtime
