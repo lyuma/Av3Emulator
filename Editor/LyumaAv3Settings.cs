@@ -1,0 +1,164 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEditor;
+
+using Lyuma.Av3Emulator.Runtime;
+using System;
+using UnityEngine;
+
+namespace Lyuma.Av3Emulator.Editor
+{
+	public class LyumaAv3Settings : EditorWindow
+	{
+		public const string EDITOR_PREF_KEY = "AV3EmulatorSettings";
+
+		#region properties
+		private static GameObject _dataContainer;
+
+		private static GameObject dataContainer
+		{
+			get
+			{
+				if (_dataContainer != null) return _dataContainer;
+
+				_dataContainer = new GameObject("AV3Emulator Settings Container");
+				_dataContainer.hideFlags = HideFlags.DontSave | HideFlags.HideInHierarchy;
+				_dataContainer.SetActive(false);
+				return _dataContainer;
+			}
+		}
+		public static LyumaAv3Emulator _data;
+		public static LyumaAv3Emulator data
+		{
+			get
+			{
+				if (_data == null) RefreshData();
+				return _data;
+			}
+		}
+		private static UnityEditor.Editor _editor;
+
+		private static UnityEditor.Editor editor
+		{
+			get
+			{
+				if (_editor == null) RefreshData();
+				return _editor;
+			}
+		}
+		#endregion
+
+		private static bool hasModifiedSettings;
+		private static Vector2 scroll;
+
+		[MenuItem("Tools/Avatars 3.0 Emulator/Settings", false, 1001)]
+		public static void ShowWindow()
+		{
+			GetWindow<LyumaAv3Settings>("AV3Emulator Settings");
+			RefreshData();
+			EditorApplication.quitting -= AskSaveSettings;
+			EditorApplication.quitting += AskSaveSettings;
+		}
+
+		private static void RefreshData()
+		{
+			if (_data == null)
+			{
+				_data = dataContainer.AddComponent<LyumaAv3Emulator>();
+				_data.hideFlags = HideFlags.DontSave;
+				LoadSettings();
+			}
+			if (_editor == null || _editor.target != _data) 
+				_editor = UnityEditor.Editor.CreateEditor(_data);
+			ClearPreviousEditors();
+		}
+
+		private static void ClearPreviousEditors()
+		{
+			var t = _editor.GetType();
+			var edits = Resources.FindObjectsOfTypeAll(t);
+			foreach (var e in edits)
+				if (e != _editor)
+					DestroyImmediate(e);
+
+		}
+
+		private static void CheckForData()
+		{
+
+		}
+
+		public void OnGUI()
+		{
+			EditorGUI.BeginChangeCheck();
+
+			scroll = EditorGUILayout.BeginScrollView(scroll);
+			editor.OnInspectorGUI();
+			EditorGUILayout.EndScrollView();
+
+			hasModifiedSettings |= EditorGUI.EndChangeCheck();
+
+			using (new GUILayout.HorizontalScope())
+			{
+				if (GUILayout.Button("Restore Defaults"))
+				{
+					if (EditorUtility.DisplayDialog("Caution!", "Are you sure you want to restore the default settings?", "Yes", "No"))
+					{
+						DestroyImmediate(_data);
+						_data = dataContainer.AddComponent<LyumaAv3Emulator>();
+						_data.hideFlags = HideFlags.DontSave;
+						RefreshData();
+						SaveSettings();
+						hasModifiedSettings = false;
+					}
+				}
+				using (new EditorGUI.DisabledScope(!hasModifiedSettings))
+				{
+					if (GUILayout.Button("Revert Changes"))
+					{
+						LoadSettings();
+						hasModifiedSettings = false;
+					}
+
+					if (GUILayout.Button("Save Changes"))
+					{
+						SaveSettings();
+						hasModifiedSettings = false;
+					}
+				}
+			}
+
+		}
+
+		public static void ApplySettings(LyumaAv3Emulator target)
+		{
+			var json = EditorPrefs.GetString(EDITOR_PREF_KEY, string.Empty);
+			if (!string.IsNullOrWhiteSpace(json))
+				JsonUtility.FromJsonOverwrite(json, target);
+		}
+
+		public static void LoadSettings()
+		{
+			ApplySettings(data);
+			editor.Repaint();
+		}
+
+		public static void SaveSettings()
+		{
+			var json = JsonUtility.ToJson(data);
+			EditorPrefs.SetString(EDITOR_PREF_KEY, json);
+		}
+
+		private static void AskSaveSettings()
+		{
+			if (hasModifiedSettings)
+			{
+				if (EditorUtility.DisplayDialog("Caution!", "There are unsaved changes to AV3Emulator settings!", "Save and Close", "Close without saving")) SaveSettings();
+				else LoadSettings();
+				hasModifiedSettings = false;
+			}
+		}
+
+		private void OnDisable() => AskSaveSettings();
+	}
+}

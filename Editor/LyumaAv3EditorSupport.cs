@@ -276,7 +276,7 @@ namespace Lyuma.Av3Emulator.Editor
 			};
 		}
 
-		[MenuItem("Tools/Enable Avatars 3.0 Emulator")]
+		[MenuItem("Tools/Avatars 3.0 Emulator/Enable", false, 1000)]
 		public static void EnableAv3Testing() {
 			GameObject go = GameObject.Find("/Avatars 3.0 Emulator Control");
 			if (go != null) {
@@ -286,7 +286,8 @@ namespace Lyuma.Av3Emulator.Editor
 			}
 			Selection.SetActiveObjectWithContext(go, go);
 			GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
-			GetOrAddComponent<LyumaAv3Emulator>(go);
+			var emulator = GetOrAddComponent<LyumaAv3Emulator>(go);
+			LyumaAv3Settings.ApplySettings(emulator);
 			GetOrAddComponent<LyumaAv3Osc>(go);
 			EditorGUIUtility.PingObject(go);
 		}
