@@ -1398,12 +1398,12 @@ namespace Lyuma.Av3Emulator.Runtime
 					{
 						networkSynced = (bool) field.GetValue(stageParam);
 					}
-					if (stageParam.name == null || stageParam.name.Length == 0 || !networkSynced) {
+					if (stageParam.name == null || stageParam.name.Length == 0) {
 						continue;
 					}
-					string stageName = stageParam.name + (stageParam.saved ? " (saved/SYNCED)" : " (SYNCED)"); //"Stage" + stageId;
+					string stageName = stageParam.name + (networkSynced ? stageParam.saved ? " (saved/SYNCED)" : " (SYNCED)" : stageParam.saved ? " (saved/local)" : " (local)"); //"Stage" + stageId;
 					float lastDefault = 0.0f;
-					if (AvatarSyncSource == this) {
+					if (AvatarSyncSource == this || !networkSynced) {
 						lastDefault = (stageParam.saved && KeepSavedParametersOnReset && stageNameToValue.ContainsKey(stageName) ? stageNameToValue[stageName] : stageParam.defaultValue);
 					}
 					StageParamterToBuiltin.Add(stageName, stageParam.name);
@@ -1411,7 +1411,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					{
 						IntParam param = new IntParam();
 						param.stageName = stageName;
-						param.synced = true;
+						param.synced = networkSynced;
 						param.name = stageParam.name;
 						param.value = (int)lastDefault;
 						param.lastValue = 0;
@@ -1422,7 +1422,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					{
 						FloatParam param = new FloatParam();
 						param.stageName = stageName;
-						param.synced = true;
+						param.synced = networkSynced;
 						param.name = stageParam.name;
 						param.value = lastDefault;
 						param.exportedValue = lastDefault;
@@ -1434,7 +1434,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					{
 						BoolParam param = new BoolParam();
 						param.stageName = stageName;
-						param.synced = true;
+						param.synced = networkSynced;
 						param.name = stageParam.name;
 						param.value = lastDefault != 0.0;
 						param.lastValue = false;
@@ -1952,7 +1952,10 @@ namespace Lyuma.Av3Emulator.Runtime
 						// Simulate IK sync of open gesture parameter.
 						if (ShouldSyncThisFrame || (IKSyncRadialMenu && menus.Length >= 1 && menus[0].IsControlIKSynced(Ints[i].name))
 								|| (IKSyncRadialMenu && menus.Length >= 2 && menus[1].IsControlIKSynced(Ints[i].name))) {
-							Ints[i].value = ClampByte(AvatarSyncSource.Ints[i].value);
+							if (AvatarSyncSource.Ints[i].synced)
+							{
+								Ints[i].value = ClampByte(AvatarSyncSource.Ints[i].value);
+							}
 						}
 					}
 				}
@@ -1961,15 +1964,21 @@ namespace Lyuma.Av3Emulator.Runtime
 						// Simulate IK sync of open gesture parameter.
 						if (ShouldSyncThisFrame || (IKSyncRadialMenu && menus.Length >= 1 && menus[0].IsControlIKSynced(Floats[i].name))
 								|| (IKSyncRadialMenu && menus.Length >= 2 && menus[1].IsControlIKSynced(Floats[i].name))) {
-							Floats[i].exportedValue = ClampAndQuantizeFloat(AvatarSyncSource.Floats[i].exportedValue);
-							Floats[i].value = Floats[i].exportedValue;
+							if (AvatarSyncSource.Floats[i].synced)
+							{
+								Floats[i].exportedValue = ClampAndQuantizeFloat(AvatarSyncSource.Floats[i].exportedValue);
+								Floats[i].value = Floats[i].exportedValue;
+							}
 						}
 					}
 				}
 				for (int i = 0; i < Bools.Count; i++) {
 					if (StageParamterToBuiltin.ContainsKey(Bools[i].stageName)) {
 						if (ShouldSyncThisFrame) {
-							Bools[i].value = AvatarSyncSource.Bools[i].value;
+							if (AvatarSyncSource.Bools[i].synced)
+							{
+								Bools[i].value = AvatarSyncSource.Bools[i].value;
+							}
 						}
 					}
 				}
@@ -1986,6 +1995,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 				for (int i = 0; i < Floats.Count; i++) { 
 					Floats[i].value = AvatarSyncSource.Floats[i].value;
+					Floats[i].exportedValue = AvatarSyncSource.Floats[i].exportedValue;
 				}
 				for (int i = 0; i < Bools.Count; i++) {
 					Bools[i].value = AvatarSyncSource.Bools[i].value;
