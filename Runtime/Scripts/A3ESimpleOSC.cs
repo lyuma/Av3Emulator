@@ -594,7 +594,7 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		Thread runningThread;
 		UDPThread udpThreadState;
-		byte[]scratchSpace = new byte[8192];
+		byte[]scratchSpace = new byte[65535]; // 65535 being the max length of a UDP package
 		IPEndPoint unconnectedEndpoint = null;
 
 		// Two methods for establishing send relationship:

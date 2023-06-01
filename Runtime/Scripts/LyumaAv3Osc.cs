@@ -38,7 +38,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool openSocket = false;
 		public bool disableOSC = false;
 		public bool resendAllParameters = false;
-		byte[] oscBuffer = new byte[65535];
+		byte[] oscBuffer = new byte[65535];  // 65535 being the max length of a UDP package
 		public int udpPort = 9000;
 		public string outgoingUdpIp = "127.0.0.1";
 		public int outgoingUdpPort = 9001;

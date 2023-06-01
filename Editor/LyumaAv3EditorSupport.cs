@@ -101,7 +101,7 @@ namespace Lyuma.Av3Emulator.Editor
 				}
 				// Debug.Log("Setting selected layers: " + layers);
 				Tools.visibleLayers = layers;
-				Camera[] cameras = new Camera[255];
+				Camera[] cameras = new Camera[Camera.allCamerasCount];
 				Camera.GetAllCameras(cameras);
 				foreach (Camera c in cameras) {
 					if (c != null && c.targetTexture == null && c.GetComponentInParent<LyumaAv3Runtime>() == null && c.gameObject.activeInHierarchy && c.isActiveAndEnabled) {
