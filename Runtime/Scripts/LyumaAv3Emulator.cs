@@ -33,7 +33,7 @@ namespace Lyuma.Av3Emulator.Runtime
 	[RequireComponent(typeof(Animator))]
 	public class LyumaAv3Emulator : MonoBehaviour
 	{
-		static readonly ulong EMULATOR_VERSION = 0x3_01_03_00;
+		public static readonly ulong EMULATOR_VERSION = 0x3_02_00_00;
 
 		[Header("Fake VR or Desktop mode selection")]
 		public bool DefaultToVR = false;

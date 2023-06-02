@@ -2,7 +2,18 @@
 
 ## **[Download the latest version at: https://github.com/lyuma/Av3Emulator/releases](https://github.com/lyuma/Av3Emulator/releases)**
 
-### New features in v 3.1.4:
+### New features in v 3.2.0:
+
+3.2.0:
+
+* Av3Emulator is now available in curated packages in VCC!
+* Updated version range to not downgrade VRCSDK below 3.3.x
+* Show warning if GestureManager is enabled in the same scene. Fix some integration issues with GM 3.8.3 and higher.
+* Do not clamp non-synced params. Internal cleanup with duplicate parameters
+* Implement Settings page to save Default Settings. Add a button to set blendshape clamping.
+* Add Earmuffs and VelocityMagnitude and freeze viseme when Mouth/Jaw animated
+* Add localonly contact support
+* Mitigation for both GestureManager and Av3Emulator in use in play mode.
 
 3.1.4:
 
@@ -313,3 +324,17 @@ If you're having unexplained issues, they might happen in game too. The most com
 ![Lock your inspector to allow investigating other objects](Runtime/Screenshots/lock_inspector_tutorial.png)![Checklist for turning off Write Defaults.](Runtime/Screenshots/write_defaults_off.png)
 [(View full lock inspector explanation)](Runtime/Screenshots/lock_inspector_tutorial.png) [(View full write defaults off checklist)](Runtime/Screenshots/write_defaults_off.png)
 
+# Thanks
+
+Although this is known by and released under my name Lyuma,
+it is only thanks to all of you in the community using and supporting the project,
+and for the many contributors that Av3Emulator is what it is today. <3
+
+Special Thanks to
+
+* jellejurre for maintaining the package and making tons of amazing changes
+* anatawa12, Dreadrith, bd_, Mysteryem, NotAKidoS for continued changes and support
+* hai-vr for the original menu implementation, testing and support
+* BlackStartX for GestureManager
+* VRC Shader Dev, VRLabs, Invitation, VRCPrefabs communities and more for all the support.
+* and the V-Sekai team for contributions, inspiration and keeping me going through the years.

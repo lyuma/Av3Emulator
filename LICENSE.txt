@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2020-2023 Lyuma, jellejurre, anatawa12, Dreadrith and contributors
+Copyright (c) 2020-2023 Lyuma, jellejurre, anatawa12, Dreadrith, bd_, Mysteryem, NotAKidoS, and V-Sekai contributors
 LyumaAv3Menu (c) 2020-2021 hai-vr
 GestureManager (c) 2021 Leonardo Lorenzoni
 
