@@ -90,6 +90,7 @@ namespace Lyuma.Av3Emulator.Editor
 
 		public void OnGUI()
 		{
+			scroll = EditorGUILayout.BeginScrollView(scroll, GUILayout.ExpandWidth(true));
 			if (UnityEditor.PlayerSettings.legacyClampBlendShapeWeights != true) {
 				EditorGUILayout.HelpBox("Clamp BlendShapes should be enabled in Project Settings/Player to match in-game behavior. Not doing so could cause inconsistencies in emulation of visemes or facial expressions.", MessageType.Warning);
 				if (GUILayout.Button("Enable Clamp BlendShapes")) {
@@ -99,8 +100,15 @@ namespace Lyuma.Av3Emulator.Editor
 
 			EditorGUI.BeginChangeCheck();
 
-			scroll = EditorGUILayout.BeginScrollView(scroll);
-			editor.OnInspectorGUI();
+			float origWidth = EditorGUIUtility.labelWidth;
+			EditorGUIUtility.labelWidth = 215.0f;
+			try {
+				editor.OnInspectorGUI();
+
+			} catch (Exception e) {
+				Debug.LogException(e);
+			}
+			EditorGUIUtility.labelWidth = origWidth;
 			EditorGUILayout.EndScrollView();
 
 			hasModifiedSettings |= EditorGUI.EndChangeCheck();
@@ -109,7 +117,7 @@ namespace Lyuma.Av3Emulator.Editor
 			{
 				if (GUILayout.Button("Restore Defaults"))
 				{
-					if (EditorUtility.DisplayDialog("Caution!", "Are you sure you want to restore the default settings?", "Yes", "No"))
+					if (EditorUtility.DisplayDialog("Avatar 3.0 Emulator", "Are you sure you want to restore the default settings?", "Yes", "No"))
 					{
 						DestroyImmediate(_data);
 						_data = dataContainer.AddComponent<LyumaAv3Emulator>();
@@ -160,7 +168,7 @@ namespace Lyuma.Av3Emulator.Editor
 		{
 			if (hasModifiedSettings)
 			{
-				if (EditorUtility.DisplayDialog("Caution!", "There are unsaved changes to AV3Emulator settings!", "Save and Close", "Close without saving")) SaveSettings();
+				if (EditorUtility.DisplayDialog("Avatar 3.0 Emulator", "There are unsaved changes to AV3Emulator settings!", "Save Settings", "Ignore")) SaveSettings();
 				else LoadSettings();
 				hasModifiedSettings = false;
 			}
