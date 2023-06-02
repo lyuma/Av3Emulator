@@ -31,6 +31,7 @@ using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using VRC.SDK3.Dynamics.Contact.Components;
 using VRC.SDK3.Dynamics.PhysBone.Components;
+using VRC.SDKBase;
 using static VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
 
 namespace Lyuma.Av3Emulator.Runtime
@@ -2059,6 +2060,13 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (IKPoseCalibration != PrevIKPoseCalibration && ikposeIndex >= 0 && playableBlendingStates[ikposeIndex] != null) {
 				playableBlendingStates[ikposeIndex].StartBlend(playableMixer.GetInputWeight(ikposeIndex + 1), IKPoseCalibration ? 1f : 0f, 0.0f);
 				PrevIKPoseCalibration = IKPoseCalibration;
+			}
+			if (IKTrackingOutputData.trackingMouthAndJaw == VRC_AnimatorTrackingControl.TrackingType.Animation)
+			{
+				// In VRC, when you set the Mouth & Jaw to Animation, it will freeze the viseme value. This replicates that behaviour
+				// See https://github.com/lyuma/Av3Emulator/issues/109
+				Viseme = (VisemeIndex)VisemeInt;
+				VisemeIdx = VisemeInt;
 			}
 			if (VisemeIdx != VisemeInt) {
 				VisemeInt = VisemeIdx;
