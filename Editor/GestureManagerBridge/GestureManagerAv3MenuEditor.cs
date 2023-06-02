@@ -330,7 +330,6 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 				return;
 			}
 			EditorGUILayout.Space(10);
-			gmenu.compact = true;
 
 			var menu = GetOrCreateRadial(this as UnityEditor.Editor);
 			if (!gmenu.IsMenuOpen) {
