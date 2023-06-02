@@ -457,7 +457,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		public List<BoolParam> Bools = new List<BoolParam>();
 		public Dictionary<string, int> BoolToIndex = new Dictionary<string, int>();
 
-		public Dictionary<string, string> StageParamterToBuiltin = new Dictionary<string, string>();
+		public HashSet<string> ParameterNames = new HashSet<string>();
 
 		[HideInInspector] public LyumaAv3Emulator emulator;
 
@@ -1373,7 +1373,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			Ints.Clear();
 			Bools.Clear();
 			Floats.Clear();
-			StageParamterToBuiltin.Clear();
+			ParameterNames.Clear();
 			IntToIndex.Clear();
 			FloatToIndex.Clear();
 			BoolToIndex.Clear();
@@ -1407,7 +1407,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (AvatarSyncSource == this || !networkSynced) {
 						lastDefault = (stageParam.saved && KeepSavedParametersOnReset && stageNameToValue.ContainsKey(stageName) ? stageNameToValue[stageName] : stageParam.defaultValue);
 					}
-					StageParamterToBuiltin.Add(stageName, stageParam.name);
+					ParameterNames.Add(stageParam.name);
 					if ((int)stageParam.valueType == 0)
 					{
 						IntParam param = new IntParam();
@@ -1484,10 +1484,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				int pcnt = playable.IsValid() ? playable.GetParameterCount() : 0;
 				for (i = 0; i < pcnt; i++) {
 					AnimatorControllerParameter aparam = playable.GetParameter(i);
-					string actualName;
-					if (!StageParamterToBuiltin.TryGetValue(aparam.name, out actualName)) {
-						actualName = aparam.name;
-					}
+					string actualName = aparam.name;
 					parameterIndices[actualName] = aparam.nameHash;
 					parameterTypes[actualName] = aparam.type;
 					if (usedparams.Contains(actualName)) {
@@ -1949,7 +1946,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				IKSyncRadialMenu = AvatarSyncSource.IKSyncRadialMenu;
 				LyumaAv3Menu[] menus = AvatarSyncSource.GetComponents<LyumaAv3Menu>();
 				for (int i = 0; i < Ints.Count; i++) {
-					if (StageParamterToBuiltin.ContainsKey(Ints[i].stageName)) {
+					if (ParameterNames.Contains(Ints[i].name)) {
 						// Simulate IK sync of open gesture parameter.
 						if (ShouldSyncThisFrame || (IKSyncRadialMenu && menus.Length >= 1 && menus[0].IsControlIKSynced(Ints[i].name))
 								|| (IKSyncRadialMenu && menus.Length >= 2 && menus[1].IsControlIKSynced(Ints[i].name))) {
@@ -1961,7 +1958,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					}
 				}
 				for (int i = 0; i < Floats.Count; i++) {
-					if (StageParamterToBuiltin.ContainsKey(Floats[i].stageName)) {
+					if (ParameterNames.Contains(Floats[i].name)) {
 						// Simulate IK sync of open gesture parameter.
 						if (ShouldSyncThisFrame || (IKSyncRadialMenu && menus.Length >= 1 && menus[0].IsControlIKSynced(Floats[i].name))
 								|| (IKSyncRadialMenu && menus.Length >= 2 && menus[1].IsControlIKSynced(Floats[i].name))) {
@@ -1974,7 +1971,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					}
 				}
 				for (int i = 0; i < Bools.Count; i++) {
-					if (StageParamterToBuiltin.ContainsKey(Bools[i].stageName)) {
+					if (ParameterNames.Contains(Bools[i].name)) {
 						if (ShouldSyncThisFrame) {
 							if (AvatarSyncSource.Bools[i].synced)
 							{
@@ -2034,17 +2031,19 @@ namespace Lyuma.Av3Emulator.Runtime
 					Floats[i].exportedValue = Floats[i].expressionValue;
 					Floats[i].lastExpressionValue_ = Floats[i].expressionValue;
 				}
-				if (StageParamterToBuiltin.ContainsKey(Floats[i].stageName)) {
+				if (ParameterNames.Contains(Floats[i].name) && Floats[i].synced) {
 					if (locally8bitQuantizedFloats) {
 						Floats[i].exportedValue = ClampAndQuantizeFloat(Floats[i].exportedValue);
 					} else {
 						Floats[i].exportedValue = ClampFloatOnly(Floats[i].exportedValue);
 					}
+				}
+				if (ParameterNames.Contains(Floats[i].name)) {
 					Floats[i].value = Floats[i].exportedValue;
 				}
 			}
 			for (int i = 0; i < Ints.Count; i++) {
-				if (StageParamterToBuiltin.ContainsKey(Ints[i].stageName)) {
+				if (ParameterNames.Contains(Ints[i].name) && Ints[i].synced) {
 					Ints[i].value = ClampByte(Ints[i].value);
 				}
 			}
