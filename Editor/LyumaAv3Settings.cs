@@ -90,6 +90,13 @@ namespace Lyuma.Av3Emulator.Editor
 
 		public void OnGUI()
 		{
+			if (UnityEditor.PlayerSettings.legacyClampBlendShapeWeights != true) {
+				EditorGUILayout.HelpBox("Clamp BlendShapes should be enabled in Project Settings/Player to match in-game behavior. Not doing so could cause inconsistencies in emulation of visemes or facial expressions.", MessageType.Warning);
+				if (GUILayout.Button("Enable Clamp BlendShapes")) {
+					UnityEditor.PlayerSettings.legacyClampBlendShapeWeights = true;
+				}
+			}
+
 			EditorGUI.BeginChangeCheck();
 
 			scroll = EditorGUILayout.BeginScrollView(scroll);
