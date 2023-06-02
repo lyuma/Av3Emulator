@@ -1037,6 +1037,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			{
 				OriginalSourceClone.IsMirrorClone = true;
 				MirrorClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
+				MirrorClone.gameObject.hideFlags = HideFlags.NotEditable;
 				MirrorClone.GetComponent<Animator>().avatar = null;
 				OriginalSourceClone.IsMirrorClone = false;
 				GameObject o = MirrorClone.gameObject;
@@ -1060,6 +1061,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (AvatarSyncSource == this && GetComponent<PipelineSaver>() == null) {
 				OriginalSourceClone.IsShadowClone = true;
 				ShadowClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
+				ShadowClone.gameObject.hideFlags = HideFlags.NotEditable;
 				ShadowClone.GetComponent<Animator>().avatar = null;
 				OriginalSourceClone.IsShadowClone = false;
 				GameObject o = ShadowClone.gameObject;

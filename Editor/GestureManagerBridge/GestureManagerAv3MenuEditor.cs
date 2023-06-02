@@ -51,7 +51,11 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 				}
 				protected override void InternalSet(float value) {
 					Vector3 vel = runtime.Velocity;
-					vel[axis] = value;
+					if (axis == 3) {
+						vel = vel.normalized * value;
+					} else {
+						vel[axis] = value;
+					}
 					runtime.Velocity = vel;
 				}
 			}
@@ -175,6 +179,8 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 						Params.Add(builtinprop, new VelocityParam(builtinprop, _runtime, 1));
 					} else if (builtinprop == "VelocityZ") {
 						Params.Add(builtinprop, new VelocityParam(builtinprop, _runtime, 2));
+					} else if (builtinprop == "VelocityMagnitude") {
+						Params.Add(builtinprop, new VelocityParam(builtinprop, _runtime, 3));
 					} else {
 						addParam(builtinprop, builtinprop);
 					}
