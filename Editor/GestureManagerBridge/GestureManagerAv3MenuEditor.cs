@@ -273,6 +273,17 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 
 		private void ManagerGui () {
 			var gmenu = (GestureManagerAv3Menu)target;
+			if (GameObject.Find("/GestureManager")) {
+				EditorGUIUtility.PingObject(GameObject.Find("/GestureManager"));
+				EditorGUILayout.HelpBox("WARNING! GestureManager was found in the scene. Use of the Gesture Manager editor may cause incorrect emulation in some cases. When finished with GestureManager, please remove them and Reset Avatar.", MessageType.Error);
+				if (GUILayout.Button("Temporarily destroy GestureManager")) {
+					GameObject foundGestureManager;
+					while ((foundGestureManager = GameObject.Find("/GestureManager")) != null) {
+						GameObject.DestroyImmediate(foundGestureManager);
+					}
+					gmenu.Runtime.ResetAvatar = true;
+				}
+			}
 			GUILayout.BeginHorizontal();
 			if (GUILayout.Button(gmenu.IsMenuOpen ? "Close menu" : "Open menu"))
 			{
