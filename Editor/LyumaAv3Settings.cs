@@ -1,9 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEditor;
-
-using Lyuma.Av3Emulator.Runtime;
+﻿using Lyuma.Av3Emulator.Runtime;
 using System;
+using UnityEditor;
 using UnityEngine;
 
 namespace Lyuma.Av3Emulator.Editor
@@ -80,11 +77,6 @@ namespace Lyuma.Av3Emulator.Editor
 			foreach (var e in edits)
 				if (e != _editor)
 					DestroyImmediate(e);
-
-		}
-
-		private static void CheckForData()
-		{
 
 		}
 
