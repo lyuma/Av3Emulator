@@ -2047,6 +2047,8 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			if (IKTrackingOutputData.trackingMouthAndJaw == VRC_AnimatorTrackingControl.TrackingType.Animation)
 			{
+				// In VRC, when you set the Mouth & Jaw to Animation, it will freeze the viseme value. This replicates that behaviour
+				// See https://github.com/lyuma/Av3Emulator/issues/109
 				Viseme = (VisemeIndex)VisemeInt;
 				VisemeIdx = VisemeInt;
 			}
