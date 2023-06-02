@@ -17,6 +17,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. */
+
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
@@ -66,9 +68,9 @@ namespace Lyuma.Av3Emulator.Runtime
 		static public LyumaAv3Emulator emulatorInstance;
 		static public RuntimeAnimatorController EmptyController;
 
-		public List<LyumaAv3Runtime> runtimes = new List<LyumaAv3Runtime>();
-		public LinkedList<LyumaAv3Runtime> forceActiveRuntimes = new LinkedList<LyumaAv3Runtime>();
-		public HashSet<VRCAvatarDescriptor> scannedAvatars = new HashSet<VRCAvatarDescriptor>();
+		[NonSerialized] public List<LyumaAv3Runtime> runtimes = new List<LyumaAv3Runtime>();
+		[NonSerialized] public LinkedList<LyumaAv3Runtime> forceActiveRuntimes = new LinkedList<LyumaAv3Runtime>();
+		[NonSerialized] public HashSet<VRCAvatarDescriptor> scannedAvatars = new HashSet<VRCAvatarDescriptor>();
 
 		public enum DefaultPoseOptions
 		{
