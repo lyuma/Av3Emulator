@@ -2275,6 +2275,20 @@ namespace Lyuma.Av3Emulator.Runtime
 					SetTypeWithMismatch(playable, paramid, VisemeInt, inType);
 					paramterInts[paramid] = VisemeInt;
 				}
+				if (parameterIndices.TryGetValue("Voice", out paramid))
+				{
+					AnimatorControllerParameterType inType = parameterTypes["Voice"];
+					if (paramterFloats.TryGetValue(paramid, out fparam))
+					{
+						float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
+						if (fparam != f)
+						{
+							Voice = f;
+						}
+					}
+					SetTypeWithMismatch(playable, paramid, Voice, inType);
+					paramterFloats[paramid] = Voice;
+				}
 				if (parameterIndices.TryGetValue("GestureLeft", out paramid))
 				{
 					AnimatorControllerParameterType inType = parameterTypes["GestureLeft"];
