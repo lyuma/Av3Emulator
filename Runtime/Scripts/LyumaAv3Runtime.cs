@@ -322,7 +322,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			Uninitialized, GenericRig, NoFingers, HeadHands, HeadHandsHip, HeadHandsHipFeet = 6
 		}
 		public static HashSet<string> BUILTIN_PARAMETERS = new HashSet<string> {
-			"Viseme", "Voice", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "VelocityMagnitude", "Upright", "AngularY", "Grounded", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation", "Earmuffs"
+			"Viseme", "Voice", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "VelocityMagnitude", "Upright", "AngularY", "Grounded", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation", "Earmuffs", "ScaleModified", "ScaleFactor", "ScaleFactorInverse", "EyeHeightAsMeters", "EyeHeightAsPercent"
 		};
 		public static readonly Type[] MirrorCloneComponentBlacklist = new Type[] {
 			typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Rigidbody), typeof(Joint)
@@ -376,6 +376,9 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool Earmuffs;
 		public bool InStation;
 		[HideInInspector] public int AvatarVersion = 3;
+		[Range(0.2f, 5f)] public float AvatarHeight = 1;
+		private Vector3 DefaultViewPosition;
+		private Vector3 DefaultAvatarScale;
 		public Vector3 VisualOffset;
 		private Vector3 SavedPosition;
 		private bool IsCurrentlyVisuallyOffset = false;
@@ -1030,6 +1033,10 @@ namespace Lyuma.Av3Emulator.Runtime
 				string avatarid = pipelineManager != null ? pipelineManager.blueprintId : null;
 			   OSCConfigurationFile.EnsureOSCJSONConfig(avadesc.expressionParameters, avatarid, this.gameObject.name);
 			}
+
+			AvatarHeight = avadesc.ViewPosition.y;
+			DefaultViewPosition = avadesc.ViewPosition;
+			DefaultAvatarScale = gameObject.transform.localScale;
 		}
 
 		public void CreateMirrorClone() {
@@ -2031,6 +2038,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				MuteSelf = AvatarSyncSource.MuteSelf;
 				Earmuffs = AvatarSyncSource.Earmuffs;
 				InStation = AvatarSyncSource.InStation;
+				AvatarHeight = AvatarSyncSource.AvatarHeight;
 			}
 			for (int i = 0; i < Floats.Count; i++) {
 				if (Floats[i].expressionValue != Floats[i].lastExpressionValue_) {
@@ -2137,7 +2145,9 @@ namespace Lyuma.Av3Emulator.Runtime
 				TrackingTypeIdxInt = (char)TrackingTypeIdx;
 			}
 			IsLocal = AvatarSyncSource == this;
-
+			float scale = AvatarHeight / DefaultViewPosition.y;
+			gameObject.transform.localScale = DefaultAvatarScale * scale;
+			avadesc.ViewPosition = DefaultViewPosition * scale;
 			int whichcontroller;
 			whichcontroller = 0;
 			foreach (AnimatorControllerPlayable playable in playables)
@@ -2540,6 +2550,31 @@ namespace Lyuma.Av3Emulator.Runtime
 					AnimatorControllerParameterType inType = parameterTypes["AvatarVersion"];
 					SetTypeWithMismatch(playable, paramid, AvatarVersion, inType);
 				}
+				if (parameterIndices.TryGetValue("ScaleModified", out paramid))
+				{
+					AnimatorControllerParameterType inType = parameterTypes["ScaleModified"];
+					SetTypeWithMismatch(playable, paramid, AvatarHeight != DefaultViewPosition.y, inType);
+				}
+				if (parameterIndices.TryGetValue("ScaleFactor", out paramid))
+				{
+					AnimatorControllerParameterType inType = parameterTypes["ScaleFactor"];
+					SetTypeWithMismatch(playable, paramid, scale, inType);
+				}
+				if (parameterIndices.TryGetValue("ScaleFactorInverse", out paramid))
+				{
+					AnimatorControllerParameterType inType = parameterTypes["ScaleFactorInverse"];
+					SetTypeWithMismatch(playable, paramid, 1f/scale, inType);
+				}
+				if (parameterIndices.TryGetValue("EyeHeightAsMeters", out paramid))
+				{
+					AnimatorControllerParameterType inType = parameterTypes["EyeHeightAsMeters"];
+					SetTypeWithMismatch(playable, paramid, avadesc.ViewPosition.y, inType);
+				}
+				if (parameterIndices.TryGetValue("EyeHeightAsPercent", out paramid))
+				{
+					AnimatorControllerParameterType inType = parameterTypes["EyeHeightAsPercent"];
+					SetTypeWithMismatch(playable, paramid, (avadesc.ViewPosition.y  - 0.2f)/ (5.0f - 0.2f), inType);
+				}
 				whichcontroller++;
 			}
 
@@ -2798,6 +2833,7 @@ namespace Lyuma.Av3Emulator.Runtime
 							outputf = Floats[fidx].value;
 							typ = "float";
 						} else {
+							float scale = AvatarHeight / DefaultViewPosition.y;
 							switch (prop.name) {
 								case "VelocityZ":
 									outputf = Velocity.z;
@@ -2858,6 +2894,21 @@ namespace Lyuma.Av3Emulator.Runtime
 									break;
 								case "Viseme":
 									outputf = VisemeInt;
+									break;
+								case "ScaleModified":
+									outputf = scale == 1.0f ? 0.0f : 1.0f;
+									break;
+								case "ScaleFactor":
+									outputf = scale;
+									break;
+								case "ScaleFactorInverse":
+									outputf = 1.0f / scale;
+									break;
+								case "EyeHeightAsMeters":
+									outputf = avadesc.ViewPosition.y;
+									break;
+								case "EyeHeightAsPercent":
+									outputf = (avadesc.ViewPosition.y - 0.2f) / (5.0f - 0.2f);
 									break;
 								default:
 									if (!warnedParams.Contains(prop.name)) {

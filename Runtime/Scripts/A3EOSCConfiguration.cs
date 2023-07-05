@@ -54,7 +54,12 @@ namespace Lyuma.Av3Emulator.Runtime
 			new string[]{"GestureLeftWeight","Float"},
 			new string[]{"GestureLeft","Int"},
 			new string[]{"Voice","Float"},
-			new string[]{"Viseme","Int"}
+			new string[]{"Viseme","Int"},
+			new string[]{"ScaleModified", "Bool"},
+			new string[]{"ScaleFactor", "Float"},
+			new string[]{"ScaleFactorInverse", "Float"},
+			new string[]{"EyeHeightAsMeters", "Float"},
+			new string[]{"EyeHeightAsPercent", "Float"},
 		};
 		public static OuterJson GenerateOuterJSON(VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters expparams, string id, string name) {
 			OuterJson oj = new OuterJson();
