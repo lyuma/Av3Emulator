@@ -376,6 +376,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool Earmuffs;
 		public bool InStation;
 		[HideInInspector] public int AvatarVersion = 3;
+		public bool EnableAvatarScaling = false;
 		[Range(0.2f, 5f)] public float AvatarHeight = 1;
 		private Vector3 DefaultViewPosition;
 		private Vector3 DefaultAvatarScale;
@@ -2038,6 +2039,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				MuteSelf = AvatarSyncSource.MuteSelf;
 				Earmuffs = AvatarSyncSource.Earmuffs;
 				InStation = AvatarSyncSource.InStation;
+				EnableAvatarScaling = AvatarSyncSource.EnableAvatarScaling;
 				AvatarHeight = AvatarSyncSource.AvatarHeight;
 			}
 			for (int i = 0; i < Floats.Count; i++) {
@@ -2145,7 +2147,10 @@ namespace Lyuma.Av3Emulator.Runtime
 				TrackingTypeIdxInt = (char)TrackingTypeIdx;
 			}
 			IsLocal = AvatarSyncSource == this;
-			float scale = AvatarHeight / DefaultViewPosition.y;
+			float scale = 1.0f;
+			if (EnableAvatarScaling) {
+				scale = AvatarHeight / DefaultViewPosition.y;
+			}
 			gameObject.transform.localScale = DefaultAvatarScale * scale;
 			avadesc.ViewPosition = DefaultViewPosition * scale;
 			int whichcontroller;
@@ -2553,7 +2558,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				if (parameterIndices.TryGetValue("ScaleModified", out paramid))
 				{
 					AnimatorControllerParameterType inType = parameterTypes["ScaleModified"];
-					SetTypeWithMismatch(playable, paramid, AvatarHeight != DefaultViewPosition.y, inType);
+					SetTypeWithMismatch(playable, paramid, EnableAvatarScaling && AvatarHeight != DefaultViewPosition.y, inType);
 				}
 				if (parameterIndices.TryGetValue("ScaleFactor", out paramid))
 				{
@@ -2573,7 +2578,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				if (parameterIndices.TryGetValue("EyeHeightAsPercent", out paramid))
 				{
 					AnimatorControllerParameterType inType = parameterTypes["EyeHeightAsPercent"];
-					SetTypeWithMismatch(playable, paramid, (avadesc.ViewPosition.y  - 0.2f)/ (5.0f - 0.2f), inType);
+					SetTypeWithMismatch(playable, paramid, Mathf.Clamp((avadesc.ViewPosition.y  - 0.2f)/ (5.0f - 0.2f), 0.0f, 1.0f), inType);
 				}
 				whichcontroller++;
 			}
@@ -2833,7 +2838,10 @@ namespace Lyuma.Av3Emulator.Runtime
 							outputf = Floats[fidx].value;
 							typ = "float";
 						} else {
-							float scale = AvatarHeight / DefaultViewPosition.y;
+							float scale = 1.0f;
+							if (EnableAvatarScaling) {
+								scale = AvatarHeight / DefaultViewPosition.y;
+							}
 							switch (prop.name) {
 								case "VelocityZ":
 									outputf = Velocity.z;
