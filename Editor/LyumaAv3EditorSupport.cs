@@ -277,7 +277,11 @@ namespace Lyuma.Av3Emulator.Editor
 		}
 
 		[MenuItem("Tools/Avatars 3.0 Emulator/Enable", false, 1000)]
-		public static void EnableAv3Testing() {
+		public static LyumaAv3Emulator EnableAv3Testing() {
+			if (GameObject.Find("/GestureManager"))
+			{
+				GameObject.Find("/GestureManager").SetActive(false);
+			}
 			GameObject go = GameObject.Find("/Avatars 3.0 Emulator Control");
 			if (go != null) {
 				go.SetActive(true);
@@ -290,6 +294,7 @@ namespace Lyuma.Av3Emulator.Editor
 			LyumaAv3Settings.ApplySettings(emulator);
 			GetOrAddComponent<LyumaAv3Osc>(go);
 			EditorGUIUtility.PingObject(go);
+			return emulator;
 		}
 	}
 }

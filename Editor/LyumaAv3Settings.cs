@@ -136,6 +136,10 @@ namespace Lyuma.Av3Emulator.Editor
 		public static void ApplySettingsToAll()
 		{
 			LyumaAv3Emulator[] emulators = FindObjectsOfType<LyumaAv3Emulator>();
+			if (emulators.Length == 0)
+			{
+				emulators = new LyumaAv3Emulator[] {LyumaAv3EditorSupport.EnableAv3Testing()};
+			}
 			var json = EditorPrefs.GetString(EDITOR_PREF_KEY, string.Empty);
 			if (!string.IsNullOrWhiteSpace(json))
 			{
