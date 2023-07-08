@@ -119,22 +119,33 @@ namespace Lyuma.Av3Emulator.Editor
 						hasModifiedSettings = false;
 					}
 				}
-				using (new EditorGUI.DisabledScope(!hasModifiedSettings))
+				if (!hasModifiedSettings && GUILayout.Button("Apply to Scene"))
 				{
-					if (GUILayout.Button("Revert Changes"))
-					{
-						LoadSettings();
-						hasModifiedSettings = false;
-					}
-
-					if (GUILayout.Button("Save Changes"))
-					{
-						SaveSettings();
-						hasModifiedSettings = false;
-					}
+					ApplySettingsToAll();
+				}
+				if (hasModifiedSettings && GUILayout.Button("Save & Apply"))
+				{
+					SaveSettings();
+					hasModifiedSettings = false;
+					ApplySettingsToAll();
 				}
 			}
 
+		}
+
+		public static void ApplySettingsToAll()
+		{
+			LyumaAv3Emulator[] emulators = FindObjectsOfType<LyumaAv3Emulator>();
+			var json = EditorPrefs.GetString(EDITOR_PREF_KEY, string.Empty);
+			if (!string.IsNullOrWhiteSpace(json))
+			{
+				foreach (LyumaAv3Emulator emu in emulators)
+				{
+					Undo.RecordObject(emu, "Applied Av3Emulator Settings to scene");
+					JsonUtility.FromJsonOverwrite(json, emu);
+					EditorGUIUtility.PingObject(emu);
+				}
+			}
 		}
 
 		public static void ApplySettings(LyumaAv3Emulator target)
