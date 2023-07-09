@@ -50,7 +50,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		private bool lastDisableRadialMenu = false;
 		public bool DefaultEnableAvatarScaling = false;
 		[Header("Unity Integrations")]
-		public bool RunPreprocessAvatarHook = false;
+		public bool RunPreprocessAvatarHook = true;
 		public bool DisableAvatarDynamicsIntegration;
 		public bool WorkaroundPlayModeScriptCompile = true;
 		[Header("Networked and mirror clone emulation")]
@@ -174,7 +174,12 @@ namespace Lyuma.Av3Emulator.Runtime
 					// Creates the playable director, and initializes animator.
 					bool alreadyHadComponent = avadesc.gameObject.GetComponent<LyumaAv3Runtime>() != null;
 					if (RunPreprocessAvatarHook && !alreadyHadComponent) {
+						GameObject origClone = GameObject.Instantiate(avadesc.gameObject);
+						origClone.name = avadesc.gameObject.name;
+						avadesc.gameObject.name = origClone.name + "(Clone)";
 						LyumaAv3Runtime.InvokeOnPreProcessAvatar(avadesc.gameObject);
+						avadesc.gameObject.name = origClone.name;
+						GameObject.DestroyImmediate(origClone);
 						avadesc.gameObject.SetActive(true);
 					}
 
