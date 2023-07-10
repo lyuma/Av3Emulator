@@ -4,6 +4,7 @@
 
 * Av3Emulator is available in curated packages in VCC!
 * Added credits, readme, github, version and changelog to the inspector.
+* Introduce a OSC Control Panel window similar to the Settings window.
 * Run preprocess hooks by default to make VRCFury testing easier.
 * Create an emulator object from settings Apply button if one does not already exist.
 * Disable GestureManager when creating an emulator object to avoid conflict.

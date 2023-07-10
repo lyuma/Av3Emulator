@@ -290,7 +290,7 @@ namespace Lyuma.Av3Emulator.Editor
 			GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
 			var emulator = GetOrAddComponent<LyumaAv3Emulator>(go);
 			LyumaAv3Settings.ApplySettings(emulator);
-			GetOrAddComponent<LyumaAv3Osc>(go);
+			LyumaAv3OSCSettings.ApplySettings(GetOrAddComponent<LyumaAv3Osc>(go));
 			EditorGUIUtility.PingObject(go);
 			return emulator;
 		}
