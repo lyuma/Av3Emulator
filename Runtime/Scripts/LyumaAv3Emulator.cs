@@ -33,8 +33,8 @@ namespace Lyuma.Av3Emulator.Runtime
 	[HelpURL("https://github.com/lyuma/Av3Emulator")]
 	public class LyumaAv3Emulator : MonoBehaviour
 	{
-		public static readonly ulong EMULATOR_VERSION = 0x3_02_00_00;
-		public const string EMULATOR_VERSION_STRING = "Avatar 3.0 Emulator Version 3.2.0";
+		public static readonly ulong EMULATOR_VERSION = 0x3_02_01_00;
+		public const string EMULATOR_VERSION_STRING = "Avatar 3.0 Emulator Version 3.2.1";
 		public const string GIT_REPO = "https://github.com/lyuma/Av3Emulator";
 		public static readonly String BUG_TRACKER_URL = GIT_REPO + "/issues";
 		public const string CREDIT1 = "By Lyuma, hai-vr, jellejurre, anatawa12,";
