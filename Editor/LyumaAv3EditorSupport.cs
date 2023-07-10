@@ -79,11 +79,9 @@ namespace Lyuma.Av3Emulator.Editor
 				}
 			}
 
-			AnimatorController emptycontroller = new AnimatorController();
-			AnimatorControllerLayer emptyLayer = new AnimatorControllerLayer();
-			emptyLayer.stateMachine = new AnimatorStateMachine();
-			emptycontroller.layers = new[] { emptyLayer };
-			LyumaAv3Emulator.EmptyController = emptycontroller;
+			LyumaAv3Emulator.READMEAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(AssetDatabase.GUIDToAssetPath("d417c05c9fa0406189ff5923ecfc745f"));
+			LyumaAv3Emulator.LICENSEAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(AssetDatabase.GUIDToAssetPath("6eadcec0dbb74827b1adc0aedbb43fb9"));
+			LyumaAv3Emulator.CHANGELOGAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(AssetDatabase.GUIDToAssetPath("f60b10c20752a814a9df2299ce2a55a5"));
 		
 			LyumaAv3Runtime.updateSelectionDelegate = (obj) => {
 				if (obj == null && LyumaAv3Emulator.emulatorInstance != null) {

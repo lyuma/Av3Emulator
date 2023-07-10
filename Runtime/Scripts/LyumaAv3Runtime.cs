@@ -37,6 +37,7 @@ using static VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
 namespace Lyuma.Av3Emulator.Runtime
 {
 	// [RequireComponent(typeof(Animator))]
+	[HelpURL("https://github.com/lyuma/Av3Emulator")]
 	public class LyumaAv3Runtime : MonoBehaviour
 	{
 		static public Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController> animLayerToDefaultController = new Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController>();
@@ -460,6 +461,14 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 		public List<BoolParam> Bools = new List<BoolParam>();
 		public Dictionary<string, int> BoolToIndex = new Dictionary<string, int>();
+
+		[Space(10)][Header(LyumaAv3Emulator.CREDIT3)][Space(-12)][Header(LyumaAv3Emulator.CREDIT2)][Space(-12)][Header(LyumaAv3Emulator.CREDIT1)][Header(LyumaAv3Emulator.EMULATOR_VERSION_STRING)]
+		public string VisitOurGithub = LyumaAv3Emulator.GIT_REPO;
+		public bool ViewREADMEManual;
+		public bool ViewChangelog;
+		[Header("Lyuma's Av3Emulator is open source!")][Space(-12)]
+		public bool ViewMITLicense;
+		public bool SendBugsOrFeedback;
 
 		public HashSet<string> ParameterNames = new HashSet<string>();
 
@@ -1633,6 +1642,25 @@ namespace Lyuma.Av3Emulator.Runtime
 		private bool isResettingHold;
 		private bool isResettingSel;
 		void LateUpdate() {
+			if (VisitOurGithub != LyumaAv3Emulator.GIT_REPO) {
+				VisitOurGithub = LyumaAv3Emulator.GIT_REPO;
+			}
+			if (ViewREADMEManual) {
+				ViewREADMEManual = false;
+				updateSelectionDelegate(LyumaAv3Emulator.READMEAsset);
+			}
+			if (ViewChangelog) {
+				ViewChangelog = false;
+				updateSelectionDelegate(LyumaAv3Emulator.CHANGELOGAsset);
+			}
+			if (ViewMITLicense) {
+				ViewMITLicense = false;
+				updateSelectionDelegate(LyumaAv3Emulator.LICENSEAsset);
+			}
+			if (SendBugsOrFeedback) {
+				SendBugsOrFeedback = false;
+				Application.OpenURL(LyumaAv3Emulator.BUG_TRACKER_URL);
+			}
 			if (ResetAndHold || (emulator != null && (!emulator.enabled || !emulator.gameObject.activeInHierarchy))) {
 				return;
 			}

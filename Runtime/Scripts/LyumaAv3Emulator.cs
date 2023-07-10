@@ -30,11 +30,31 @@ using VRC.SDK3.Dynamics.PhysBone.Components;
 
 namespace Lyuma.Av3Emulator.Runtime
 {
-	[RequireComponent(typeof(Animator))]
+	[HelpURL("https://github.com/lyuma/Av3Emulator")]
 	public class LyumaAv3Emulator : MonoBehaviour
 	{
 		public static readonly ulong EMULATOR_VERSION = 0x3_02_00_00;
+		public const string EMULATOR_VERSION_STRING = "Avatar 3.0 Emulator Version 3.2.0";
+		public const string GIT_REPO = "https://github.com/lyuma/Av3Emulator";
+		public static readonly String BUG_TRACKER_URL = GIT_REPO + "/issues";
+		public const string CREDIT1 = "By Lyuma, hai-vr, jellejurre, anatawa12,";
+		public const string CREDIT2 = "Dreadrith, BlackStartX, bd_, Mysteryem,";
+		public const string CREDIT3 = "NotAKidoS, and V-Sekai contributors";
+		//public const string CREDITX = "Created by\nLyuma, hai-vr, jellejurre, anatawa12,\nDreadrith, BlackStartX, bd_, Mysteryem,\nNotAKidoS, and V-Sekai contributors";
 
+		public static TextAsset READMEAsset;
+		public static TextAsset CHANGELOGAsset;
+		public static TextAsset LICENSEAsset;
+
+		[Space(12)][Header(CREDIT3)][Space(-12)][Header(CREDIT2)][Space(-12)][Header(CREDIT1)][Header(EMULATOR_VERSION_STRING)]
+		// They added multiline [Header] in Unity 2021
+		//[Header(CREDITX)]
+		public string VisitOurGithub = GIT_REPO;
+		public bool ViewREADMEManual;
+		public bool ViewChangelog;
+		[Header("Lyuma's Av3Emulator is open source!")][Space(-12)]
+		public bool ViewMITLicense;
+		public bool SendBugsOrFeedback;
 		[Header("Fake VR or Desktop mode selection")]
 		public bool DefaultToVR = false;
 		public DefaultPoseOptions DefaultPose = DefaultPoseOptions.Standing;
@@ -72,6 +92,29 @@ namespace Lyuma.Av3Emulator.Runtime
 		[NonSerialized] public List<LyumaAv3Runtime> runtimes = new List<LyumaAv3Runtime>();
 		[NonSerialized] public LinkedList<LyumaAv3Runtime> forceActiveRuntimes = new LinkedList<LyumaAv3Runtime>();
 		[NonSerialized] public HashSet<VRCAvatarDescriptor> scannedAvatars = new HashSet<VRCAvatarDescriptor>();
+
+		private void OnValidate()
+		{
+			if (VisitOurGithub != GIT_REPO) {
+				VisitOurGithub = GIT_REPO;
+			}
+			if (SendBugsOrFeedback) {
+				SendBugsOrFeedback = false;
+				Application.OpenURL(BUG_TRACKER_URL);
+			}
+			if (ViewREADMEManual) {
+				ViewREADMEManual = false;
+				LyumaAv3Runtime.updateSelectionDelegate(READMEAsset);
+			}
+			if (ViewChangelog) {
+				ViewChangelog = false;
+				LyumaAv3Runtime.updateSelectionDelegate(CHANGELOGAsset);
+			}
+			if (ViewMITLicense) {
+				ViewMITLicense = false;
+				LyumaAv3Runtime.updateSelectionDelegate(LICENSEAsset);
+			}
+		}
 
 		public enum DefaultPoseOptions
 		{
@@ -139,9 +182,6 @@ namespace Lyuma.Av3Emulator.Runtime
 		{
 			Camera.onPreCull += PreCull;
 			Camera.onPostRender += PostRender;
-			Animator animator = GetOrAddComponent<Animator>(gameObject);
-			animator.enabled = false;
-			animator.runtimeAnimatorController = EmptyController;
 			emulatorInstance = this;
 			ScanForAvatars();
 			if (WorkaroundPlayModeScriptCompile) {
