@@ -378,6 +378,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool InStation;
 		[HideInInspector] public int AvatarVersion = 3;
 		public bool EnableAvatarScaling = false;
+		private Vector3 defaultHeadScale;
 		[Range(0.2f, 5f)] public float AvatarHeight = 1;
 		private Vector3 DefaultViewPosition;
 		private Vector3 DefaultAvatarScale;
@@ -1919,7 +1920,11 @@ namespace Lyuma.Av3Emulator.Runtime
 			if(this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
 				Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
 				if (head != null) {
-					head.localScale = EnableHeadScaling ? new Vector3(0.0001f, 0.0001f, 0.0001f) : new Vector3(1.0f, 1.0f, 1.0f); // head bone is set to 0.0001 locally (not multiplied
+					if (defaultHeadScale == new Vector3(0, 0, 0))
+					{
+						defaultHeadScale = head.localScale;
+					}
+					head.localScale = EnableHeadScaling ? new Vector3(0.0001f, 0.0001f, 0.0001f) : defaultHeadScale; // head bone is set to 0.0001 locally (not multiplied
 				}
 			}
 			if (DisableMirrorAndShadowClones && (MirrorClone != null || ShadowClone != null)) {
