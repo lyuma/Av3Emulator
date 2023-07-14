@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
@@ -34,33 +37,8 @@ namespace Lyuma.Av3Emulator.Runtime
 			public string name;
 			public InnerJson[] parameters;
 		}
-		readonly static string [][] OSC_BUILTIN_PARAMETERS = {
-			new string[]{"VelocityZ","Float"},
-			new string[]{"VelocityY","Float"},
-			new string[]{"VelocityX","Float"},
-			new string[]{"VelocityMagnitude","Float"},
-			new string[]{"InStation","Bool"},
-			new string[]{"Seated","Bool"},
-			new string[]{"AFK","Bool"},
-			new string[]{"Upright","Float"},
-			new string[]{"AngularY","Float"},
-			new string[]{"Grounded","Bool"},
-			new string[]{"MuteSelf","Bool"},
-			new string[]{"Earmuffs","Bool"},
-			new string[]{"VRMode","Int"},
-			new string[]{"TrackingType","Int"},
-			new string[]{"GestureRightWeight","Float"},
-			new string[]{"GestureRight","Int"},
-			new string[]{"GestureLeftWeight","Float"},
-			new string[]{"GestureLeft","Int"},
-			new string[]{"Voice","Float"},
-			new string[]{"Viseme","Int"},
-			new string[]{"ScaleModified", "Bool"},
-			new string[]{"ScaleFactor", "Float"},
-			new string[]{"ScaleFactorInverse", "Float"},
-			new string[]{"EyeHeightAsMeters", "Float"},
-			new string[]{"EyeHeightAsPercent", "Float"},
-		};
+
+		private readonly static LyumaAv3Runtime.BuiltinParameterDefinition[] OSC_BUILTIN_PARAMETERS = LyumaAv3Runtime.BUILTIN_PARAMETERS.Where(x => x.name != "IsLocal").ToArray();
 		public static OuterJson GenerateOuterJSON(VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters expparams, string id, string name) {
 			OuterJson oj = new OuterJson();
 			oj.id = id;
@@ -118,8 +96,8 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 			}
 			for (int i = 0; i < OSC_BUILTIN_PARAMETERS.Length; i++) {
-				var bname = OSC_BUILTIN_PARAMETERS[i][0];
-				var btype = OSC_BUILTIN_PARAMETERS[i][1];
+				var bname = OSC_BUILTIN_PARAMETERS[i].name;
+				var btype = OSC_BUILTIN_PARAMETERS[i].GetTypeString();
 				oj.parameters[idx] = new InnerJson {
 					name = bname,
 					output = new InputOutputPath {

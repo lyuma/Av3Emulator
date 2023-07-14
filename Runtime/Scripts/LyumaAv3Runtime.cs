@@ -322,9 +322,62 @@ namespace Lyuma.Av3Emulator.Runtime
 		public enum TrackingTypeIndex {
 			Uninitialized, GenericRig, NoFingers, HeadHands, HeadHandsHip, HeadHandsHipFeet = 6
 		}
-		public static HashSet<string> BUILTIN_PARAMETERS = new HashSet<string> {
-			"Viseme", "Voice", "GestureLeft", "GestureLeftWeight", "GestureRight", "GestureRightWeight", "VelocityX", "VelocityY", "VelocityZ", "VelocityMagnitude", "Upright", "AngularY", "Grounded", "Seated", "AFK", "TrackingType", "VRMode", "MuteSelf", "InStation", "Earmuffs", "ScaleModified", "ScaleFactor", "ScaleFactorInverse", "EyeHeightAsMeters", "EyeHeightAsPercent"
+
+		public class BuiltinParameterDefinition
+		{
+			public BuiltinParameterDefinition(string name, VRCExpressionParameters.ValueType type, Func<LyumaAv3Runtime, object> valueGetter)
+			{
+				this.name = name;
+				this.type = type;
+				this.valueGetter = valueGetter;
+			}
+
+			public string GetTypeString()
+			{
+				if (type == VRCExpressionParameters.ValueType.Bool){
+					return "bool";
+				}
+				if (type == VRCExpressionParameters.ValueType.Float)
+				{
+					return "float";
+				}
+				return "int";
+			}
+			
+			public string name;
+			public VRCExpressionParameters.ValueType type;
+			public Func<LyumaAv3Runtime, object> valueGetter;
 		};
+		
+		public static HashSet<BuiltinParameterDefinition> BUILTIN_PARAMETERS = new HashSet<BuiltinParameterDefinition> {
+			new BuiltinParameterDefinition("IsLocal", VRCExpressionParameters.ValueType.Bool, runtime => runtime.IsLocal || runtime.IsMirrorClone || runtime.IsShadowClone),
+			new BuiltinParameterDefinition("Viseme", VRCExpressionParameters.ValueType.Int, runtime => runtime.VisemeInt),
+			new BuiltinParameterDefinition("Voice", VRCExpressionParameters.ValueType.Float, runtime => runtime.Voice),
+			new BuiltinParameterDefinition("GestureLeft", VRCExpressionParameters.ValueType.Int, runtime => (int)runtime.GestureLeft),
+			new BuiltinParameterDefinition("GestureRight", VRCExpressionParameters.ValueType.Int, runtime => (int)runtime.GestureRight),
+			new BuiltinParameterDefinition("GestureLeftWeight", VRCExpressionParameters.ValueType.Float, runtime => runtime.GestureLeftWeight),
+			new BuiltinParameterDefinition("GestureRightWeight", VRCExpressionParameters.ValueType.Float, runtime => runtime.GestureRightWeight),
+			new BuiltinParameterDefinition("AngularY", VRCExpressionParameters.ValueType.Float, runtime => runtime.AngularY),
+			new BuiltinParameterDefinition("VelocityX", VRCExpressionParameters.ValueType.Float, runtime => runtime.Velocity.x),
+			new BuiltinParameterDefinition("VelocityY", VRCExpressionParameters.ValueType.Float, runtime => runtime.Velocity.y),
+			new BuiltinParameterDefinition("VelocityZ", VRCExpressionParameters.ValueType.Float, runtime => runtime.Velocity.z),
+			new BuiltinParameterDefinition("VelocityMagnitude", VRCExpressionParameters.ValueType.Float, runtime => runtime.Velocity.magnitude),
+			new BuiltinParameterDefinition("Upright", VRCExpressionParameters.ValueType.Float, runtime => runtime.Upright),
+			new BuiltinParameterDefinition("Grounded", VRCExpressionParameters.ValueType.Bool, runtime => runtime.Grounded),
+			new BuiltinParameterDefinition("Seated", VRCExpressionParameters.ValueType.Bool, runtime => runtime.Seated),
+			new BuiltinParameterDefinition("AFK", VRCExpressionParameters.ValueType.Bool, runtime => runtime.AFK),
+			new BuiltinParameterDefinition("TrackingType", VRCExpressionParameters.ValueType.Int, runtime => (int)runtime.TrackingType),
+			new BuiltinParameterDefinition("VRMode", VRCExpressionParameters.ValueType.Int, runtime => runtime.VRMode),
+			new BuiltinParameterDefinition("MuteSelf", VRCExpressionParameters.ValueType.Bool, runtime => runtime.MuteSelf),
+			new BuiltinParameterDefinition("InStation", VRCExpressionParameters.ValueType.Bool, runtime => runtime.InStation),
+			new BuiltinParameterDefinition("Earmuffs", VRCExpressionParameters.ValueType.Bool, runtime => runtime.Earmuffs),
+			new BuiltinParameterDefinition("ScaleModified", VRCExpressionParameters.ValueType.Bool, runtime => runtime.EnableAvatarScaling && runtime.AvatarHeight != runtime.DefaultViewPosition.y),
+			new BuiltinParameterDefinition("ScaleFactor", VRCExpressionParameters.ValueType.Float, runtime => runtime.EnableAvatarScaling ? runtime.AvatarHeight / runtime.DefaultViewPosition.y : 1.0f),
+			new BuiltinParameterDefinition("ScaleFactorInverse", VRCExpressionParameters.ValueType.Float, runtime =>  runtime.EnableAvatarScaling ? 1.0f / (runtime.AvatarHeight / runtime.DefaultViewPosition.y) : 1.0f),
+			new BuiltinParameterDefinition("EyeHeightAsMeters", VRCExpressionParameters.ValueType.Float, runtime => runtime.avadesc.ViewPosition.y),
+			new BuiltinParameterDefinition("EyeHeightAsPercent", VRCExpressionParameters.ValueType.Float, runtime => Mathf.Clamp((runtime.avadesc.ViewPosition.y  - 0.2f)/ (5.0f - 0.2f), 0.0f, 1.0f)), 
+		};
+		
 		public static readonly Type[] MirrorCloneComponentBlacklist = new Type[] {
 			typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Rigidbody), typeof(Joint)
 		};
@@ -1405,7 +1458,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			return stageNameToValue;
 		}
 		void LateRefreshExpressionParameters(Dictionary<string, float> stageNameToValue) {
-			HashSet<string> usedparams = new HashSet<string>(BUILTIN_PARAMETERS);
+			HashSet<string> usedparams = new HashSet<string>(BUILTIN_PARAMETERS.Select(x => x.name));
 			int i = 0;
 			if (stageParameters != null)
 			{
@@ -2308,310 +2361,34 @@ namespace Lyuma.Av3Emulator.Runtime
 						paramterBools[paramid] = param.value;
 					}
 				}
-				if (parameterIndices.TryGetValue("Viseme", out paramid))
+				
+				foreach (var builtinParam in BUILTIN_PARAMETERS)
 				{
-					AnimatorControllerParameterType inType = parameterTypes["Viseme"];
-					if (paramterInts.TryGetValue(paramid, out iparam))
+					if (parameterIndices.TryGetValue(builtinParam.name, out paramid))
 					{
-						int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
-						if (iparam != i)
+						AnimatorControllerParameterType inType = parameterTypes[builtinParam.name];
+						SetTypeWithMismatch(playable, paramid, builtinParam.valueGetter(this), inType);
+						if (builtinParam.type == VRCExpressionParameters.ValueType.Bool)
 						{
-							VisemeInt = VisemeIdx = i;
-							Viseme = (VisemeIndex)VisemeInt;
+							paramterBools[paramid] = (bool)builtinParam.valueGetter(this);
+						}
+
+						if (builtinParam.type == VRCExpressionParameters.ValueType.Float)
+						{
+							paramterFloats[paramid] = (float)builtinParam.valueGetter(this);
+						}
+
+						if (builtinParam.type == VRCExpressionParameters.ValueType.Int)
+						{
+							paramterInts[paramid] = (int)builtinParam.valueGetter(this);
 						}
 					}
-					SetTypeWithMismatch(playable, paramid, VisemeInt, inType);
-					paramterInts[paramid] = VisemeInt;
 				}
-				if (parameterIndices.TryGetValue("Voice", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["Voice"];
-					if (paramterFloats.TryGetValue(paramid, out fparam))
-					{
-						float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
-						if (fparam != f)
-						{
-							Voice = f;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, Voice, inType);
-					paramterFloats[paramid] = Voice;
-				}
-				if (parameterIndices.TryGetValue("GestureLeft", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["GestureLeft"];
-					if (paramterInts.TryGetValue(paramid, out iparam))
-					{
-						int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
-						if (iparam != i)
-						{
-							GestureLeftIdx = i;
-							GestureLeftIdxInt = (char)GestureLeftIdx;
-							GestureLeft = (GestureIndex)GestureLeftIdx; 
-						} 
-					}
-					SetTypeWithMismatch(playable, paramid, (int)GestureLeft, inType);
-					paramterInts[paramid] = (int)GestureLeft;
-				}
-				if (parameterIndices.TryGetValue("GestureLeftWeight", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["GestureLeftWeight"];
-					if (paramterFloats.TryGetValue(paramid, out fparam)) {
-						float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
-						if (fparam != f)
-						{
-							GestureLeftWeight = f;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, GestureLeftWeight, inType);
-					paramterFloats[paramid] = GestureLeftWeight;
-				}
-				if (parameterIndices.TryGetValue("GestureRight", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["GestureRight"];
-					if (paramterInts.TryGetValue(paramid, out iparam)) {
-						int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
-						if (iparam != i)
-						{
-							GestureRightIdx = i;
-							GestureRightIdxInt = (char)GestureRightIdx;
-							GestureRight = (GestureIndex)GestureRightIdx;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, (int)GestureRight, inType);
-					paramterInts[paramid] = (int)GestureRight;
-				}
-				if (parameterIndices.TryGetValue("GestureRightWeight", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["GestureRightWeight"];
-					if (paramterFloats.TryGetValue(paramid, out fparam)) {
-						float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
-						if (fparam != f)
-						{
-							GestureRightWeight = f;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, GestureRightWeight, inType);
-					paramterFloats[paramid] = GestureRightWeight;
-				}
-				if (parameterIndices.TryGetValue("VelocityX", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["VelocityX"];
-					if (paramterFloats.TryGetValue(paramid, out fparam)) {
-						float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
-						if (fparam != f)
-						{
-							Velocity.x = f;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, Velocity.x, inType);
-					paramterFloats[paramid] = Velocity.x;
-				}
-				if (parameterIndices.TryGetValue("VelocityY", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["VelocityY"];
-					if (paramterFloats.TryGetValue(paramid, out fparam)) {
-						float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
-						if (fparam != f)
-						{
-							Velocity.y = f;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, Velocity.y, inType);
-					paramterFloats[paramid] = Velocity.y;
-				}
-				if (parameterIndices.TryGetValue("VelocityZ", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["VelocityZ"];
-					if (paramterFloats.TryGetValue(paramid, out fparam)) {
-						float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
-						if (fparam != f)
-						{
-							Velocity.z = f;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, Velocity.z, inType);
-					paramterFloats[paramid] = Velocity.z;
-				}
-				if (parameterIndices.TryGetValue("VelocityMagnitude", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["VelocityMagnitude"];
-					if (paramterFloats.TryGetValue(paramid, out fparam)) {
-						float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
-						if (fparam != f)
-						{
-							Velocity = Velocity.normalized * f;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, Velocity.magnitude, inType);
-					paramterFloats[paramid] = Velocity.magnitude;
-				}
-				if (parameterIndices.TryGetValue("AngularY", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["AngularY"];
-					if (paramterFloats.TryGetValue(paramid, out fparam)) {
-						float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
-						if (fparam != f)
-						{
-							AngularY = f;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, AngularY, inType);
-					paramterFloats[paramid] = AngularY;
-				}
-				if (parameterIndices.TryGetValue("Upright", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["Upright"];
-					if (paramterFloats.TryGetValue(paramid, out fparam)) {
-						float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
-						if (fparam != f)
-						{
-							Upright = f;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, Upright, inType);
-					paramterFloats[paramid] = Upright;
-				}
-				if (parameterIndices.TryGetValue("IsLocal", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["IsLocal"];
-					SetTypeWithMismatch(playable, paramid, IsLocal || IsMirrorClone || IsShadowClone, inType);
-				}
-				if (parameterIndices.TryGetValue("Grounded", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["Grounded"];
-					if (paramterInts.TryGetValue(paramid, out iparam)) {
-						int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
-						if (i != iparam)
-						{
-							Grounded = i == 1;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, Grounded, inType);
-					paramterInts[paramid] = Grounded ? 1 : 0;
-				}
-				if (parameterIndices.TryGetValue("Seated", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["Seated"];
-					if (paramterInts.TryGetValue(paramid, out iparam)) {
-						int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
-						if (i != iparam)
-						{
-							Seated = i == 1;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, Seated, inType);
-					paramterInts[paramid] = Seated ? 1 : 0;
-				}
-				if (parameterIndices.TryGetValue("AFK", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["AFK"];
-					if (paramterInts.TryGetValue(paramid, out iparam)) {
-						int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
-						if (i != iparam)
-						{
-							AFK = i == 1;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, AFK, inType);
-					paramterInts[paramid] = AFK ? 1 : 0;
-				}
-				if (parameterIndices.TryGetValue("TrackingType", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["TrackingType"];
-					if (paramterInts.TryGetValue(paramid, out iparam)) {
-						int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
-						if (iparam != i)
-						{
-							TrackingTypeIdx = i;
-							TrackingTypeIdxInt = (char)TrackingTypeIdx;
-							TrackingType = (TrackingTypeIndex)TrackingTypeIdx;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, (int)TrackingType, inType);
-					paramterInts[paramid] = (int)TrackingType;
-				}
-				if (parameterIndices.TryGetValue("VRMode", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["VRMode"];
-					if (paramterInts.TryGetValue(paramid, out iparam)) {
-						int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
-						if (iparam != i)
-						{
-							VRMode = i != 0;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid,VRMode ? 1 : 0, inType);
-					paramterInts[paramid] = VRMode ? 1 : 0;
-				}
-				if (parameterIndices.TryGetValue("MuteSelf", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["MuteSelf"];
-					if (paramterInts.TryGetValue(paramid, out iparam)) {
-						int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
-						if (iparam != i)
-						{
-							MuteSelf = i == 1;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, MuteSelf, inType);
-					paramterInts[paramid] = MuteSelf ? 1 : 0;
-				}
-				if (parameterIndices.TryGetValue("InStation", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["InStation"];
-					if (paramterInts.TryGetValue(paramid, out iparam))
-					{
-						int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
-						if (iparam != i)
-						{
-							InStation = i == 1;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, InStation, inType);
-					paramterInts[paramid] = InStation ? 1 : 0;
-				}
-				if (parameterIndices.TryGetValue("Earmuffs", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["Earmuffs"];
-					if (paramterInts.TryGetValue(paramid, out iparam)) {
-						int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
-						if (iparam != i)
-						{
-							Earmuffs = i == 1;
-						}
-					}
-					SetTypeWithMismatch(playable, paramid, Earmuffs, inType);
-					paramterInts[paramid] = Earmuffs ? 1 : 0;
-				}
+				
+				
 				if (parameterIndices.TryGetValue("AvatarVersion", out paramid)) {
 					AnimatorControllerParameterType inType = parameterTypes["AvatarVersion"];
 					SetTypeWithMismatch(playable, paramid, AvatarVersion, inType);
-				}
-				if (parameterIndices.TryGetValue("ScaleModified", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["ScaleModified"];
-					SetTypeWithMismatch(playable, paramid, EnableAvatarScaling && AvatarHeight != DefaultViewPosition.y, inType);
-				}
-				if (parameterIndices.TryGetValue("ScaleFactor", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["ScaleFactor"];
-					SetTypeWithMismatch(playable, paramid, scale, inType);
-				}
-				if (parameterIndices.TryGetValue("ScaleFactorInverse", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["ScaleFactorInverse"];
-					SetTypeWithMismatch(playable, paramid, 1f/scale, inType);
-				}
-				if (parameterIndices.TryGetValue("EyeHeightAsMeters", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["EyeHeightAsMeters"];
-					SetTypeWithMismatch(playable, paramid, avadesc.ViewPosition.y, inType);
-				}
-				if (parameterIndices.TryGetValue("EyeHeightAsPercent", out paramid))
-				{
-					AnimatorControllerParameterType inType = parameterTypes["EyeHeightAsPercent"];
-					SetTypeWithMismatch(playable, paramid, Mathf.Clamp((avadesc.ViewPosition.y  - 0.2f)/ (5.0f - 0.2f), 0.0f, 1.0f), inType);
 				}
 				whichcontroller++;
 			}
@@ -2875,88 +2652,33 @@ namespace Lyuma.Av3Emulator.Runtime
 							if (EnableAvatarScaling) {
 								scale = AvatarHeight / DefaultViewPosition.y;
 							}
-							switch (prop.name) {
-								case "VelocityZ":
-									outputf = Velocity.z;
-									break;
-								case "VelocityY":
-									outputf = Velocity.y;
-									break;
-								case "VelocityX":
-									outputf = Velocity.x;
-									break;
-								case "VelocityMagnitude":
-									outputf = Velocity.magnitude;
-									break;
-								case "InStation":
-									outputf = InStation ? 1.0f : 0.0f;
-									break;
-								case "Seated":
-									outputf = Seated ? 1.0f : 0.0f;
-									break;
-								case "AFK":
-									outputf = AFK ? 1.0f : 0.0f;
-									break;
-								case "Upright":
-									outputf = Upright;
-									break;
-								case "AngularY":
-									outputf = AngularY;
-									break;
-								case "Grounded":
-									outputf = Grounded ? 1.0f : 0.0f;
-									break;
-								case "MuteSelf":
-									outputf = MuteSelf ? 1.0f : 0.0f;
-									break;
-								case "Earmuffs":
-									outputf = Earmuffs ? 1.0f : 0.0f;
-									break;
-								case "VRMode":
-									outputf = VRMode ? 1.0f : 0.0f;
-									break;
-								case "TrackingType":
-									outputf = TrackingTypeIdxInt;
-									break;
-								case "GestureRightWeight":
-									outputf = GestureRightWeight;
-									break;
-								case "GestureRight":
-									outputf = GestureRightIdxInt;
-									break;
-								case "GestureLeftWeight":
-									outputf = GestureLeftWeight;
-									break;
-								case "GestureLeft":
-									outputf = GestureLeftIdxInt;
-									break;
-								case "Voice":
-									outputf = Voice;
-									break;
-								case "Viseme":
-									outputf = VisemeInt;
-									break;
-								case "ScaleModified":
-									outputf = scale == 1.0f ? 0.0f : 1.0f;
-									break;
-								case "ScaleFactor":
-									outputf = scale;
-									break;
-								case "ScaleFactorInverse":
-									outputf = 1.0f / scale;
-									break;
-								case "EyeHeightAsMeters":
-									outputf = avadesc.ViewPosition.y;
-									break;
-								case "EyeHeightAsPercent":
-									outputf = (avadesc.ViewPosition.y - 0.2f) / (5.0f - 0.2f);
-									break;
-								default:
-									if (!warnedParams.Contains(prop.name)) {
-										Debug.LogWarning("Unrecognized OSC param " + prop.name);
-										warnedParams.Add(prop.name);
-									}
-									break;
+
+							BuiltinParameterDefinition oscParam =
+								BUILTIN_PARAMETERS.FirstOrDefault(x => x.name == prop.name);
+							if (oscParam == null)
+							{
+								if (!warnedParams.Contains(prop.name)) {
+									Debug.LogWarning("Unrecognized OSC param " + prop.name);
+									warnedParams.Add(prop.name);
+								}
+							}
+							else
+							{
+								object value = oscParam.valueGetter(this);
+								if (value is float f)
+								{
+									outputf = f;
+								}
+
+								if (value is int i)
+								{
+									outputf = i;
+								}
+
+								if (value is bool b)
+								{
+									outputf = b ? 1.0f : 0.0f;
+								}
 							}
 						}
 						object output;
@@ -3055,79 +2777,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				break;
 			}
 		}
-		public void processOSCVRCInputMessage(string ParamName, object arg0) {
-			float argFloat = getObjectFloat(arg0);
-			int argInt = getObjectInt(arg0);
-			bool argBool = isObjectTrue(arg0);
-			switch (ParamName) {
-				case "VelocityZ":
-					Velocity.z = argFloat;
-					break;
-				case "VelocityY":
-					Velocity.y = argFloat;
-					break;
-				case "VelocityX":
-					Velocity.x = argFloat;
-					break;
-				case "VelocityMagnitude":
-					Velocity.x = argFloat;
-					break;
-				case "InStation":
-					InStation = argBool;
-					break;
-				case "Seated":
-					Seated = argBool;
-					break;
-				case "AFK":
-					AFK = argBool;
-					break;
-				case "Upright":
-					Upright = argFloat;
-					break;
-				case "AngularY":
-					AngularY = argFloat;
-					break;
-				case "Grounded":
-					Grounded = argBool;
-					break;
-				case "MuteSelf":
-					MuteSelf = argBool;
-					break;
-				case "Earmuffs":
-					MuteSelf = argBool;
-					break;
-				case "VRMode":
-					VRMode = argBool;
-					break;
-				case "TrackingType":
-					TrackingTypeIdx = argInt;
-					break;
-				case "GestureRightWeight":
-					GestureRightWeight = argFloat;
-					break;
-				case "GestureRight":
-					GestureRightIdx = argInt;
-					break;
-				case "GestureLeftWeight":
-					GestureLeftWeight = argFloat;
-					break;
-				case "GestureLeft":
-					GestureLeftIdx = argInt;
-					break;
-				case "Voice":
-					Voice = argFloat;
-					break;
-				case "Viseme":
-					VisemeIdx = argInt;
-					break;
-				default:
-					if (!warnedParams.Contains(ParamName)) {
-						Debug.LogWarning("Unrecognized built in VRC param " + ParamName);
-						warnedParams.Add(ParamName);
-					}
-					break;
-			}
-		}
+		
 		public void HandleOSCMessages(List<A3ESimpleOSC.OSCMessage> messages) {
 			var innerProperties = new Dictionary<string, A3EOSCConfiguration.InnerJson>();
 			foreach (var ij in OSCConfigurationFile.OSCJsonConfig.parameters) {
@@ -3174,8 +2824,8 @@ namespace Lyuma.Av3Emulator.Runtime
 						if (msgPath.StartsWith("/avatar/parameters/")) {
 							ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
 						}
-						if (BUILTIN_PARAMETERS.Contains( ParamName ) ) {
-							processOSCVRCInputMessage( ParamName, arguments[0]);
+						if (BUILTIN_PARAMETERS.Any( x => x.name == ParamName ) ) {
+							Debug.LogWarning("Setting builtin VRC Parameters isn't allowed");
 						} else if (!IntToIndex.ContainsKey(ParamName) && !BoolToIndex.ContainsKey(ParamName) && !FloatToIndex.ContainsKey(ParamName)) {
 							if (LogOSCWarnings) { //if (!ParamName.EndsWith("_Angle") && !ParamName.EndsWith("_IsGrabbed") && !ParamName.EndsWith("_Stretch")) {
 								Debug.LogWarning("Address " + msgPath + " not found for input in JSON.");
