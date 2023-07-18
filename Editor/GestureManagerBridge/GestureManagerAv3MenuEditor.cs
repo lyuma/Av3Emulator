@@ -173,16 +173,16 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 				}
 				Params.Clear();
 				foreach (var builtinprop in LyumaAv3Runtime.BUILTIN_PARAMETERS) {
-					if (builtinprop == "VelocityX") {
-						Params.Add(builtinprop, new VelocityParam(builtinprop, _runtime, 0));
-					} else if (builtinprop == "VelocityY") {
-						Params.Add(builtinprop, new VelocityParam(builtinprop, _runtime, 1));
-					} else if (builtinprop == "VelocityZ") {
-						Params.Add(builtinprop, new VelocityParam(builtinprop, _runtime, 2));
-					} else if (builtinprop == "VelocityMagnitude") {
-						Params.Add(builtinprop, new VelocityParam(builtinprop, _runtime, 3));
+					if (builtinprop.name == "VelocityX") {
+						Params.Add(builtinprop.name, new VelocityParam(builtinprop.name, _runtime, 0));
+					} else if (builtinprop.name == "VelocityY") {
+						Params.Add(builtinprop.name, new VelocityParam(builtinprop.name, _runtime, 1));
+					} else if (builtinprop.name == "VelocityZ") {
+						Params.Add(builtinprop.name, new VelocityParam(builtinprop.name, _runtime, 2));
+					} else if (builtinprop.name == "VelocityMagnitude") {
+						Params.Add(builtinprop.name, new VelocityParam(builtinprop.name, _runtime, 3));
 					} else {
-						addParam(builtinprop, builtinprop);
+						addParam(builtinprop.name, builtinprop.name);
 					}
 				}
 				addParam("IKPoseCalibration", "PoseIK");
