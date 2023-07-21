@@ -2665,6 +2665,10 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		void SetTypeWithMismatch(AnimatorControllerPlayable playable, int id, object value, AnimatorControllerParameterType outType)
 		{
+			if (playable.IsParameterControlledByCurve(id))
+			{
+				return;
+			}
 			if (value is float floatValue)
 			{
 				switch (outType)
