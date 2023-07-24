@@ -335,13 +335,13 @@ namespace Lyuma.Av3Emulator.Runtime
 			public string GetTypeString()
 			{
 				if (type == VRCExpressionParameters.ValueType.Bool){
-					return "bool";
+					return "Bool";
 				}
 				if (type == VRCExpressionParameters.ValueType.Float)
 				{
-					return "float";
+					return "Float";
 				}
-				return "int";
+				return "Int";
 			}
 			
 			public string name;
