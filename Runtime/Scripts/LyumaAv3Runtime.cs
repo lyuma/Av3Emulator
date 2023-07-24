@@ -325,11 +325,12 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		public class BuiltinParameterDefinition
 		{
-			public BuiltinParameterDefinition(string name, VRCExpressionParameters.ValueType type, Func<LyumaAv3Runtime, object> valueGetter)
+			public BuiltinParameterDefinition(string name, VRCExpressionParameters.ValueType type, Func<LyumaAv3Runtime, object> valueGetter, Action<LyumaAv3Runtime, object> valueSetter)
 			{
 				this.name = name;
 				this.type = type;
 				this.valueGetter = valueGetter;
+				this.valueSetter = valueSetter;
 			}
 
 			public string GetTypeString()
@@ -347,35 +348,88 @@ namespace Lyuma.Av3Emulator.Runtime
 			public string name;
 			public VRCExpressionParameters.ValueType type;
 			public Func<LyumaAv3Runtime, object> valueGetter;
+			public Action<LyumaAv3Runtime, object> valueSetter;
 		};
 		
 		public static HashSet<BuiltinParameterDefinition> BUILTIN_PARAMETERS = new HashSet<BuiltinParameterDefinition> {
-			new BuiltinParameterDefinition("IsLocal", VRCExpressionParameters.ValueType.Bool, runtime => runtime.IsLocal || runtime.IsMirrorClone || runtime.IsShadowClone),
-			new BuiltinParameterDefinition("Viseme", VRCExpressionParameters.ValueType.Int, runtime => runtime.VisemeInt),
-			new BuiltinParameterDefinition("Voice", VRCExpressionParameters.ValueType.Float, runtime => runtime.Voice),
-			new BuiltinParameterDefinition("GestureLeft", VRCExpressionParameters.ValueType.Int, runtime => (int)runtime.GestureLeft),
-			new BuiltinParameterDefinition("GestureRight", VRCExpressionParameters.ValueType.Int, runtime => (int)runtime.GestureRight),
-			new BuiltinParameterDefinition("GestureLeftWeight", VRCExpressionParameters.ValueType.Float, runtime => runtime.GestureLeftWeight),
-			new BuiltinParameterDefinition("GestureRightWeight", VRCExpressionParameters.ValueType.Float, runtime => runtime.GestureRightWeight),
-			new BuiltinParameterDefinition("AngularY", VRCExpressionParameters.ValueType.Float, runtime => runtime.AngularY),
-			new BuiltinParameterDefinition("VelocityX", VRCExpressionParameters.ValueType.Float, runtime => runtime.Velocity.x),
-			new BuiltinParameterDefinition("VelocityY", VRCExpressionParameters.ValueType.Float, runtime => runtime.Velocity.y),
-			new BuiltinParameterDefinition("VelocityZ", VRCExpressionParameters.ValueType.Float, runtime => runtime.Velocity.z),
-			new BuiltinParameterDefinition("VelocityMagnitude", VRCExpressionParameters.ValueType.Float, runtime => runtime.Velocity.magnitude),
-			new BuiltinParameterDefinition("Upright", VRCExpressionParameters.ValueType.Float, runtime => runtime.Upright),
-			new BuiltinParameterDefinition("Grounded", VRCExpressionParameters.ValueType.Bool, runtime => runtime.Grounded),
-			new BuiltinParameterDefinition("Seated", VRCExpressionParameters.ValueType.Bool, runtime => runtime.Seated),
-			new BuiltinParameterDefinition("AFK", VRCExpressionParameters.ValueType.Bool, runtime => runtime.AFK),
-			new BuiltinParameterDefinition("TrackingType", VRCExpressionParameters.ValueType.Int, runtime => (int)runtime.TrackingType),
-			new BuiltinParameterDefinition("VRMode", VRCExpressionParameters.ValueType.Int, runtime => runtime.VRMode),
-			new BuiltinParameterDefinition("MuteSelf", VRCExpressionParameters.ValueType.Bool, runtime => runtime.MuteSelf),
-			new BuiltinParameterDefinition("InStation", VRCExpressionParameters.ValueType.Bool, runtime => runtime.InStation),
-			new BuiltinParameterDefinition("Earmuffs", VRCExpressionParameters.ValueType.Bool, runtime => runtime.Earmuffs),
-			new BuiltinParameterDefinition("ScaleModified", VRCExpressionParameters.ValueType.Bool, runtime => runtime.EnableAvatarScaling && runtime.AvatarHeight != runtime.DefaultViewPosition.y),
-			new BuiltinParameterDefinition("ScaleFactor", VRCExpressionParameters.ValueType.Float, runtime => runtime.EnableAvatarScaling ? runtime.AvatarHeight / runtime.DefaultViewPosition.y : 1.0f),
-			new BuiltinParameterDefinition("ScaleFactorInverse", VRCExpressionParameters.ValueType.Float, runtime =>  runtime.EnableAvatarScaling ? 1.0f / (runtime.AvatarHeight / runtime.DefaultViewPosition.y) : 1.0f),
-			new BuiltinParameterDefinition("EyeHeightAsMeters", VRCExpressionParameters.ValueType.Float, runtime => runtime.avadesc.ViewPosition.y),
-			new BuiltinParameterDefinition("EyeHeightAsPercent", VRCExpressionParameters.ValueType.Float, runtime => Mathf.Clamp((runtime.avadesc.ViewPosition.y  - 0.2f)/ (5.0f - 0.2f), 0.0f, 1.0f)), 
+			new BuiltinParameterDefinition("IsLocal", VRCExpressionParameters.ValueType.Bool,
+				runtime => runtime.IsLocal || runtime.IsMirrorClone || runtime.IsShadowClone,
+				(runtime, value) => runtime.IsLocal = (bool)value),
+			new BuiltinParameterDefinition("Viseme", VRCExpressionParameters.ValueType.Int, 
+				runtime => runtime.VisemeInt, 
+				(runtime, value) => runtime.VisemeInt = (int)value),
+			new BuiltinParameterDefinition("Voice", VRCExpressionParameters.ValueType.Float, 
+				runtime => runtime.Voice,
+				(runtime, value) => runtime.Voice = (float)value),
+			new BuiltinParameterDefinition("GestureLeft", VRCExpressionParameters.ValueType.Int, 
+				runtime => (int)runtime.GestureLeft,
+				(runtime, value) => runtime.GestureLeft = (GestureIndex)value),
+			new BuiltinParameterDefinition("GestureRight", VRCExpressionParameters.ValueType.Int, 
+				runtime => (int)runtime.GestureRight,
+				(runtime, value) => runtime.GestureRight = (GestureIndex)value),
+			new BuiltinParameterDefinition("GestureLeftWeight", VRCExpressionParameters.ValueType.Float, 
+				runtime => runtime.GestureLeftWeight,
+				(runtime, value) => runtime.GestureLeftWeight = (float)value),
+			new BuiltinParameterDefinition("GestureRightWeight", VRCExpressionParameters.ValueType.Float, 
+				runtime => runtime.GestureRightWeight,
+				(runtime, value) => runtime.GestureRightWeight = (float)value),
+			new BuiltinParameterDefinition("AngularY", VRCExpressionParameters.ValueType.Float, 
+				runtime => runtime.AngularY,
+				(runtime, value) => runtime.AngularY = (float)value),
+			new BuiltinParameterDefinition("VelocityX", VRCExpressionParameters.ValueType.Float, 
+				runtime => runtime.Velocity.x,
+				(runtime, value) => runtime.Velocity = new Vector3((float)value, runtime.Velocity.y, runtime.Velocity.z)),
+			new BuiltinParameterDefinition("VelocityY", VRCExpressionParameters.ValueType.Float, 
+				runtime => runtime.Velocity.y,
+				(runtime, value) => runtime.Velocity = new Vector3(runtime.Velocity.x, (float)value, runtime.Velocity.z)),
+			new BuiltinParameterDefinition("VelocityZ", VRCExpressionParameters.ValueType.Float, 
+				runtime => runtime.Velocity.z,
+				(runtime, value) => runtime.Velocity = new Vector3(runtime.Velocity.x, runtime.Velocity.y, (float)value)),
+			new BuiltinParameterDefinition("VelocityMagnitude", VRCExpressionParameters.ValueType.Float, 
+				runtime => runtime.Velocity.magnitude,
+				(runtime, value) => runtime.Velocity = runtime.Velocity.normalized * (float)value),
+			new BuiltinParameterDefinition("Upright", VRCExpressionParameters.ValueType.Float, 
+				runtime => runtime.Upright,
+				(runtime, value) => runtime.Upright = (float)value),
+			new BuiltinParameterDefinition("Grounded", VRCExpressionParameters.ValueType.Bool, 
+				runtime => runtime.Grounded,
+				(runtime, value) => runtime.Grounded = (bool)value),
+			new BuiltinParameterDefinition("Seated", VRCExpressionParameters.ValueType.Bool, 
+				runtime => runtime.Seated,
+				(runtime, value) => runtime.Seated = (bool)value),
+			new BuiltinParameterDefinition("AFK", VRCExpressionParameters.ValueType.Bool, 
+				runtime => runtime.AFK,
+				(runtime, value) => runtime.AFK = (bool)value),
+			new BuiltinParameterDefinition("TrackingType", VRCExpressionParameters.ValueType.Int, 
+				runtime => (int)runtime.TrackingType,
+				(runtime, value) => runtime.TrackingType = (TrackingTypeIndex)value),
+			new BuiltinParameterDefinition("VRMode", VRCExpressionParameters.ValueType.Int,
+				runtime => runtime.VRMode ? 1 : 0,
+				(runtime, value) => runtime.VRMode = (int)value == 1),
+			new BuiltinParameterDefinition("MuteSelf", VRCExpressionParameters.ValueType.Bool, 
+				runtime => runtime.MuteSelf,
+				(runtime, value) => runtime.MuteSelf = (bool)value),
+			new BuiltinParameterDefinition("InStation", VRCExpressionParameters.ValueType.Bool, 
+				runtime => runtime.InStation,
+				(runtime, value) => runtime.InStation = (bool)value),
+			new BuiltinParameterDefinition("Earmuffs", VRCExpressionParameters.ValueType.Bool, 
+				runtime => runtime.Earmuffs,
+				(runtime, value) => runtime.Earmuffs = (bool)value),
+			new BuiltinParameterDefinition("ScaleModified", VRCExpressionParameters.ValueType.Bool, 
+				runtime => runtime.EnableAvatarScaling && runtime.AvatarHeight != runtime.DefaultViewPosition.y,
+				(runtime, value) => { }), //Modifying this doesn't make sense, this field is un-editable in VRC
+			new BuiltinParameterDefinition("ScaleFactor", VRCExpressionParameters.ValueType.Float, 
+				runtime => runtime.EnableAvatarScaling ? runtime.AvatarHeight / runtime.DefaultViewPosition.y : 1.0f,
+				(runtime, value) => { if (runtime.EnableAvatarScaling) runtime.AvatarHeight = runtime.DefaultViewPosition.y * (float)value; }),
+			new BuiltinParameterDefinition("ScaleFactorInverse", VRCExpressionParameters.ValueType.Float, 
+				runtime =>  runtime.EnableAvatarScaling ? 1.0f / (runtime.AvatarHeight / runtime.DefaultViewPosition.y) : 1.0f,
+				(runtime, value) => { if (runtime.EnableAvatarScaling) runtime.AvatarHeight = runtime.DefaultViewPosition.y / (float)value; }),
+			new BuiltinParameterDefinition("EyeHeightAsMeters", VRCExpressionParameters.ValueType.Float, 
+				runtime => runtime.avadesc.ViewPosition.y,
+				(runtime, value) => { }), //Modifying this doesn't make sense, this field is un-editable in VRC
+			new BuiltinParameterDefinition("EyeHeightAsPercent", VRCExpressionParameters.ValueType.Float, 
+				runtime => Mathf.Clamp((runtime.avadesc.ViewPosition.y  - 0.2f)/ (5.0f - 0.2f), 0.0f, 1.0f),
+				(runtime, value) => { }) //Modifying this doesn't make sense, this field is un-editable in VRC
 		};
 		
 		public static readonly Type[] MirrorCloneComponentBlacklist = new Type[] {
@@ -2777,6 +2831,27 @@ namespace Lyuma.Av3Emulator.Runtime
 				break;
 			}
 		}
+
+		public void ProcessOSCBuiltinParamInputMessage(BuiltinParameterDefinition param, LyumaAv3Runtime runtime, object input)
+		{
+			if (param.type == VRCExpressionParameters.ValueType.Bool)
+			{
+				bool argBool = isObjectTrue(input);
+				param.valueSetter(runtime, argBool);
+			}
+
+			if (param.type == VRCExpressionParameters.ValueType.Float)
+			{
+				float argFloat = getObjectFloat(input);
+				param.valueSetter(runtime, argFloat);
+			}
+
+			if (param.type == VRCExpressionParameters.ValueType.Int)
+			{
+				int argInt = getObjectInt(input);
+				param.valueSetter(runtime, argInt);
+			}
+		}
 		
 		public void HandleOSCMessages(List<A3ESimpleOSC.OSCMessage> messages) {
 			var innerProperties = new Dictionary<string, A3EOSCConfiguration.InnerJson>();
@@ -2824,8 +2899,12 @@ namespace Lyuma.Av3Emulator.Runtime
 						if (msgPath.StartsWith("/avatar/parameters/")) {
 							ParamName = msgPath.Split(new char[]{'/'}, 4)[3];
 						}
-						if (BUILTIN_PARAMETERS.Any( x => x.name == ParamName ) ) {
-							Debug.LogWarning("Setting builtin VRC Parameters isn't allowed");
+
+						BuiltinParameterDefinition messageParameter =
+							BUILTIN_PARAMETERS.FirstOrDefault(x => x.name == ParamName);
+						if (messageParameter != null) {
+							Debug.LogWarning("Setting builtin VRC Parameters isn't respected in game");
+							ProcessOSCBuiltinParamInputMessage(messageParameter, this, arguments[0]);
 						} else if (!IntToIndex.ContainsKey(ParamName) && !BoolToIndex.ContainsKey(ParamName) && !FloatToIndex.ContainsKey(ParamName)) {
 							if (LogOSCWarnings) { //if (!ParamName.EndsWith("_Angle") && !ParamName.EndsWith("_IsGrabbed") && !ParamName.EndsWith("_Stretch")) {
 								Debug.LogWarning("Address " + msgPath + " not found for input in JSON.");
