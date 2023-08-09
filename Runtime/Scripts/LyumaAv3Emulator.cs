@@ -183,15 +183,13 @@ namespace Lyuma.Av3Emulator.Runtime
 			Camera.onPreCull += PreCull;
 			Camera.onPostRender += PostRender;
 			emulatorInstance = this;
-			ScanForAvatars();
 			if (WorkaroundPlayModeScriptCompile) {
 				LyumaAv3Runtime.ApplyOnEnableWorkaroundDelegate();
 			}
-
-			SceneManager.sceneLoaded += OnSceneLoaded;
 		}
 
-		private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
+		private void Start()
+		{
 			ScanForAvatars();
 		}
 
@@ -287,7 +285,6 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			runtimes.Clear();
 			LyumaAv3Runtime.updateSceneLayersDelegate(~0);
-			SceneManager.sceneLoaded -= OnSceneLoaded;
 		}
 
 		private void Update() {
