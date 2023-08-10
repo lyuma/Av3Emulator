@@ -479,6 +479,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		private HashSet<Animator> attachedAnimators;
 		private HashSet<string> duplicateParameterAdds = new HashSet<string>();
 
+		private (ParentConstraint, Vector3[])[] ParentConstraints;
+
 		const float BASE_HEIGHT = 1.4f;
 
 		public IEnumerator DelayedEnterPoseSpace(bool setView, float time) {
@@ -1048,6 +1050,8 @@ namespace Lyuma.Av3Emulator.Runtime
 			AvatarHeight = avadesc.ViewPosition.y;
 			DefaultViewPosition = avadesc.ViewPosition;
 			DefaultAvatarScale = gameObject.transform.localScale;
+
+			ParentConstraints = gameObject.GetComponentsInChildren<ParentConstraint>().Select(x => (x, x.translationOffsets)).ToArray();
 		}
 
 		public void CreateMirrorClone() {
@@ -2186,6 +2190,12 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			gameObject.transform.localScale = DefaultAvatarScale * scale;
 			avadesc.ViewPosition = DefaultViewPosition * scale;
+			
+			foreach ((ParentConstraint constraint, Vector3[] offsets) in ParentConstraints)
+			{
+				constraint.translationOffsets = offsets.Select(original => new Vector3(original.x * constraint.transform.lossyScale.x, original.y * constraint.transform.lossyScale.y, original.z * constraint.transform.lossyScale.z)).ToArray();
+			}
+			
 			int whichcontroller;
 			whichcontroller = 0;
 			foreach (AnimatorControllerPlayable playable in playables)
