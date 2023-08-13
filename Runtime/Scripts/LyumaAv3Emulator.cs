@@ -89,6 +89,9 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool ApplyClonePositionOffset = false;
 
 		static public LyumaAv3Emulator emulatorInstance;
+		public List<GameObject> AvatarList = new List<GameObject>();
+		public bool InitNextFrame = false;
+		public bool Init = false;
 		static public RuntimeAnimatorController EmptyController;
 
 		[NonSerialized] public List<LyumaAv3Runtime> runtimes = new List<LyumaAv3Runtime>();
@@ -179,30 +182,42 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 			}
 		}
-
-		private void Awake()
+		
+		private void Start()
 		{
 			Camera.onPreCull += PreCull;
 			Camera.onPostRender += PostRender;
 			emulatorInstance = this;
-			ScanForAvatars();
+			RunPreprocessors();
 			if (WorkaroundPlayModeScriptCompile) {
 				LyumaAv3Runtime.ApplyOnEnableWorkaroundDelegate();
 			}
 
-			SceneManager.sceneLoaded += OnSceneLoaded;
+			InitNextFrame = true;
 		}
 
-		private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
-			ScanForAvatars();
+		private void RunPreprocessors()
+		{
+			List<GameObject> avatars = AvatarList;
+			foreach (var avadesc in avatars)
+			{
+				bool alreadyHadComponent = avadesc.gameObject.GetComponent<LyumaAv3Runtime>() != null;
+				if (RunPreprocessAvatarHook && !alreadyHadComponent)
+				{
+					GameObject origClone = GameObject.Instantiate(avadesc.gameObject);
+					origClone.name = avadesc.gameObject.name;
+					avadesc.gameObject.name = origClone.name + "(Clone)";
+					LyumaAv3Runtime.InvokeOnPreProcessAvatar(avadesc.gameObject);
+					avadesc.gameObject.name = origClone.name;
+					GameObject.DestroyImmediate(origClone);
+				}
+			}
 		}
-
-		private void ScanForAvatars() {
-			VRCAvatarDescriptor[] avatars = FindObjectsOfType<VRCAvatarDescriptor>()
-				.Where(avatar => !scannedAvatars.Contains(avatar))
-				.ToArray();
-			scannedAvatars.UnionWith(avatars);
-			Debug.Log(this.name + ": Setting up Av3Emulator on "+avatars.Length + " avatars.", this);
+		
+		private void Initialize()
+		{
+			List<GameObject> avatars = AvatarList;
+			Debug.Log(this.name + ": Setting up Av3Emulator on " + avatars.Count + " avatars.", this);
 			foreach (var avadesc in avatars)
 			{
 				if (avadesc.GetComponents<Component>().Any(x => x.GetType().Name == "PipelineSaver")) {
@@ -215,16 +230,6 @@ namespace Lyuma.Av3Emulator.Runtime
 				try {
 					// Creates the playable director, and initializes animator.
 					bool alreadyHadComponent = avadesc.gameObject.GetComponent<LyumaAv3Runtime>() != null;
-					if (RunPreprocessAvatarHook && !alreadyHadComponent) {
-						GameObject origClone = GameObject.Instantiate(avadesc.gameObject);
-						origClone.name = avadesc.gameObject.name;
-						avadesc.gameObject.name = origClone.name + "(Clone)";
-						LyumaAv3Runtime.InvokeOnPreProcessAvatar(avadesc.gameObject);
-						avadesc.gameObject.name = origClone.name;
-						GameObject.DestroyImmediate(origClone);
-						avadesc.gameObject.SetActive(true);
-					}
-
 					var oml = GetOrAddComponent<UnityEngine.AI.OffMeshLink>(avadesc.gameObject);
 					oml.startTransform = this.transform;
 					var runtime = GetOrAddComponent<LyumaAv3Runtime>(avadesc.gameObject);
@@ -289,13 +294,24 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			runtimes.Clear();
 			LyumaAv3Runtime.updateSceneLayersDelegate(~0);
-			SceneManager.sceneLoaded -= OnSceneLoaded;
 		}
 
 		private void Update() {
+			if (InitNextFrame)
+			{
+				InitNextFrame = false;
+				Init = true;
+				return;
+			}
+
+			if (Init)
+			{
+				Init = false;
+				Initialize();
+			}
 			if (RestartingEmulator) {
 				RestartingEmulator = false;
-				Awake();
+				Initialize();
 			} else if (RestartEmulator) {
 				RunPreprocessAvatarHook = false;
 				RestartEmulator = false;
