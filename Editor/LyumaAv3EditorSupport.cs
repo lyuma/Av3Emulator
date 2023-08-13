@@ -19,6 +19,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. */
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Lyuma.Av3Emulator.Runtime;
 using UnityEditor;
