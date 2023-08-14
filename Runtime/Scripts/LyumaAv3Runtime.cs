@@ -2190,12 +2190,18 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			gameObject.transform.localScale = DefaultAvatarScale * scale;
 			avadesc.ViewPosition = DefaultViewPosition * scale;
-			
-			foreach ((ParentConstraint constraint, Vector3[] offsets) in ParentConstraints)
+
+			if (emulator.DisableParentConstraintOffsetScaling)
 			{
-				constraint.translationOffsets = offsets.Select(original => new Vector3(original.x * constraint.transform.lossyScale.x, original.y * constraint.transform.lossyScale.y, original.z * constraint.transform.lossyScale.z)).ToArray();
+				foreach ((ParentConstraint constraint, Vector3[] offsets) in ParentConstraints)
+				{
+					constraint.translationOffsets = offsets.Select(original =>
+						new Vector3(original.x * constraint.transform.lossyScale.x,
+							original.y * constraint.transform.lossyScale.y,
+							original.z * constraint.transform.lossyScale.z)).ToArray();
+				}
 			}
-			
+
 			int whichcontroller;
 			whichcontroller = 0;
 			foreach (AnimatorControllerPlayable playable in playables)
