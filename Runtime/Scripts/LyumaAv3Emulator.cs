@@ -218,6 +218,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			Debug.Log(this.name + ": Setting up Av3Emulator on " + avatars.Count + " avatars.", this);
 			foreach (var avadesc in avatars)
 			{
+				avadesc.SetActive(true);
 				if (avadesc.GetComponent<PipelineSaver>() != null) {
 					Debug.Log("Found PipelineSaver on " + avadesc.name + ". Disabling clones and mirror copy.", avadesc);
 					DisableMirrorClone = true;
