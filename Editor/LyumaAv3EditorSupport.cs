@@ -228,7 +228,7 @@ namespace Lyuma.Av3Emulator.Editor
 				CompilationPipeline.assemblyCompilationStarted -= WorkaroundDestroyManagersBeforeCompile;
 			}
 
-			// Writing all disabled objects into SessionState
+			// Saving all avatars into the AV3 Emulators
 			if (pmsc == PlayModeStateChange.ExitingEditMode)
 			{
 				List<GameObject> avatars = GameObject.FindObjectsOfType<VRCAvatarDescriptor>()
@@ -252,7 +252,7 @@ namespace Lyuma.Av3Emulator.Editor
 				}
 			}
 
-			// Obtaining disabled objects from SessionState and enabling them
+			// Obtaining disabled objects from AV3 Emulator and enabling them
 			if (pmsc == PlayModeStateChange.EnteredEditMode)
 			{
 				foreach (var lyumaAv3Emulator in GameObject.FindObjectsOfType<LyumaAv3Emulator>())
