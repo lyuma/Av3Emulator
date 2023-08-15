@@ -19,12 +19,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. */
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Lyuma.Av3Emulator.Runtime;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.Compilation;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using static Lyuma.Av3Emulator.Runtime.LyumaAv3Emulator;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDKBase.Editor.BuildPipeline;
@@ -221,8 +223,47 @@ namespace Lyuma.Av3Emulator.Editor
 
 		public static void OnPlayModeStateChange(UnityEditor.PlayModeStateChange pmsc) {
 			// We don't want any of our callbacks causing trouble outside of play mode.
-			if (pmsc != UnityEditor.PlayModeStateChange.EnteredPlayMode) {
+			if (pmsc != UnityEditor.PlayModeStateChange.EnteredPlayMode)
+			{
 				CompilationPipeline.assemblyCompilationStarted -= WorkaroundDestroyManagersBeforeCompile;
+			}
+
+			// Saving all avatars into the AV3 Emulators
+			if (pmsc == PlayModeStateChange.ExitingEditMode)
+			{
+				List<GameObject> avatars = GameObject.FindObjectsOfType<VRCAvatarDescriptor>()
+					.Select(x => x.gameObject)
+					.Where(x => x.activeSelf).ToList();
+
+				bool emulatorEnabled = false;
+				
+				foreach (var lyumaAv3Emulator in GameObject.FindObjectsOfType<LyumaAv3Emulator>())
+				{
+					emulatorEnabled = true;
+					lyumaAv3Emulator.AvatarList = avatars;
+				}
+
+				if (emulatorEnabled)
+				{
+					foreach (var gameObject in avatars)
+					{
+						gameObject.SetActive(false);
+					}
+				}
+			}
+
+			// Obtaining disabled objects from AV3 Emulator and enabling them
+			if (pmsc == PlayModeStateChange.EnteredEditMode)
+			{
+				foreach (var lyumaAv3Emulator in GameObject.FindObjectsOfType<LyumaAv3Emulator>())
+				{
+					foreach (var gameObject in lyumaAv3Emulator.AvatarList)
+					{
+						gameObject.SetActive(true);
+					}
+
+					lyumaAv3Emulator.AvatarList = new List<GameObject>();
+				}
 			}
 		}
 
