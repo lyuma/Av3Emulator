@@ -270,10 +270,20 @@ namespace Lyuma.Av3Emulator.Editor
 			EditorApplication.playModeStateChanged += OnPlayModeStateChange;
 			LyumaAv3Runtime.InvokeOnPreProcessAvatar = (obj) =>
 			{
-				List<IVRCSDKPreprocessAvatarCallback> _preprocessAvatarCallbacks = (List<IVRCSDKPreprocessAvatarCallback>) typeof(VRCBuildPipelineCallbacks)
-					.GetField("_preprocessAvatarCallbacks", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
-				IVRCSDKPreprocessAvatarCallback lockMaterials =
-					_preprocessAvatarCallbacks.FirstOrDefault(x => x.GetType().Name == "LockMaterialsOnUpload");
+				IVRCSDKPreprocessAvatarCallback lockMaterials = null;
+				List<IVRCSDKPreprocessAvatarCallback> _preprocessAvatarCallbacks = new List<IVRCSDKPreprocessAvatarCallback>();
+				
+				FieldInfo ProcessorField = typeof(VRCBuildPipelineCallbacks).GetField("_preprocessAvatarCallbacks", BindingFlags.Static | BindingFlags.NonPublic);
+				if (ProcessorField != null)
+				{
+					object value = ProcessorField.GetValue(null);
+					if (value is List<IVRCSDKPreprocessAvatarCallback> callbacks)
+					{
+						_preprocessAvatarCallbacks = callbacks;
+						lockMaterials = _preprocessAvatarCallbacks.FirstOrDefault(x => x.GetType().Name == "LockMaterialsOnUpload");
+					}
+				}
+
 				if (lockMaterials != null)
 				{
 					_preprocessAvatarCallbacks.Remove(lockMaterials);
