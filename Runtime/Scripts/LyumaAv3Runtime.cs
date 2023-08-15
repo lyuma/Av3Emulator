@@ -349,6 +349,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			public VRCExpressionParameters.ValueType type;
 			public Func<LyumaAv3Runtime, object> valueGetter;
 			public Action<LyumaAv3Runtime, object> valueSetter;
+			public bool warned = false;
 		};
 		
 		public static HashSet<BuiltinParameterDefinition> BUILTIN_PARAMETERS = new HashSet<BuiltinParameterDefinition> {
@@ -2903,7 +2904,11 @@ namespace Lyuma.Av3Emulator.Runtime
 						BuiltinParameterDefinition messageParameter =
 							BUILTIN_PARAMETERS.FirstOrDefault(x => x.name == ParamName);
 						if (messageParameter != null) {
-							Debug.LogWarning("Setting builtin VRC Parameters isn't respected in game");
+							if (!messageParameter.warned)
+							{
+								Debug.LogWarning("Setting built-in OSC " + msgPath + " isn't respected in game. Consider using /input/ paths instead.");
+								messageParameter.warned = true;
+							}
 							ProcessOSCBuiltinParamInputMessage(messageParameter, this, arguments[0]);
 						} else if (!IntToIndex.ContainsKey(ParamName) && !BoolToIndex.ContainsKey(ParamName) && !FloatToIndex.ContainsKey(ParamName)) {
 							if (LogOSCWarnings) { //if (!ParamName.EndsWith("_Angle") && !ParamName.EndsWith("_IsGrabbed") && !ParamName.EndsWith("_Stretch")) {
