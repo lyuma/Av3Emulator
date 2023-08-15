@@ -87,9 +87,9 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool ApplyClonePositionOffset = false;
 
 		static public LyumaAv3Emulator emulatorInstance;
-		public List<GameObject> AvatarList = new List<GameObject>();
-		public bool InitNextFrame = false;
-		public bool Init = false;
+		[HideInInspector] public List<GameObject> AvatarList = new List<GameObject>();
+		private bool InitNextFrame = false;
+		private bool Init = false;
 		static public RuntimeAnimatorController EmptyController;
 
 		[NonSerialized] public List<LyumaAv3Runtime> runtimes = new List<LyumaAv3Runtime>();
