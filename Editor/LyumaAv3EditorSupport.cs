@@ -261,6 +261,8 @@ namespace Lyuma.Av3Emulator.Editor
 					{
 						gameObject.SetActive(true);
 					}
+
+					lyumaAv3Emulator.AvatarList = new List<GameObject>();
 				}
 			}
 		}
