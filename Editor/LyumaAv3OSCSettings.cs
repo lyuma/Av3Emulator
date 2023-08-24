@@ -36,6 +36,11 @@ namespace Lyuma.Av3Emulator.Editor
 		[MenuItem("Tools/Avatars 3.0 Emulator/OSC Control Panel", false, 1001)]
 		public static void ShowWindow()
 		{
+			if (EditorApplication.isPlaying && FindObjectsOfType<LyumaAv3Osc>().Length == 0)
+			{
+				EditorUtility.DisplayDialog("Starting AV3 OSC", "You are trying to start the AV3 OSC Control panel without any Emulator enabled in play mode.\nThis is not allowed. Please enable emulation before entering play mode.", "Ok");
+				return;
+			}
 			GetWindow<LyumaAv3OSCSettings>("AV3Emulator OSC Control");
 			RefreshData();
 			EditorApplication.quitting -= AskSaveSettings;
@@ -72,9 +77,6 @@ namespace Lyuma.Av3Emulator.Editor
 		{
 			if (_data == null) {
 				EditorGUILayout.HelpBox("The Avatar 3.0 Emulator object was destroyed. Nothing to see here.", MessageType.Warning);
-				if (GUILayout.Button("Refresh / Re-add Emulator to Scene")) {
-					RefreshData();
-				}
 				return;
 			}
 			scroll = EditorGUILayout.BeginScrollView(scroll, GUILayout.ExpandWidth(true));

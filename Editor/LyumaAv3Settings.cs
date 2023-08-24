@@ -136,7 +136,7 @@ namespace Lyuma.Av3Emulator.Editor
 		public static void ApplySettingsToAll()
 		{
 			LyumaAv3Emulator[] emulators = FindObjectsOfType<LyumaAv3Emulator>();
-			if (emulators.Length == 0)
+			if (emulators.Length == 0 && !EditorApplication.isPlaying)
 			{
 				emulators = new LyumaAv3Emulator[] {LyumaAv3EditorSupport.EnableAv3Testing()};
 			}

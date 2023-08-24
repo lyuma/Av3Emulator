@@ -359,6 +359,11 @@ namespace Lyuma.Av3Emulator.Editor
 
 		[MenuItem("Tools/Avatars 3.0 Emulator/Enable", false, 1000)]
 		public static LyumaAv3Emulator EnableAv3Testing() {
+			if (EditorApplication.isPlaying)
+			{
+				EditorUtility.DisplayDialog("Starting AV3 Emulator", "You are trying to start the AV3 Emulator in play mode.\n	This is not allowed. Please enable emulation before entering play mode.", "Ok");
+				return null;
+			}
 			if (GameObject.Find("/GestureManager"))
 			{
 				GameObject.Find("/GestureManager").SetActive(false);
