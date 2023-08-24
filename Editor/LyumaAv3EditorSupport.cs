@@ -312,6 +312,7 @@ namespace Lyuma.Av3Emulator.Editor
 			LyumaAv3Runtime.InvokeOnPreProcessAvatar = (obj) =>
 			{
 				IVRCSDKPreprocessAvatarCallback lockMaterials = null;
+				IVRCSDKPreprocessAvatarCallback vrcFuryPreprocess = null;
 				List<IVRCSDKPreprocessAvatarCallback> _preprocessAvatarCallbacks = new List<IVRCSDKPreprocessAvatarCallback>();
 				
 				FieldInfo ProcessorField = typeof(VRCBuildPipelineCallbacks).GetField("_preprocessAvatarCallbacks", BindingFlags.Static | BindingFlags.NonPublic);
@@ -322,6 +323,7 @@ namespace Lyuma.Av3Emulator.Editor
 					{
 						_preprocessAvatarCallbacks = callbacks;
 						lockMaterials = _preprocessAvatarCallbacks.FirstOrDefault(x => x.GetType().Name == "LockMaterialsOnUpload");
+						vrcFuryPreprocess = _preprocessAvatarCallbacks.FirstOrDefault(x => x.GetType().FullName == "VF.VrcHooks.PreuploadHook");
 					}
 				}
 
@@ -329,6 +331,12 @@ namespace Lyuma.Av3Emulator.Editor
 				{
 					_preprocessAvatarCallbacks.Remove(lockMaterials);
 				}
+
+				if (vrcFuryPreprocess != null)
+				{
+					_preprocessAvatarCallbacks.Remove(vrcFuryPreprocess);
+				}
+				
 				Debug.Log("Invoking OnPreprocessAvatar for " + obj, obj);
 				try
 				{
@@ -339,7 +347,12 @@ namespace Lyuma.Av3Emulator.Editor
 					if (lockMaterials != null);
 					{
 						_preprocessAvatarCallbacks.Add(lockMaterials);
-					}	
+					}
+
+					if (vrcFuryPreprocess != null)
+					{
+						_preprocessAvatarCallbacks.Add(vrcFuryPreprocess);
+					}
 				}
 			};
 		}
