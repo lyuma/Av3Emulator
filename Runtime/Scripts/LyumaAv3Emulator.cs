@@ -27,6 +27,7 @@ using UnityEngine.SceneManagement;
 using VRC.Dynamics;
 using VRC.SDK3.Dynamics.Contact.Components;
 using VRC.SDK3.Dynamics.PhysBone.Components;
+using Object = UnityEngine.Object;
 
 namespace Lyuma.Av3Emulator.Runtime
 {
@@ -238,7 +239,25 @@ namespace Lyuma.Av3Emulator.Runtime
 			Debug.Log(this.name + ": Setting up Av3Emulator on " + avatars.Count + " avatars.", this);
 			foreach (GameObject avatar in avatars)
 			{
+				var enabled = avatar.GetComponentsInChildren<Animator>();
+
 				RunPreprocessors(avatar);
+				foreach (var animator in enabled)
+				{
+					RuntimeAnimatorController controller = animator.runtimeAnimatorController;
+					Avatar avi = animator.avatar;
+					bool applyRootMotion = animator.applyRootMotion;
+					AnimatorUpdateMode updateMode = animator.updateMode;
+					AnimatorCullingMode cullingMode = animator.cullingMode;
+					GameObject animatorObject = animator.gameObject;
+					Object.DestroyImmediate(animator);
+					Animator newAnimator = animatorObject.AddComponent<Animator>();
+					newAnimator.runtimeAnimatorController = controller;
+					newAnimator.avatar = avi;
+					newAnimator.applyRootMotion = applyRootMotion;
+					newAnimator.updateMode = updateMode;
+					newAnimator.cullingMode = cullingMode;
+				}
 				Initialize(avatar);
 			}
 		}
