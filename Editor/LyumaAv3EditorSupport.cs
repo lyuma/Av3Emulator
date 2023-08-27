@@ -219,6 +219,7 @@ namespace Lyuma.Av3Emulator.Editor
 						}
 					}
 			};
+			LyumaAv3Runtime.isPersistent = EditorUtility.IsPersistent;
 		}
 
 		public static void OnPlayModeStateChange(UnityEditor.PlayModeStateChange pmsc) {

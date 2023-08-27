@@ -53,7 +53,9 @@ namespace Lyuma.Av3Emulator.Runtime
 		public static ForceUpdateDescriptorCollidersFunc forceUpdateDescriptorColliders;
 		public delegate void ConvertDynamicBonesFunc (GameObject avatarObj);
 		public static ConvertDynamicBonesFunc convertDynamicBones;
-
+		public delegate bool IsPersistentFunc (GameObject prefab);
+		public static IsPersistentFunc isPersistent;
+		
 		// This is injected by Editor-scope scripts to give us access to VRCBuildPipelineCallbacks.
 		public static Action<GameObject> InvokeOnPreProcessAvatar = (_) => { };
 

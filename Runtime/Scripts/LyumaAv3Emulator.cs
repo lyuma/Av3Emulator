@@ -94,7 +94,6 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		[NonSerialized] public List<LyumaAv3Runtime> runtimes = new List<LyumaAv3Runtime>();
 		[NonSerialized] public LinkedList<LyumaAv3Runtime> forceActiveRuntimes = new LinkedList<LyumaAv3Runtime>();
-		[NonSerialized] public HashSet<VRCAvatarDescriptor> scannedAvatars = new HashSet<VRCAvatarDescriptor>();
 
 		private void OnValidate()
 		{
@@ -211,6 +210,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		{
 			Resources.FindObjectsOfTypeAll<VRCAvatarDescriptor>()
 				.Select(x => x.gameObject)
+				.Where(x => !LyumaAv3Runtime.isPersistent(x))
 				.Where(x => !x.activeSelf)
 				.ToList()
 				.ForEach(x => x.AddComponent<LyumaAv3Marker>());
@@ -232,7 +232,7 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		private void InitializeInScene()
 		{
-			List<GameObject> avatars = GameObject.FindObjectsOfType<VRCAvatarDescriptor>()
+			List<GameObject> avatars = FindObjectsOfType<VRCAvatarDescriptor>()
 				.Select(x => x.gameObject)
 				.Where(x => x.activeSelf).ToList();
 			Debug.Log(this.name + ": Setting up Av3Emulator on " + avatars.Count + " avatars.", this);
