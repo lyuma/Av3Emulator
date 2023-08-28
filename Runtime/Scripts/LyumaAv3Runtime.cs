@@ -1159,7 +1159,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			DefaultViewPosition = avadesc.ViewPosition;
 			DefaultAvatarScale = gameObject.transform.localScale;
 
-			ParentConstraints = gameObject.GetComponentsInChildren<ParentConstraint>().Select(x => (x, x.translationOffsets)).ToArray();
+			ParentConstraints = gameObject.GetComponentsInChildren<ParentConstraint>(true).Select(x => (x, x.translationOffsets)).ToArray();
 		}
 
 		public void CreateMirrorClone() {
