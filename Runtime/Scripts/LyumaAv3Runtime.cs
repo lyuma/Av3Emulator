@@ -1109,7 +1109,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				OriginalSourceClone = this;
 				shouldClone = true;
 			}
-			if (shouldClone && GetComponent<PipelineSaver>() == null) {
+			if (shouldClone && GetComponents<Component>().All(x => x.GetType().Name != "PipelineSaver")) {
 				GameObject cloned = GameObject.Instantiate(gameObject);
 				cloned.hideFlags = HideFlags.HideAndDontSave;
 				cloned.SetActive(false);
@@ -1165,7 +1165,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		public void CreateMirrorClone() {
-			if (AvatarSyncSource == this && GetComponent<PipelineSaver>() == null)
+			if (AvatarSyncSource == this && GetComponents<Component>().All(x => x.GetType().Name != "PipelineSaver"))
 			{
 				OriginalSourceClone.IsMirrorClone = true;
 				MirrorClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
@@ -1190,7 +1190,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		public void CreateShadowClone() {
-			if (AvatarSyncSource == this && GetComponent<PipelineSaver>() == null) {
+			if (AvatarSyncSource == this && GetComponents<Component>().All(x => x.GetType().Name != "PipelineSaver")) {
 				OriginalSourceClone.IsShadowClone = true;
 				ShadowClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
 				ShadowClone.gameObject.hideFlags = HideFlags.NotEditable;

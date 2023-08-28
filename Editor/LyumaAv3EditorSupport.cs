@@ -285,11 +285,12 @@ namespace Lyuma.Av3Emulator.Editor
 		static void MoveComponentToTop(Component c) {
 			GameObject go = c.gameObject;
 			Component[] components = go.GetComponents<Component>();
-			for (int i = 0; i < components.Length; i++) {
-				if (components[i].GetType().Name.Contains("PipelineSaver")) {
-					return;
-				}
+
+			if (components.Any(x => x.GetType().Name == "PipelineSaver"))
+			{
+				return;
 			}
+			
 			try {
 				if (PrefabUtility.IsPartOfAnyPrefab(go)) {
 					PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
