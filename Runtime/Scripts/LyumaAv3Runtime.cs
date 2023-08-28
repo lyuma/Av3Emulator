@@ -588,6 +588,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		private HashSet<string> duplicateParameterAdds = new HashSet<string>();
 
 		private (ParentConstraint, Vector3[])[] ParentConstraints;
+		private Cloth[] ClothComponents;
 
 		const float BASE_HEIGHT = 1.4f;
 
@@ -1160,6 +1161,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			DefaultAvatarScale = gameObject.transform.localScale;
 
 			ParentConstraints = gameObject.GetComponentsInChildren<ParentConstraint>(true).Select(x => (x, x.translationOffsets)).ToArray();
+			ClothComponents = gameObject.GetComponentsInChildren<Cloth>(true).ToArray();
 		}
 
 		public void CreateMirrorClone() {
@@ -2296,9 +2298,14 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (EnableAvatarScaling) {
 				scale = AvatarHeight / DefaultViewPosition.y;
 			}
+
+			Vector3 oldScale = gameObject.transform.localScale;
+			
 			gameObject.transform.localScale = DefaultAvatarScale * scale;
 			avadesc.ViewPosition = DefaultViewPosition * scale;
 
+			bool scaleChanged = oldScale != gameObject.transform.localScale;
+			
 			if (emulator.DisableParentConstraintOffsetScaling)
 			{
 				foreach ((ParentConstraint constraint, Vector3[] offsets) in ParentConstraints)
@@ -2307,6 +2314,21 @@ namespace Lyuma.Av3Emulator.Runtime
 						new Vector3(original.x * constraint.transform.lossyScale.x,
 							original.y * constraint.transform.lossyScale.y,
 							original.z * constraint.transform.lossyScale.z)).ToArray();
+				}
+			}
+
+			if (emulator.EnableClothOffsetScaling)
+			{
+				if (scaleChanged)
+				{
+					foreach (Cloth cloth in ClothComponents)
+					{
+						if (cloth.enabled)
+						{
+							cloth.enabled = false;
+							cloth.enabled = true;	
+						}
+					}
 				}
 			}
 

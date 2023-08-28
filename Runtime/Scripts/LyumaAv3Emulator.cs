@@ -74,6 +74,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool DisableAvatarDynamicsIntegration;
 		public bool WorkaroundPlayModeScriptCompile = true;
 		public bool DisableParentConstraintOffsetScaling = true;
+		public bool EnableClothOffsetScaling = true;
 		[Header("Networked and mirror clone emulation")]
 		public bool CreateNonLocalClone;
 		public int CreateNonLocalCloneCount;
