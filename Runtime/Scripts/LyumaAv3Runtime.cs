@@ -2317,7 +2317,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 			}
 
-			if (emulator.EnableClothOffsetScaling)
+			if (emulator.EnableClothScalingFix)
 			{
 				if (scaleChanged)
 				{
