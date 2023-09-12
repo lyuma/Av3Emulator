@@ -227,44 +227,6 @@ namespace Lyuma.Av3Emulator.Editor
 			{
 				CompilationPipeline.assemblyCompilationStarted -= WorkaroundDestroyManagersBeforeCompile;
 			}
-
-			// Saving all avatars into the AV3 Emulators
-			if (pmsc == PlayModeStateChange.ExitingEditMode)
-			{
-				List<GameObject> avatars = GameObject.FindObjectsOfType<VRCAvatarDescriptor>()
-					.Select(x => x.gameObject)
-					.Where(x => x.activeSelf).ToList();
-
-				bool emulatorEnabled = false;
-				
-				foreach (var lyumaAv3Emulator in GameObject.FindObjectsOfType<LyumaAv3Emulator>())
-				{
-					emulatorEnabled = true;
-					lyumaAv3Emulator.AvatarList = avatars;
-				}
-
-				if (emulatorEnabled)
-				{
-					foreach (var gameObject in avatars)
-					{
-						gameObject.SetActive(false);
-					}
-				}
-			}
-
-			// Obtaining disabled objects from AV3 Emulator and enabling them
-			if (pmsc == PlayModeStateChange.EnteredEditMode)
-			{
-				foreach (var lyumaAv3Emulator in GameObject.FindObjectsOfType<LyumaAv3Emulator>())
-				{
-					foreach (var gameObject in lyumaAv3Emulator.AvatarList)
-					{
-						gameObject.SetActive(true);
-					}
-
-					lyumaAv3Emulator.AvatarList = new List<GameObject>();
-				}
-			}
 		}
 
 		private static void WorkaroundDestroyManagersBeforeCompile(string obj) {
@@ -344,7 +306,7 @@ namespace Lyuma.Av3Emulator.Editor
 				}
 				finally
 				{
-					if (lockMaterials != null);
+					if (lockMaterials != null)
 					{
 						_preprocessAvatarCallbacks.Add(lockMaterials);
 					}

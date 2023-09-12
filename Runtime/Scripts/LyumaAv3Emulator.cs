@@ -30,6 +30,7 @@ using VRC.SDK3.Dynamics.PhysBone.Components;
 
 namespace Lyuma.Av3Emulator.Runtime
 {
+	[DefaultExecutionOrder(-10000)]
 	[HelpURL("https://github.com/lyuma/Av3Emulator")]
 	public class LyumaAv3Emulator : MonoBehaviour
 	{
@@ -89,9 +90,6 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool ApplyClonePositionOffset = false;
 
 		static public LyumaAv3Emulator emulatorInstance;
-		[HideInInspector] public List<GameObject> AvatarList = new List<GameObject>();
-		private bool InitNextFrame = false;
-		private bool Init = false;
 		static public RuntimeAnimatorController EmptyController;
 
 		[NonSerialized] public List<LyumaAv3Runtime> runtimes = new List<LyumaAv3Runtime>();
@@ -188,102 +186,126 @@ namespace Lyuma.Av3Emulator.Runtime
 			Camera.onPreCull += PreCull;
 			Camera.onPostRender += PostRender;
 			emulatorInstance = this;
-			RunPreprocessors();
 			if (WorkaroundPlayModeScriptCompile) {
 				LyumaAv3Runtime.ApplyOnEnableWorkaroundDelegate();
 			}
-
-			InitNextFrame = true;
+			AddMarkersToDisabled();
+			InitializeInScene();
 		}
 
-		private void RunPreprocessors()
+		[DefaultExecutionOrder(-9999)]
+		private class LyumaAv3Marker : MonoBehaviour
 		{
-			List<GameObject> avatars = AvatarList;
-			foreach (var avadesc in avatars)
+			private void Start()
 			{
-				bool alreadyHadComponent = avadesc.gameObject.GetComponent<LyumaAv3Runtime>() != null;
-				if (RunPreprocessAvatarHook && !alreadyHadComponent)
+				if (GetComponent<VRCAvatarDescriptor>() != null)
 				{
-					GameObject origClone = GameObject.Instantiate(avadesc.gameObject);
-					origClone.name = avadesc.gameObject.name;
-					avadesc.gameObject.name = origClone.name + "(Clone)";
-					LyumaAv3Runtime.InvokeOnPreProcessAvatar(avadesc.gameObject);
-					avadesc.gameObject.name = origClone.name;
-					GameObject.DestroyImmediate(origClone);
+					Debug.Log("Setting up Emulator late on: " + gameObject.name);
+					emulatorInstance.RunPreprocessors(gameObject);
+					emulatorInstance.Initialize(gameObject);
 				}
 			}
 		}
 		
-		private void Initialize()
+		private void AddMarkersToDisabled()
 		{
-			List<GameObject> avatars = AvatarList;
-			Debug.Log(this.name + ": Setting up Av3Emulator on " + avatars.Count + " avatars.", this);
-			foreach (var avadesc in avatars)
+			Resources.FindObjectsOfTypeAll<VRCAvatarDescriptor>()
+				.Select(x => x.gameObject)
+				.Where(x => !x.activeSelf)
+				.ToList()
+				.ForEach(x => x.AddComponent<LyumaAv3Marker>());
+		}
+
+		private void RunPreprocessors(GameObject avatar)
+		{
+			bool alreadyHadComponent = avatar.gameObject.GetComponent<LyumaAv3Runtime>() != null;
+			if (RunPreprocessAvatarHook && !alreadyHadComponent)
 			{
-				avadesc.SetActive(true);
-				if (avadesc.GetComponents<Component>().Any(x => x.GetType().Name == "PipelineSaver")) {
-					Debug.Log("Found PipelineSaver on " + avadesc.name + ". Disabling clones and mirror copy.", avadesc);
-					DisableMirrorClone = true;
-					DisableShadowClone = true;
-					CreateNonLocalClone = false;
-					EnableHeadScaling = false;
+				GameObject origClone = GameObject.Instantiate(avatar.gameObject);
+				origClone.name = avatar.gameObject.name;
+				avatar.gameObject.name = origClone.name + "(Clone)";
+				LyumaAv3Runtime.InvokeOnPreProcessAvatar(avatar.gameObject);
+				avatar.gameObject.name = origClone.name;
+				GameObject.DestroyImmediate(origClone);
+			}
+		}
+
+		private void InitializeInScene()
+		{
+			List<GameObject> avatars = GameObject.FindObjectsOfType<VRCAvatarDescriptor>()
+				.Select(x => x.gameObject)
+				.Where(x => x.activeSelf).ToList();
+			Debug.Log(this.name + ": Setting up Av3Emulator on " + avatars.Count + " avatars.", this);
+			foreach (GameObject avatar in avatars)
+			{
+				RunPreprocessors(avatar);
+				Initialize(avatar);
+			}
+		}
+		private void Initialize(GameObject avatar)
+		{
+			if (avadesc.GetComponents<Component>().Any(x => x.GetType().Name == "PipelineSaver")) {
+				Debug.Log("Found PipelineSaver on " + avatar.name + ". Disabling clones and mirror copy.", avatar);
+				DisableMirrorClone = true;
+				DisableShadowClone = true;
+				CreateNonLocalClone = false;
+				EnableHeadScaling = false;
+			}
+			try {
+				// Creates the playable director, and initializes animator.
+				bool alreadyHadComponent = avatar.gameObject.GetComponent<LyumaAv3Runtime>() != null;
+				var oml = GetOrAddComponent<UnityEngine.AI.OffMeshLink>(avatar.gameObject);
+				oml.startTransform = this.transform;
+				var runtime = GetOrAddComponent<LyumaAv3Runtime>(avatar.gameObject);
+				if (RunPreprocessAvatarHook && !alreadyHadComponent) {
+					forceActiveRuntimes.AddLast(runtime);
 				}
-				try {
-					// Creates the playable director, and initializes animator.
-					bool alreadyHadComponent = avadesc.gameObject.GetComponent<LyumaAv3Runtime>() != null;
-					var oml = GetOrAddComponent<UnityEngine.AI.OffMeshLink>(avadesc.gameObject);
-					oml.startTransform = this.transform;
-					var runtime = GetOrAddComponent<LyumaAv3Runtime>(avadesc.gameObject);
-					if (RunPreprocessAvatarHook && !alreadyHadComponent) {
-						forceActiveRuntimes.AddLast(runtime);
-					}
-					if (oml != null) {
-						GameObject.DestroyImmediate(oml);
-					}
-
-					switch (DefaultPose)
-					{
-						case DefaultPoseOptions.TPose:
-							runtime.TPoseCalibration = true;
-							break;
-						case DefaultPoseOptions.IKPose:
-							runtime.IKPoseCalibration = true;
-							break;
-						case DefaultPoseOptions.AFK:
-							runtime.AFK = true;
-							break;
-						case DefaultPoseOptions.InStationAndSeated:
-							runtime.Seated = true;
-							runtime.InStation = true;
-							break;
-						case DefaultPoseOptions.InStation:
-							runtime.InStation = true;
-							break;
-					}
-
-					runtime.emulator = this;
-					runtime.VRMode = DefaultToVR;
-					runtime.EnableAvatarScaling = DefaultEnableAvatarScaling;
-					runtime.TrackingType = DefaultTrackingType;
-					runtime.DebugDuplicateAnimator = DefaultAnimatorToDebug;
-					runtime.EnableHeadScaling = EnableHeadScaling;
-					runtimes.Add(runtime);
-					if (!alreadyHadComponent && !DisableShadowClone) {
-						runtime.CreateShadowClone();
-					}
-					if (!alreadyHadComponent && !DisableMirrorClone) {
-						runtime.CreateMirrorClone();
-					}
-
-					if (!alreadyHadComponent && (!DisableMirrorClone || !DisableShadowClone))
-					{
-						runtime.SetupCloneCaches();
-					}
-					runtime.DisableMirrorAndShadowClones = DisableShadowClone && DisableMirrorClone;
-
-				} catch (System.Exception e) {
-					Debug.LogException(e);
+				if (oml != null) {
+					GameObject.DestroyImmediate(oml);
 				}
+
+				switch (DefaultPose)
+				{
+					case DefaultPoseOptions.TPose:
+						runtime.TPoseCalibration = true;
+						break;
+					case DefaultPoseOptions.IKPose:
+						runtime.IKPoseCalibration = true;
+						break;
+					case DefaultPoseOptions.AFK:
+						runtime.AFK = true;
+						break;
+					case DefaultPoseOptions.InStationAndSeated:
+						runtime.Seated = true;
+						runtime.InStation = true;
+						break;
+					case DefaultPoseOptions.InStation:
+						runtime.InStation = true;
+						break;
+				}
+
+				runtime.emulator = this;
+				runtime.VRMode = DefaultToVR;
+				runtime.EnableAvatarScaling = DefaultEnableAvatarScaling;
+				runtime.TrackingType = DefaultTrackingType;
+				runtime.DebugDuplicateAnimator = DefaultAnimatorToDebug;
+				runtime.EnableHeadScaling = EnableHeadScaling;
+				runtimes.Add(runtime);
+				if (!alreadyHadComponent && !DisableShadowClone) {
+					runtime.CreateShadowClone();
+				}
+				if (!alreadyHadComponent && !DisableMirrorClone) {
+					runtime.CreateMirrorClone();
+				}
+
+				if (!alreadyHadComponent && (!DisableMirrorClone || !DisableShadowClone))
+				{
+					runtime.SetupCloneCaches();
+				}
+				runtime.DisableMirrorAndShadowClones = DisableShadowClone && DisableMirrorClone;
+
+			} catch (System.Exception e) {
+				Debug.LogException(e);
 			}
 		}
 
@@ -298,21 +320,9 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		private void Update() {
-			if (InitNextFrame)
-			{
-				InitNextFrame = false;
-				Init = true;
-				return;
-			}
-
-			if (Init)
-			{
-				Init = false;
-				Initialize();
-			}
 			if (RestartingEmulator) {
 				RestartingEmulator = false;
-				Initialize();
+				InitializeInScene();
 			} else if (RestartEmulator) {
 				RunPreprocessAvatarHook = false;
 				RestartEmulator = false;
