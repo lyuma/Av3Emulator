@@ -245,9 +245,10 @@ namespace Lyuma.Av3Emulator.Editor
 			GameObject go = c.gameObject;
 			Component[] components = go.GetComponents<Component>();
 
-			if (components.Any(x => x.GetType().Name == "PipelineSaver"))
-			{
-				return;
+			foreach (Component comp in components) {
+				if (comp.GetType().Name == "PipelineSaver") {
+					return;
+				}
 			}
 			
 			try {
@@ -280,7 +281,11 @@ namespace Lyuma.Av3Emulator.Editor
 					if (value is List<IVRCSDKPreprocessAvatarCallback> callbacks)
 					{
 						_preprocessAvatarCallbacks = callbacks;
-						lockMaterials = _preprocessAvatarCallbacks.FirstOrDefault(x => x.GetType().Name == "LockMaterialsOnUpload");
+						foreach (var pac in _preprocessAvatarCallbacks) {
+							if (pac.GetType().Name == "LockMaterialsOnUpload") {
+								lockMaterials = pac;
+							}
+						}
 					}
 				}
 
