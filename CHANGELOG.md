@@ -1,3 +1,21 @@
+### New features in v 3.2.2:
+
+3.2.2:
+
+Thanks to jellejurre for all of the hard work that went into this update.
+
+* Av3Emulator is updated to latest SDK 3.3.0.
+* Add head bone scale caching and stop unneeded scaling
+* Refactor builtin parameters to SSOT and stop OSC from setting them
+* Supress warnings if parameter is controlled by curve
+* Enable parameter setting with OSC
+* Add Parent Constraint scaling fix to follow VRC
+* Add toggle to disable parent constraint offset scaling, and cloth fix
+* Add safety checks for if internals change
+* Warn only once when setting builtin parameters
+* Include hidden parent constraints and enable scaling by default
+* Avoid accessing PipelineSaver internal class.
+
 ### New features in v 3.2.1:
 
 3.2.1:
