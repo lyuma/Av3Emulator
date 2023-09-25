@@ -300,7 +300,7 @@ namespace Lyuma.Av3Emulator.Editor
 				}
 				finally
 				{
-					if (lockMaterials != null);
+					if (lockMaterials != null)
 					{
 						_preprocessAvatarCallbacks.Add(lockMaterials);
 					}	
