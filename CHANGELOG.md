@@ -1,5 +1,13 @@
 ### New features in v 3.2.2:
 
+3.2.3:
+
+Thanks to anatawa12 for the update.
+
+* Compatible with SDK 3.4.x
+* Fix null check in preprocessAvatarCallbacks
+* Enable avatar scaling by default. Thanks to Smash-ter for the report.
+
 3.2.2:
 
 Thanks to jellejurre for all of the hard work that went into this update.
