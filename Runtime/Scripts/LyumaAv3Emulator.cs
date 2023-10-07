@@ -68,7 +68,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool legacySubAnimatorParameterDriverMode = false;
 		public bool disableRadialMenu = false;
 		private bool lastDisableRadialMenu = false;
-		public bool DefaultEnableAvatarScaling = false;
+		public bool EnableAvatarScaling = true;
 		[Header("Unity Integrations")]
 		public bool RunPreprocessAvatarHook = true;
 		public bool DisableAvatarDynamicsIntegration;
@@ -257,7 +257,7 @@ namespace Lyuma.Av3Emulator.Runtime
 
 					runtime.emulator = this;
 					runtime.VRMode = DefaultToVR;
-					runtime.EnableAvatarScaling = DefaultEnableAvatarScaling;
+					runtime.EnableAvatarScaling = EnableAvatarScaling;
 					runtime.TrackingType = DefaultTrackingType;
 					runtime.DebugDuplicateAnimator = DefaultAnimatorToDebug;
 					runtime.EnableHeadScaling = EnableHeadScaling;
