@@ -1,5 +1,9 @@
 ### New features in v 3.2.2:
 
+3.2.4:
+
+- Workaround bug in VCC that prevents installation.
+
 3.2.3:
 
 Thanks to anatawa12 for the update.
