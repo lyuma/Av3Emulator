@@ -434,11 +434,10 @@ namespace Lyuma.Av3Emulator.Runtime
 		};
 		
 		public static readonly Type[] MirrorCloneComponentBlacklist = new Type[] {
-			typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Rigidbody), typeof(Joint)
+			typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Rigidbody), typeof(Joint), typeof(IConstraint),
 		};
 		public static readonly Type[] ShadowCloneComponentBlacklist = new Type[] {
-			typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Light), typeof(ParticleSystemRenderer), typeof(Rigidbody), typeof(Joint)
-		
+			typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Light), typeof(ParticleSystemRenderer), typeof(Rigidbody), typeof(Joint), typeof(IConstraint),
 		};
 		public static readonly HashSet<string> CloneStringComponentBlacklist = new HashSet<string>() { "DynamicBone", "VRCContact", "VRCPhysBone", "VRCSpatialAudioSource" };
 
