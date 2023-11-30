@@ -102,12 +102,19 @@ namespace Lyuma.Av3Emulator.Editor
 			for (var controlIndex = 0; controlIndex < _currentMenu.controls.Count; controlIndex++)
 			{
 				var control = _currentMenu.controls[controlIndex];
-				bool parametersIncorrect = menu.Runtime.ParameterNames != null &&
-				                           ((control.parameter.name != "" &&
-				                             !menu.Runtime.ParameterNames.Contains(control.parameter.name))
-				                            || !control.subParameters.All(x =>
-					                            x == null || x.name == "" || menu.Runtime.ParameterNames.Contains(x.name)));
-				if (parametersIncorrect)
+
+				bool IsParametersCorrect()
+				{
+					if (menu.Runtime.ParameterNames == null) return true;
+
+					return ParameterCorrect(control.parameter) && control.subParameters.All(ParameterCorrect);
+
+					bool ParameterCorrect(VRCExpressionsMenu.Control.Parameter parameter) =>
+						parameter == null || string.IsNullOrEmpty(parameter.name) || // it's not specified parameter
+						menu.Runtime.ParameterNames.Contains(parameter.name); // it's in parameter list
+				}
+
+				if (!IsParametersCorrect())
 				{
 					GUILayout.Label(new GUIContent("Parameter not found in expression parameters for: " + control.name), Styles.ParameterizedButtonStyle, GUILayout.Height(36), GUILayout.MinWidth(40));
 				}
