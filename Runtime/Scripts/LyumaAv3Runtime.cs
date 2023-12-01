@@ -432,7 +432,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				runtime => Mathf.Clamp((runtime.avadesc.ViewPosition.y  - 0.2f)/ (5.0f - 0.2f), 0.0f, 1.0f),
 				(runtime, value) => { }), //Modifying this doesn't make sense, this field is un-editable in VRC
 			new BuiltinParameterDefinition("IsOnFriendsList", VRCExpressionParameters.ValueType.Bool, 
-				runtime => true, // always true for now.
+				runtime => !runtime.IsLocal, // true for remote and false for local 
 				(runtime, value) => { }), //Modifying this doesn't make sense, this field is un-editable in VRC
 		};
 		
