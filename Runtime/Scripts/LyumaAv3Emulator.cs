@@ -78,6 +78,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		[Header("Networked and mirror clone emulation")]
 		public bool CreateNonLocalClone;
 		public int CreateNonLocalCloneCount;
+		public bool ClonesAreOnFriendsList = true;
 		public bool DisableMirrorClone;
 		public bool DisableShadowClone;
 		private bool lastHead;

@@ -432,7 +432,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				runtime => Mathf.Clamp((runtime.avadesc.ViewPosition.y  - 0.2f)/ (5.0f - 0.2f), 0.0f, 1.0f),
 				(runtime, value) => { }), //Modifying this doesn't make sense, this field is un-editable in VRC
 			new BuiltinParameterDefinition("IsOnFriendsList", VRCExpressionParameters.ValueType.Bool, 
-				runtime => !runtime.IsLocal, // true for remote and false for local 
+				runtime => !runtime.IsLocal && !runtime.IsMirrorClone && !runtime.IsShadowClone && runtime.IsOnFriendsList, // true for remote and false for local
 				(runtime, value) => { }), //Modifying this doesn't make sense, this field is un-editable in VRC
 		};
 		
@@ -496,6 +496,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		public Vector3 VisualOffset;
 		private Vector3 SavedPosition;
 		private bool IsCurrentlyVisuallyOffset = false;
+		public bool IsOnFriendsList = false;
 
 		[Header("Output State (Read-only)")]
 		public bool IsLocal;
@@ -2034,6 +2035,9 @@ namespace Lyuma.Av3Emulator.Runtime
 				Dictionary<string, float> stageNameToValue = EarlyRefreshExpressionParameters();
 				LateRefreshExpressionParameters(stageNameToValue);
 			}
+			if(this == AvatarSyncSource || IsMirrorClone || IsShadowClone) {
+				IsOnFriendsList = false;
+			}
 			if(this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
 				Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
 				if (head != null) {
@@ -2093,6 +2097,9 @@ namespace Lyuma.Av3Emulator.Runtime
 				CreateNonLocalClone = false;
 				AvatarSyncSource.CloneCount++;
 				Vector3 oldOffset = VisualOffset;
+				if (emulator != null) {
+					OriginalSourceClone.IsOnFriendsList = emulator.ClonesAreOnFriendsList;
+				}
 				OriginalSourceClone.VisualOffset = AvatarSyncSource.CloneCount * new Vector3(0.4f, 0.0f, 0.4f);
 				GameObject go = GameObject.Instantiate(OriginalSourceClone.gameObject);
 				go.hideFlags = 0;
