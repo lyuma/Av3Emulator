@@ -1,5 +1,12 @@
 ### New features in v 3.2.2:
 
+3.3.0:
+
+- Fix parametersIncorrect not working with null parameter.name (thanks anatawa12)
+- Minimum support for `IsOnFriendsList`, false for local (thanks anatawa12)
+- Implement preference for changing clones IsOnFriendsList
+- Support latest Unity 2022 compatible version of SDK (thanks jellejurre)
+
 3.2.4:
 
 - Workaround bug in VCC that prevents installation.
