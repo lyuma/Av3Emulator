@@ -37,6 +37,7 @@ using static VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
 namespace Lyuma.Av3Emulator.Runtime
 {
 	// [RequireComponent(typeof(Animator))]
+	[DefaultExecutionOrder(-100000)]
 	[HelpURL("https://github.com/lyuma/Av3Emulator")]
 	public class LyumaAv3Runtime : MonoBehaviour
 	{
@@ -1072,7 +1073,27 @@ namespace Lyuma.Av3Emulator.Runtime
 				ViewAnimatorOnlyNoParams = this.emulator.DefaultAnimatorToDebug;
 			}
 
-			animator = GetOrAddComponent<Animator>(this.gameObject);
+			animator = GetComponent<Animator>();
+			if (animator == null)
+			{
+				animator = gameObject.AddComponent<Animator>();
+			}
+			else
+			{
+				var controller = animator.runtimeAnimatorController;
+				var avatar = animator.avatar;
+				var applyRootMotion = animator.applyRootMotion;
+				var updateMode = animator.updateMode;
+				var cullingMode = animator.cullingMode;
+				DestroyImmediate(animator);
+				animator = gameObject.AddComponent<Animator>();
+				animator.applyRootMotion = applyRootMotion;
+				animator.updateMode = updateMode;
+				animator.cullingMode = cullingMode;
+				animator.avatar = avatar;
+				animator.runtimeAnimatorController = controller;
+			}
+			
 			if (animatorAvatar != null && animator.avatar == null) {
 				animator.avatar = animatorAvatar;
 			} else {
@@ -1920,6 +1941,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		void Update() {
+			animator ??= GetOrAddComponent<Animator>(this.gameObject);
 			if (broadcastStartNextFrame) {
 				Debug.Log("BROADCASTING START!");
 				broadcastStartNextFrame = false;

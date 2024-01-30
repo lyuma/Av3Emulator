@@ -30,6 +30,7 @@ using VRC.SDK3.Dynamics.PhysBone.Components;
 
 namespace Lyuma.Av3Emulator.Runtime
 {
+	[DefaultExecutionOrder(-100000)]
 	[HelpURL("https://github.com/lyuma/Av3Emulator")]
 	public class LyumaAv3Emulator : MonoBehaviour
 	{
@@ -186,12 +187,16 @@ namespace Lyuma.Av3Emulator.Runtime
 			Camera.onPreCull += PreCull;
 			Camera.onPostRender += PostRender;
 			emulatorInstance = this;
-			ScanForAvatars();
 			if (WorkaroundPlayModeScriptCompile) {
 				LyumaAv3Runtime.ApplyOnEnableWorkaroundDelegate();
 			}
 
 			SceneManager.sceneLoaded += OnSceneLoaded;
+		}
+
+		private void Start()
+		{
+			ScanForAvatars();
 		}
 
 		private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
