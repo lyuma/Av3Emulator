@@ -191,15 +191,10 @@ namespace Lyuma.Av3Emulator.Runtime
 				LyumaAv3Runtime.ApplyOnEnableWorkaroundDelegate();
 			}
 
-			SceneManager.sceneLoaded += OnSceneLoaded;
 		}
 
 		private void Start()
 		{
-			ScanForAvatars();
-		}
-
-		private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
 			ScanForAvatars();
 		}
 
@@ -295,7 +290,6 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			runtimes.Clear();
 			LyumaAv3Runtime.updateSceneLayersDelegate(~0);
-			SceneManager.sceneLoaded -= OnSceneLoaded;
 		}
 
 		private void Update() {
