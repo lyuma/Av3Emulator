@@ -1941,7 +1941,10 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		void Update() {
-			animator ??= GetOrAddComponent<Animator>(this.gameObject);
+			if (animator == null)
+			{
+				animator = GetOrAddComponent<Animator>(this.gameObject);
+			}
 			if (broadcastStartNextFrame) {
 				Debug.Log("BROADCASTING START!");
 				broadcastStartNextFrame = false;
