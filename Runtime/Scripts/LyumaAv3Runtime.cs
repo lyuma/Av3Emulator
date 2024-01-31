@@ -37,7 +37,7 @@ using static VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
 namespace Lyuma.Av3Emulator.Runtime
 {
 	// [RequireComponent(typeof(Animator))]
-	[DefaultExecutionOrder(-100000)]
+	[DefaultExecutionOrder(-10)]
 	[HelpURL("https://github.com/lyuma/Av3Emulator")]
 	public class LyumaAv3Runtime : MonoBehaviour
 	{

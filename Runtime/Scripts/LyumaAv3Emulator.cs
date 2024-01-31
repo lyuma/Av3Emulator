@@ -30,7 +30,7 @@ using VRC.SDK3.Dynamics.PhysBone.Components;
 
 namespace Lyuma.Av3Emulator.Runtime
 {
-	[DefaultExecutionOrder(-100000)]
+	[DefaultExecutionOrder(-10)]
 	[HelpURL("https://github.com/lyuma/Av3Emulator")]
 	public class LyumaAv3Emulator : MonoBehaviour
 	{
