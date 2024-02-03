@@ -296,8 +296,10 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (RestartingEmulator) {
 				RestartingEmulator = false;
 				Awake();
+				Start();
 			} else if (RestartEmulator) {
 				RunPreprocessAvatarHook = false;
+				scannedAvatars = new HashSet<VRCAvatarDescriptor>();
 				RestartEmulator = false;
 				OnDestroy();
 				RestartingEmulator = true;
