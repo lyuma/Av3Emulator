@@ -789,9 +789,11 @@ namespace Lyuma.Av3Emulator.Runtime
 							if (!bp.synced) {
 								// Triggers ignore alue and Set unconditionally.
 								whichController = 0;
-								foreach (var p in runtime.playables) {
-									if (bp.hasBool[whichController]) {
-										p.SetBool(actualName, newValue);
+								foreach (var p in runtime.playables){
+									int paramId = 0;
+									if (runtime.playableParamterIds[whichController].TryGetValue(actualName, out paramId))
+									{
+										runtime.SetTypeWithMismatch(p, paramId, newValue, runtime.playableParamterTypes[whichController][actualName]);
 									}
 									whichController++;
 								}
