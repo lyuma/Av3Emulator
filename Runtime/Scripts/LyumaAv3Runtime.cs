@@ -1187,7 +1187,12 @@ namespace Lyuma.Av3Emulator.Runtime
 			DefaultViewPosition = avadesc.ViewPosition;
 			DefaultAvatarScale = gameObject.transform.localScale;
 
-			ParentConstraints = gameObject.GetComponentsInChildren<ParentConstraint>(true).Select(x => (x, x.translationOffsets)).ToArray();
+			ParentConstraints = gameObject.GetComponentsInChildren<ParentConstraint>(true)
+				.Select(constraint => (constraint, constraint.translationOffsets.Select(offset =>
+				{
+					Vector3 lossyScale = constraint.transform.lossyScale;
+					return new Vector3(offset.x / lossyScale.x, offset.y / lossyScale.y, offset.z / lossyScale.z); // We want offsets to be in world space;
+				}).ToArray())).ToArray();
 			ClothComponents = gameObject.GetComponentsInChildren<Cloth>(true).ToArray();
 		}
 
