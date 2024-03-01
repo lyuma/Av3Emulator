@@ -1828,7 +1828,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 				foreach (Transform[] allXTransforms in new Transform[][]{allMirrorTransforms, allShadowTransforms}) {
 					if (allXTransforms != null) {
-						Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
+						Transform head = animator.avatar == null ? null : animator.GetBoneTransform(HumanBodyBones.Head);
 						for(int i = 0; i < allTransforms.Length && i < allXTransforms.Length; i++) {
 							if (allXTransforms[i] == null || allTransforms[i] == this.transform) {
 								continue;
@@ -2065,7 +2065,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			if(this == AvatarSyncSource || IsMirrorClone || IsShadowClone) {
 				IsOnFriendsList = false;
 			}
-			if(this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
+			if(this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone && animator.avatar != null) {
 				Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
 				if (head != null) {
 					if (defaultHeadScale == new Vector3(0, 0, 0))
