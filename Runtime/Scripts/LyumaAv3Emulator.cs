@@ -325,10 +325,12 @@ namespace Lyuma.Av3Emulator.Runtime
 				Start();
 			} else if (RestartEmulator) {
 				RunPreprocessAvatarHook = false;
-				scannedAvatars = new HashSet<VRCAvatarDescriptor>();
 				RestartEmulator = false;
 				OnDestroy();
 				RestartingEmulator = true;
+				runtimes.Clear();
+				forceActiveRuntimes.Clear();
+				scannedAvatars.Clear();
 			}
 			foreach (var runtime in forceActiveRuntimes) {
 				runtime.gameObject.SetActive(true);

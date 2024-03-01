@@ -1038,6 +1038,22 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 				animator.runtimeAnimatorController = origAnimatorController;
 			}
+			if (MirrorClone) {
+				GameObject.Destroy(MirrorClone.gameObject);
+				MirrorClone = null;
+			}
+			if (ShadowClone) {
+				GameObject.Destroy(ShadowClone.gameObject);
+				ShadowClone = null;
+			}
+			if (OriginalSourceClone) {
+				GameObject.Destroy(OriginalSourceClone.gameObject);
+				OriginalSourceClone = null;
+			}
+			foreach (LyumaAv3Runtime clone in NonLocalClones) {
+				GameObject.Destroy(clone.gameObject);
+			}
+			NonLocalClones.Clear();
 		}
 
 		void Awake()

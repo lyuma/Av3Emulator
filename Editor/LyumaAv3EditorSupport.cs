@@ -228,8 +228,10 @@ namespace Lyuma.Av3Emulator.Editor
 
 		private static void WorkaroundDestroyManagersBeforeCompile(string obj) {
 			Debug.Log("Compile Started");
-			GameObject gotmp = new GameObject("TempReloadDontDestroy");
-			Object.DontDestroyOnLoad(gotmp);
+			if (!GameObject.Find("/TempReloadDontDestroy")) {
+				GameObject gotmp = new GameObject("TempReloadDontDestroy");
+				Object.DontDestroyOnLoad(gotmp);
+			}
 			GameObject go;
 			go = GameObject.Find("/TriggerManager");
 			if (go != null) {
