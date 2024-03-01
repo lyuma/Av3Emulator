@@ -1,5 +1,13 @@
 ### New features in v 3.2.2:
 
+3.3.1:
+
+- Initialize on Start instead of Awake (thanks to jellejurre, anatawa12, bd_ and Senky for your guidance on this issue!)
+- Add an option to use the old behavior of initialize on Awake. This shouldn't be needed, but if it fixes a glitch, let me know.
+- Fix generic support (thanks, jellejurre)
+- Fix scaling offset on parent constraints being wrong with changed scale (thanks, jellejurre)
+- Fix bool copy parameter mismatch
+
 3.3.0:
 
 - Fix parametersIncorrect not working with null parameter.name (thanks anatawa12)
