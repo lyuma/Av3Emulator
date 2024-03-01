@@ -1080,8 +1080,14 @@ namespace Lyuma.Av3Emulator.Runtime
 			{
 				animator = gameObject.AddComponent<Animator>();
 			}
-			else
+			else if (this.emulator == null || !this.emulator.IsLegacyAwakeUsed())
 			{
+				// legacy Awake() mode doesn't recreate the Animator for... legacy reasons.
+				// (the assumption is that Awake() runs before the Animator records defaults)
+
+				// But in the new version which uses Start(), we do recreate the Animator.
+				// Supposedly this is needed to workaround some Animator glitch caused by VRCFury
+				// to prevent the animator from baking defaults from before VRCFury build runs.
 				var controller = animator.runtimeAnimatorController;
 				var avatar = animator.avatar;
 				var applyRootMotion = animator.applyRootMotion;
@@ -1095,7 +1101,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				animator.avatar = avatar;
 				animator.runtimeAnimatorController = controller;
 			}
-			
+
 			if (animatorAvatar != null && animator.avatar == null) {
 				animator.avatar = animatorAvatar;
 			} else {

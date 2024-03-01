@@ -65,8 +65,6 @@ namespace Lyuma.Av3Emulator.Runtime
 		public DescriptorCollidersSendersHelper.DescriptorExtractionType DescriptorColliders = DescriptorCollidersSendersHelper.DescriptorExtractionType.CollidersAndSenders;
 		public bool RestartEmulator;
 		private bool RestartingEmulator;
-		[Tooltip("Simulate behavior with sub-animator parameter drivers prior to the 2021.1.1 patch (19 Jan 2021)")]
-		public bool legacySubAnimatorParameterDriverMode = false;
 		public bool disableRadialMenu = false;
 		private bool lastDisableRadialMenu = false;
 		public bool EnableAvatarScaling = true;
@@ -89,6 +87,11 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool ViewBothRealAndMirror;
 		public bool VisuallyOffsetClonesOnly = true;
 		public bool ApplyClonePositionOffset = false;
+		[Header("Legacy options")]
+		[Tooltip("Simulate behavior with sub-animator parameter drivers prior to the 2021.1.1 patch (19 Jan 2021)")]
+		public bool legacySubAnimatorParameterDriverMode = false;
+		[Tooltip("Initialize during Awake() instead of Start(). May avoid rare glitches with clones but will break VRCFury and may cause crash on Unity 2019. May only be changed prior to starting.")]
+		public bool LegacyInitializeOnAwake = false;
 
 		static public LyumaAv3Emulator emulatorInstance;
 		static public RuntimeAnimatorController EmptyController;
@@ -96,6 +99,12 @@ namespace Lyuma.Av3Emulator.Runtime
 		[NonSerialized] public List<LyumaAv3Runtime> runtimes = new List<LyumaAv3Runtime>();
 		[NonSerialized] public LinkedList<LyumaAv3Runtime> forceActiveRuntimes = new LinkedList<LyumaAv3Runtime>();
 		[NonSerialized] public HashSet<VRCAvatarDescriptor> scannedAvatars = new HashSet<VRCAvatarDescriptor>();
+
+		private bool usedLegacyAwake = false;
+
+		public bool IsLegacyAwakeUsed() {
+			return usedLegacyAwake;
+		}
 
 		private void OnValidate()
 		{
@@ -190,7 +199,20 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (WorkaroundPlayModeScriptCompile) {
 				LyumaAv3Runtime.ApplyOnEnableWorkaroundDelegate();
 			}
+			if (LegacyInitializeOnAwake) {
+				ScanForAvatars();
+				usedLegacyAwake = true;
+				SceneManager.sceneLoaded += LegacyOnSceneLoaded;
+			}
 
+		}
+
+		private void LegacyOnSceneLoaded(Scene scene, LoadSceneMode mode)
+		{
+			if (!usedLegacyAwake) {
+				throw new Exception("Unreachable code when in non-legacy mode");
+			}
+			ScanForAvatars();
 		}
 
 		private void Start()
@@ -290,6 +312,10 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			runtimes.Clear();
 			LyumaAv3Runtime.updateSceneLayersDelegate(~0);
+			if (usedLegacyAwake) {
+				SceneManager.sceneLoaded -= LegacyOnSceneLoaded;
+				usedLegacyAwake = false;
+			}
 		}
 
 		private void Update() {
