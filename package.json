@@ -4,13 +4,12 @@
   "version": "3.3.1",
   "description": "An Emulator for VRChat's Avatar 3.0 System",
   "gitDependencies": {},
-   "legacyFolders" : {
+  "legacyFolders" : {
     "Assets\\Lyuma\\Av3Emulator" : "e42c5d0b3e2b3f64e8a88c225b3cef62"
   },
   "vpmDependencies": {
     "com.vrchat.avatars": ">=3.1.0 <3.6.0"
   },
-  "legacyFolders": {},
   "legacyFiles": {},
   "type": "tool",
   "unity": "2019.4"
