@@ -157,7 +157,6 @@ namespace Lyuma.Av3Emulator.Editor
 		#endregion
 		
 		#region Foldout Variables
-
 		private static bool resetAndRefreshFoldout;
 		private static bool animatorToDebugFoldout;
 		private static bool OSCFoldout;
@@ -170,7 +169,7 @@ namespace Lyuma.Av3Emulator.Editor
 		private static bool trackingSetupAndOtherFoldout;
 		private static bool userInputsFoldout;
 		private static bool outputStateFoldout;
-		
+		private static bool creditsAndLinksFoldout;
 		#endregion
 		public override void OnInspectorGUI()
 		{
@@ -187,13 +186,7 @@ namespace Lyuma.Av3Emulator.Editor
 			DrawFoldout("Built-in Inputs", ref builtInInputsFoldout, DrawBuiltInInputsGUI);
 			DrawFoldout("User Inputs", ref userInputsFoldout, DrawUserInputsGUI);
 			DrawFoldout("Output State (Read-Only)", ref outputStateFoldout, DrawOutputStateGUI);
-			
-			EditorGUILayout.PropertyField(VisitOurGithub);
-			EditorGUILayout.PropertyField(ViewREADMEManual);
-			EditorGUILayout.PropertyField(ViewChangelog);
-			EditorGUILayout.PropertyField(ViewMITLicense);
-			EditorGUILayout.PropertyField(SendBugsOrFeedback);
-			
+			DrawFoldout("Credits and Links", ref creditsAndLinksFoldout, DrawCreditsAndLinksGUI);
 			//Not sure why this is visible in base inspector? It's set automatically
 			//EditorGUILayout.PropertyField(emulator);
 			
@@ -319,6 +312,15 @@ namespace Lyuma.Av3Emulator.Editor
 			}
 		}
 		
+		private void DrawCreditsAndLinksGUI()
+		{
+			EditorGUILayout.PropertyField(VisitOurGithub);
+			EditorGUILayout.PropertyField(ViewREADMEManual);
+			EditorGUILayout.PropertyField(ViewChangelog);
+			EditorGUILayout.PropertyField(ViewMITLicense);
+			EditorGUILayout.PropertyField(SendBugsOrFeedback);
+		}
+
 		private static void DrawFoldout(string label, ref bool foldout, Action content)
 		{
 			foldout = EditorGUILayout.Foldout(foldout, label, true);
@@ -329,5 +331,5 @@ namespace Lyuma.Av3Emulator.Editor
 			EditorGUI.indentLevel--;
 		}
 	}
-
+	
 }
