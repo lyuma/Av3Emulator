@@ -211,63 +211,66 @@ namespace Lyuma.Av3Emulator.Editor
 
 		private void DrawResetAndRefreshGUI()
 		{
-			EditorGUILayout.PropertyField(ResetAvatar);
-			EditorGUILayout.PropertyField(ResetAndHold);
-			EditorGUILayout.PropertyField(RefreshExpressionParams);
-			EditorGUILayout.PropertyField(KeepSavedParametersOnReset);
+			using (new GUILayout.HorizontalScope())
+			{
+				DrawAsClickableToggle(ResetAvatar);
+				DrawAsClickableToggle(ResetAndHold);
+			}
+
+			DrawAsClickableToggle(RefreshExpressionParams);
+			DrawAsClickableToggle(KeepSavedParametersOnReset);
 		}
 
 		private void DrawAnimatorToDebugGUI()
 		{
 			EditorGUILayout.PropertyField(DebugDuplicateAnimator);
 			EditorGUILayout.PropertyField(ViewAnimatorOnlyNoParams);
-			EditorGUILayout.PropertyField(SourceObjectPath);
-			EditorGUILayout.PropertyField(AvatarSyncSource);
 		}
 
 		private void DrawOSCGUI()
 		{
-			EditorGUILayout.PropertyField(EnableAvatarOSC);
-			EditorGUILayout.PropertyField(LogOSCWarnings);
+			DrawAsClickableToggle(EnableAvatarOSC);
+			DrawAsClickableToggle(LogOSCWarnings);
 			EditorGUILayout.PropertyField(OSCController);
 			EditorGUILayout.PropertyField(OSCConfigurationFile);
 		}
 
 		private void DrawNetworkClonesAndSyncGUI()
 		{
-			EditorGUILayout.PropertyField(CreateNonLocalClone);
-			EditorGUILayout.PropertyField(locally8bitQuantizedFloats);
+			using (new GUILayout.HorizontalScope())
+			{
+				EditorGUILayout.PropertyField(locally8bitQuantizedFloats);
+				DrawAsClickableToggle(CreateNonLocalClone);
+			}
 			EditorGUILayout.PropertyField(NonLocalSyncInterval);
 			EditorGUILayout.PropertyField(IKSyncRadialMenu);
 		}
 
 		private void DrawPlayerLocalAndMirrorReflectionGUI()
 		{
-			EditorGUILayout.PropertyField(EnableHeadScaling);
-			EditorGUILayout.PropertyField(DisableMirrorAndShadowClones);
-			EditorGUILayout.PropertyField(MirrorClone);
-			EditorGUILayout.PropertyField(ShadowClone);
-			EditorGUILayout.PropertyField(NonLocalClones);
-			EditorGUILayout.PropertyField(DebugOffsetMirrorClone);
-			EditorGUILayout.PropertyField(ViewMirrorReflection);
-			EditorGUILayout.PropertyField(ViewBothRealAndMirror);
-			EditorGUILayout.PropertyField(avadesc);
+			DrawAsClickableToggle(EnableHeadScaling);
+			DrawAsClickableToggle(DisableMirrorAndShadowClones);
+			
+			DrawAsClickableToggle(DebugOffsetMirrorClone);
+			using (new GUILayout.HorizontalScope())
+			{
+				DrawAsClickableToggle(ViewMirrorReflection);
+				DrawAsClickableToggle(ViewBothRealAndMirror);
+			}
 		}
 
 		private void DrawVisemeGUI()
 		{
-			EditorGUILayout.PropertyField(Viseme);
-			EditorGUILayout.PropertyField(VisemeIdx);
+			DrawAsEnumWithIndex(Viseme, VisemeIdx, 50);
 			EditorGUILayout.PropertyField(Voice);
 		}
 
 		private void DrawHandGestureGUI()
 		{
-			EditorGUILayout.PropertyField(GestureLeft);
-			EditorGUILayout.PropertyField(GestureLeftIdx);
+			DrawAsEnumWithIndex(GestureLeft, GestureLeftIdx);
 			EditorGUILayout.PropertyField(GestureLeftWeight);
-			EditorGUILayout.PropertyField(GestureRight);
-			EditorGUILayout.PropertyField(GestureRightIdx);
+			
+			DrawAsEnumWithIndex(GestureRight, GestureRightIdx);
 			EditorGUILayout.PropertyField(GestureRightWeight);
 		}
 
@@ -276,50 +279,117 @@ namespace Lyuma.Av3Emulator.Editor
 			EditorGUILayout.PropertyField(Velocity);
 			EditorGUILayout.PropertyField(AngularY);
 			EditorGUILayout.PropertyField(Upright);
-			EditorGUILayout.PropertyField(Grounded);
-			EditorGUILayout.PropertyField(Jump);
-			EditorGUILayout.PropertyField(JumpPower);
 			EditorGUILayout.PropertyField(RunSpeed);
-			EditorGUILayout.PropertyField(Seated);
-			EditorGUILayout.PropertyField(AFK);
-			EditorGUILayout.PropertyField(TPoseCalibration);
-			EditorGUILayout.PropertyField(IKPoseCalibration);
+			
+			using (new GUILayout.HorizontalScope())
+			{
+				EditorGUILayout.PropertyField(JumpPower);
+				if (ClickableButton("Jump", GUILayout.Width(75)))
+					Jump.boolValue = true;
+				
+				DrawAsClickableToggle(Grounded, true, GUILayout.Width(75));
+			}
+
+			using (new GUILayout.HorizontalScope())
+			{
+				DrawAsClickableToggle(Seated);
+				DrawAsClickableToggle(AFK);
+			}
+			
+			using (new GUILayout.HorizontalScope())
+			{
+				DrawAsClickableToggle(TPoseCalibration);
+				DrawAsClickableToggle(IKPoseCalibration);
+			}
 		}
 
 		private void DrawTrackingSetupAndOtherGUI()
 		{
-			EditorGUILayout.PropertyField(TrackingType);
-			EditorGUILayout.PropertyField(TrackingTypeIdx);
-			EditorGUILayout.PropertyField(VRMode);
-			EditorGUILayout.PropertyField(MuteSelf);
-			EditorGUILayout.PropertyField(Earmuffs);
-			EditorGUILayout.PropertyField(InStation);
+			DrawAsEnumWithIndex(TrackingType, TrackingTypeIdx, 150);
+			
+			using (new GUILayout.HorizontalScope())
+			{
+				EditorGUILayout.PropertyField(AvatarHeight);
+				DrawAsClickableToggle(EnableAvatarScaling, true, GUILayout.Width(150));
+			}
 			EditorGUILayout.PropertyField(AvatarVersion);
-			EditorGUILayout.PropertyField(EnableAvatarScaling);
-			EditorGUILayout.PropertyField(AvatarHeight);
+			
 			EditorGUILayout.PropertyField(VisualOffset);
-			EditorGUILayout.PropertyField(IsOnFriendsList);
+			
+			using (new GUILayout.HorizontalScope())
+			{
+				DrawAsClickableToggle(MuteSelf);
+				DrawAsClickableToggle(Earmuffs);
+			}
+
+			using (new GUILayout.HorizontalScope())
+			{
+				DrawAsClickableToggle(VRMode);
+				DrawAsClickableToggle(InStation);
+
+			}
+			DrawAsClickableToggle(IsOnFriendsList);
 		}
 
 		private void DrawOutputStateGUI()
 		{
 			using (new EditorGUI.DisabledScope(true))
 			{
-				EditorGUILayout.PropertyField(IsLocal);
-				EditorGUILayout.PropertyField(IsMirrorClone);
-				EditorGUILayout.PropertyField(IsShadowClone);
-				EditorGUILayout.PropertyField(LocomotionIsDisabled);
-				EditorGUILayout.PropertyField(IKTrackingOutputData);
+				DrawAsClickableToggle(IsLocal, true);
+				using (new GUILayout.HorizontalScope())
+				{
+					DrawAsClickableToggle(IsMirrorClone, true);
+					DrawAsClickableToggle(IsShadowClone, true);
+				}
+
+				bool locomotionState = !LocomotionIsDisabled.boolValue;
+				using (new ColoredScope(ColoredScope.ColoringType.BG, locomotionState, Color.green, Color.red))
+				{
+					string label = locomotionState ? "Locomotion Is Enabled" : "Locomotion Is Disabled";
+					GUILayout.Button(label);
+				}
+				EditorGUILayout.PropertyField(IKTrackingOutputData, true);
 			}
 		}
 
 		private void DrawCreditsAndLinksGUI()
 		{
-			EditorGUILayout.PropertyField(VisitOurGithub);
+			EditorGUILayout.Space();
+			DrawCredits();
+			EditorGUILayout.Space();
+			
+			if (ClickableButton(new GUIContent("Visit Our Github",LyumaAv3Emulator.GIT_REPO)))
+				Application.OpenURL(LyumaAv3Emulator.GIT_REPO);
+
+			if (ClickableButton(new GUIContent("Send Bugs Or Feedback")))
+				Application.OpenURL(LyumaAv3Emulator.BUG_TRACKER_URL);
+			
+			using (new GUILayout.HorizontalScope())
+			{
+				if (ClickableButton("View README Manual"))
+					Selection.activeObject = LyumaAv3Emulator.READMEAsset;
+				
+				if (ClickableButton("View Changelog"))
+					Selection.activeObject = LyumaAv3Emulator.CHANGELOGAsset;
+				
+				if (ClickableButton("View MIT License"))
+					Selection.activeObject = LyumaAv3Emulator.LICENSEAsset;
+			}
+
+			/*EditorGUILayout.PropertyField(VisitOurGithub);
 			EditorGUILayout.PropertyField(ViewREADMEManual);
 			EditorGUILayout.PropertyField(ViewChangelog);
 			EditorGUILayout.PropertyField(ViewMITLicense);
-			EditorGUILayout.PropertyField(SendBugsOrFeedback);
+			EditorGUILayout.PropertyField(SendBugsOrFeedback);*/
+		}
+
+		private void DrawCredits()
+		{
+			GUILayout.Label("Lyuma's Av3Emulator is open source!", EditorStyles.boldLabel);
+			GUILayout.Label(LyumaAv3Emulator.EMULATOR_VERSION_STRING, EditorStyles.boldLabel);
+			GUILayout.Label(LyumaAv3Emulator.CREDIT1, EditorStyles.boldLabel);
+			GUILayout.Label(LyumaAv3Emulator.CREDIT2, EditorStyles.boldLabel);
+			GUILayout.Label(LyumaAv3Emulator.CREDIT3, EditorStyles.boldLabel);
 		}
 
 		private static void DrawFoldout(string label, ref bool foldout, Action content)
@@ -327,27 +397,52 @@ namespace Lyuma.Av3Emulator.Editor
 			foldout = EditorGUILayout.Foldout(foldout, label, true, EditorStyles.foldoutHeader);
 			if (!foldout) return;
 
-			EditorGUI.indentLevel++;
-			content();
-			EditorGUI.indentLevel--;
+			using (new GUILayout.HorizontalScope())
+			{
+				GUILayout.Space(15);
+				using (new GUILayout.VerticalScope()) 
+					content();
+			}
+			
 		}
 
-		private static bool ClickableButton(GUIContent content)
+		#region Clickables
+		private static bool ClickableButton(string content, params GUILayoutOption[] options) => ClickableButton(new GUIContent(content), options);
+		private static bool ClickableButton(GUIContent content, params GUILayoutOption[] options)
 		{
 			GUIStyle style = GUI.skin.button;
-			var r = EditorGUILayout.GetControlRect(false, 20, style);
+			var r = EditorGUILayout.GetControlRect(false, 20, style, options);
 			EditorGUIUtility.AddCursorRect(r, MouseCursor.Link);
 			return GUI.Button(r, content, style);
 		}
 
-		private static bool ClickableToggle(GUIContent content, bool value)
+		private static bool ClickableToggle(GUIContent content, bool value, bool colorOnFalse = false, params GUILayoutOption[] options)
 		{
 			GUIStyle style = GUI.skin.button;
-			var r = EditorGUILayout.GetControlRect(false, 20, style);
-			EditorGUIUtility.AddCursorRect(r, MouseCursor.Link);
+			var r = EditorGUILayout.GetControlRect(false, 20, style, options);
+			if (GUI.enabled) EditorGUIUtility.AddCursorRect(r, MouseCursor.Link);
+			
+			if (colorOnFalse)
+			{
+				using (new ColoredScope(ColoredScope.ColoringType.BG, value, Color.green, Color.red))
+					return GUI.Toggle(r, value, content, style);
+			}
+			
 			using (new ColoredScope(ColoredScope.ColoringType.BG, value, Color.green))
 				return GUI.Toggle(r, value, content, style);
+			
 		}
+		private static void DrawAsClickableToggle(SerializedProperty property, bool colorOnFalse = false, params GUILayoutOption[] options) => property.boolValue = ClickableToggle(GetContent(property), property.boolValue, colorOnFalse, options);
+
+		private static void DrawAsEnumWithIndex(SerializedProperty enumProperty, SerializedProperty indexProperty, float width = 100)
+		{
+			using (new GUILayout.HorizontalScope())
+			{
+				EditorGUILayout.PropertyField(indexProperty, GetContent(enumProperty));
+				EditorGUILayout.PropertyField(enumProperty, GUIContent.none, GUILayout.Width(width));
+			}
+		}
+		#endregion
 		
 		private static GUIContent GetContent(SerializedProperty property)
 		{ 
