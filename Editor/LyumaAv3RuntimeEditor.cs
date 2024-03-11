@@ -16,8 +16,6 @@ namespace Lyuma.Av3Emulator.Editor
 		public SerializedProperty KeepSavedParametersOnReset;
 		public SerializedProperty DebugDuplicateAnimator;
 		public SerializedProperty ViewAnimatorOnlyNoParams;
-		public SerializedProperty SourceObjectPath;
-		public SerializedProperty AvatarSyncSource;
 		public SerializedProperty EnableAvatarOSC;
 		public SerializedProperty LogOSCWarnings;
 		public SerializedProperty OSCController;
@@ -28,13 +26,9 @@ namespace Lyuma.Av3Emulator.Editor
 		public SerializedProperty IKSyncRadialMenu;
 		public SerializedProperty EnableHeadScaling;
 		public SerializedProperty DisableMirrorAndShadowClones;
-		public SerializedProperty MirrorClone;
-		public SerializedProperty ShadowClone;
-		public SerializedProperty NonLocalClones;
 		public SerializedProperty DebugOffsetMirrorClone;
 		public SerializedProperty ViewMirrorReflection;
 		public SerializedProperty ViewBothRealAndMirror;
-		public SerializedProperty avadesc;
 		public SerializedProperty Viseme;
 		public SerializedProperty VisemeIdx;
 		public SerializedProperty Voice;
@@ -74,11 +68,6 @@ namespace Lyuma.Av3Emulator.Editor
 		public SerializedProperty Floats;
 		public SerializedProperty Ints;
 		public SerializedProperty Bools;
-		public SerializedProperty VisitOurGithub;
-		public SerializedProperty ViewREADMEManual;
-		public SerializedProperty ViewChangelog;
-		public SerializedProperty ViewMITLicense;
-		public SerializedProperty SendBugsOrFeedback;
 		//public SerializedProperty emulator;
 
 		private void RefreshSerializedProperties()
@@ -90,8 +79,6 @@ namespace Lyuma.Av3Emulator.Editor
 			KeepSavedParametersOnReset = serializedObject.FindProperty("KeepSavedParametersOnReset");
 			DebugDuplicateAnimator = serializedObject.FindProperty("DebugDuplicateAnimator");
 			ViewAnimatorOnlyNoParams = serializedObject.FindProperty("ViewAnimatorOnlyNoParams");
-			SourceObjectPath = serializedObject.FindProperty("SourceObjectPath");
-			AvatarSyncSource = serializedObject.FindProperty("AvatarSyncSource");
 			EnableAvatarOSC = serializedObject.FindProperty("EnableAvatarOSC");
 			LogOSCWarnings = serializedObject.FindProperty("LogOSCWarnings");
 			OSCController = serializedObject.FindProperty("OSCController");
@@ -102,13 +89,9 @@ namespace Lyuma.Av3Emulator.Editor
 			IKSyncRadialMenu = serializedObject.FindProperty("IKSyncRadialMenu");
 			EnableHeadScaling = serializedObject.FindProperty("EnableHeadScaling");
 			DisableMirrorAndShadowClones = serializedObject.FindProperty("DisableMirrorAndShadowClones");
-			MirrorClone = serializedObject.FindProperty("MirrorClone");
-			ShadowClone = serializedObject.FindProperty("ShadowClone");
-			NonLocalClones = serializedObject.FindProperty("NonLocalClones");
 			DebugOffsetMirrorClone = serializedObject.FindProperty("DebugOffsetMirrorClone");
 			ViewMirrorReflection = serializedObject.FindProperty("ViewMirrorReflection");
 			ViewBothRealAndMirror = serializedObject.FindProperty("ViewBothRealAndMirror");
-			avadesc = serializedObject.FindProperty("avadesc");
 			Viseme = serializedObject.FindProperty("Viseme");
 			VisemeIdx = serializedObject.FindProperty("VisemeIdx");
 			Voice = serializedObject.FindProperty("Voice");
@@ -148,12 +131,6 @@ namespace Lyuma.Av3Emulator.Editor
 			Floats = serializedObject.FindProperty("Floats");
 			Ints = serializedObject.FindProperty("Ints");
 			Bools = serializedObject.FindProperty("Bools");
-			VisitOurGithub = serializedObject.FindProperty("VisitOurGithub");
-			ViewREADMEManual = serializedObject.FindProperty("ViewREADMEManual");
-			ViewChangelog = serializedObject.FindProperty("ViewChangelog");
-			ViewMITLicense = serializedObject.FindProperty("ViewMITLicense");
-			SendBugsOrFeedback = serializedObject.FindProperty("SendBugsOrFeedback");
-			//emulator = serializedObject.FindProperty("emulator");
 		}
 		#endregion
 
