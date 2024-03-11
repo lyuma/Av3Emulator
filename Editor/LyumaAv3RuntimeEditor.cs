@@ -1,8 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System;
 using Lyuma.Av3Emulator.Runtime;
 using UnityEditor;
-using UnityEngine;
 
 namespace Lyuma.Av3Emulator.Editor
 {
@@ -80,9 +78,9 @@ namespace Lyuma.Av3Emulator.Editor
 		public SerializedProperty ViewChangelog;
 		public SerializedProperty ViewMITLicense;
 		public SerializedProperty SendBugsOrFeedback;
-		public SerializedProperty emulator;
+		//public SerializedProperty emulator;
 
-		public void RefreshSerializedProperties()
+		private void RefreshSerializedProperties()
 		{
 			OriginalSourceClone = serializedObject.FindProperty("OriginalSourceClone");
 			ResetAvatar = serializedObject.FindProperty("ResetAvatar");
@@ -154,30 +152,103 @@ namespace Lyuma.Av3Emulator.Editor
 			ViewChangelog = serializedObject.FindProperty("ViewChangelog");
 			ViewMITLicense = serializedObject.FindProperty("ViewMITLicense");
 			SendBugsOrFeedback = serializedObject.FindProperty("SendBugsOrFeedback");
-			emulator = serializedObject.FindProperty("emulator");
+			//emulator = serializedObject.FindProperty("emulator");
 		}
+		#endregion
+		
+		#region Foldout Variables
 
+		private static bool resetAndRefreshFoldout;
+		private static bool animatorToDebugFoldout;
+		private static bool OSCFoldout;
+		private static bool networkClonesAndSyncFoldout;
+		private static bool playerLocalAndMirrorReflectionFoldout;
+		private static bool builtInInputsFoldout;
+		private static bool visemeFoldout;
+		private static bool handGestureFoldout;
+		private static bool locomotionFoldout;
+		private static bool trackingSetupAndOtherFoldout;
+		private static bool userInputsFoldout;
+		private static bool outputStateFoldout;
+		
+		#endregion
 		public override void OnInspectorGUI()
 		{
 			serializedObject.Update();
 			RefreshSerializedProperties();
 			EditorGUILayout.PropertyField(OriginalSourceClone);
+			EditorGUILayout.Space();
+			
+			DrawFoldout("Reset and Refresh", ref resetAndRefreshFoldout, DrawResetAndRefreshGUI);
+			DrawFoldout("Animator to Debug", ref animatorToDebugFoldout, DrawAnimatorToDebugGUI);
+			DrawFoldout("OSC", ref OSCFoldout, DrawOSCGUI);
+			DrawFoldout("Network Clones and Sync", ref networkClonesAndSyncFoldout, DrawNetworkClonesAndSyncGUI);
+			DrawFoldout("Player Local and Mirror Reflection", ref playerLocalAndMirrorReflectionFoldout, DrawPlayerLocalAndMirrorReflectionGUI);
+			DrawFoldout("Built-in Inputs", ref builtInInputsFoldout, DrawBuiltInInputsGUI);
+			DrawFoldout("User Inputs", ref userInputsFoldout, DrawUserInputsGUI);
+			DrawFoldout("Output State (Read-Only)", ref outputStateFoldout, DrawOutputStateGUI);
+			
+			EditorGUILayout.PropertyField(VisitOurGithub);
+			EditorGUILayout.PropertyField(ViewREADMEManual);
+			EditorGUILayout.PropertyField(ViewChangelog);
+			EditorGUILayout.PropertyField(ViewMITLicense);
+			EditorGUILayout.PropertyField(SendBugsOrFeedback);
+			
+			//Not sure why this is visible in base inspector? It's set automatically
+			//EditorGUILayout.PropertyField(emulator);
+			
+			serializedObject.ApplyModifiedProperties();
+		}
+		
+		private void DrawBuiltInInputsGUI()
+		{
+			DrawFoldout("Viseme",ref visemeFoldout, DrawVisemeGUI);
+			DrawFoldout("Hand Gesture",ref handGestureFoldout, DrawHandGestureGUI);
+			DrawFoldout("Locomotion",ref locomotionFoldout, DrawLocomotionGUI);
+			DrawFoldout("Tracking Setup and Other",ref trackingSetupAndOtherFoldout, DrawTrackingSetupAndOtherGUI);
+		}
+
+		private void DrawUserInputsGUI()
+		{
+			EditorGUILayout.PropertyField(Floats);
+			EditorGUILayout.PropertyField(Ints);
+			EditorGUILayout.PropertyField(Bools);
+		}
+
+		private void DrawResetAndRefreshGUI()
+		{
 			EditorGUILayout.PropertyField(ResetAvatar);
 			EditorGUILayout.PropertyField(ResetAndHold);
 			EditorGUILayout.PropertyField(RefreshExpressionParams);
 			EditorGUILayout.PropertyField(KeepSavedParametersOnReset);
+		}
+
+		private void DrawAnimatorToDebugGUI()
+		{
 			EditorGUILayout.PropertyField(DebugDuplicateAnimator);
 			EditorGUILayout.PropertyField(ViewAnimatorOnlyNoParams);
 			EditorGUILayout.PropertyField(SourceObjectPath);
 			EditorGUILayout.PropertyField(AvatarSyncSource);
+		}
+
+		private void DrawOSCGUI()
+		{
 			EditorGUILayout.PropertyField(EnableAvatarOSC);
 			EditorGUILayout.PropertyField(LogOSCWarnings);
 			EditorGUILayout.PropertyField(OSCController);
 			EditorGUILayout.PropertyField(OSCConfigurationFile);
+		}
+		
+		private void DrawNetworkClonesAndSyncGUI()
+		{
 			EditorGUILayout.PropertyField(CreateNonLocalClone);
 			EditorGUILayout.PropertyField(locally8bitQuantizedFloats);
 			EditorGUILayout.PropertyField(NonLocalSyncInterval);
 			EditorGUILayout.PropertyField(IKSyncRadialMenu);
+		}
+		
+		private void DrawPlayerLocalAndMirrorReflectionGUI()
+		{
 			EditorGUILayout.PropertyField(EnableHeadScaling);
 			EditorGUILayout.PropertyField(DisableMirrorAndShadowClones);
 			EditorGUILayout.PropertyField(MirrorClone);
@@ -187,15 +258,27 @@ namespace Lyuma.Av3Emulator.Editor
 			EditorGUILayout.PropertyField(ViewMirrorReflection);
 			EditorGUILayout.PropertyField(ViewBothRealAndMirror);
 			EditorGUILayout.PropertyField(avadesc);
+		}
+		
+		private void DrawVisemeGUI()
+		{
 			EditorGUILayout.PropertyField(Viseme);
 			EditorGUILayout.PropertyField(VisemeIdx);
 			EditorGUILayout.PropertyField(Voice);
+		}
+		
+		private void DrawHandGestureGUI()
+		{
 			EditorGUILayout.PropertyField(GestureLeft);
 			EditorGUILayout.PropertyField(GestureLeftIdx);
 			EditorGUILayout.PropertyField(GestureLeftWeight);
 			EditorGUILayout.PropertyField(GestureRight);
 			EditorGUILayout.PropertyField(GestureRightIdx);
 			EditorGUILayout.PropertyField(GestureRightWeight);
+		}
+		
+		private void DrawLocomotionGUI()
+		{
 			EditorGUILayout.PropertyField(Velocity);
 			EditorGUILayout.PropertyField(AngularY);
 			EditorGUILayout.PropertyField(Upright);
@@ -207,6 +290,10 @@ namespace Lyuma.Av3Emulator.Editor
 			EditorGUILayout.PropertyField(AFK);
 			EditorGUILayout.PropertyField(TPoseCalibration);
 			EditorGUILayout.PropertyField(IKPoseCalibration);
+		}
+		
+		private void DrawTrackingSetupAndOtherGUI()
+		{
 			EditorGUILayout.PropertyField(TrackingType);
 			EditorGUILayout.PropertyField(TrackingTypeIdx);
 			EditorGUILayout.PropertyField(VRMode);
@@ -218,24 +305,29 @@ namespace Lyuma.Av3Emulator.Editor
 			EditorGUILayout.PropertyField(AvatarHeight);
 			EditorGUILayout.PropertyField(VisualOffset);
 			EditorGUILayout.PropertyField(IsOnFriendsList);
-			EditorGUILayout.PropertyField(IsLocal);
-			EditorGUILayout.PropertyField(IsMirrorClone);
-			EditorGUILayout.PropertyField(IsShadowClone);
-			EditorGUILayout.PropertyField(LocomotionIsDisabled);
-			EditorGUILayout.PropertyField(IKTrackingOutputData);
-			EditorGUILayout.PropertyField(Floats);
-			EditorGUILayout.PropertyField(Ints);
-			EditorGUILayout.PropertyField(Bools);
-			EditorGUILayout.PropertyField(VisitOurGithub);
-			EditorGUILayout.PropertyField(ViewREADMEManual);
-			EditorGUILayout.PropertyField(ViewChangelog);
-			EditorGUILayout.PropertyField(ViewMITLicense);
-			EditorGUILayout.PropertyField(SendBugsOrFeedback);
-			EditorGUILayout.PropertyField(emulator);
-			serializedObject.ApplyModifiedProperties();
 		}
+		
+		private void DrawOutputStateGUI()
+		{
+			using (new EditorGUI.DisabledScope(true))
+			{
+				EditorGUILayout.PropertyField(IsLocal);
+				EditorGUILayout.PropertyField(IsMirrorClone);
+				EditorGUILayout.PropertyField(IsShadowClone);
+				EditorGUILayout.PropertyField(LocomotionIsDisabled);
+				EditorGUILayout.PropertyField(IKTrackingOutputData);
+			}
+		}
+		
+		private static void DrawFoldout(string label, ref bool foldout, Action content)
+		{
+			foldout = EditorGUILayout.Foldout(foldout, label, true);
+			if (!foldout) return;
 
-		#endregion
+			EditorGUI.indentLevel++;
+			content();
+			EditorGUI.indentLevel--;
+		}
 	}
 
 }
