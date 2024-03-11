@@ -1,6 +1,7 @@
 ﻿using System;
 using Lyuma.Av3Emulator.Runtime;
 using UnityEditor;
+using UnityEngine;
 
 namespace Lyuma.Av3Emulator.Editor
 {
@@ -323,7 +324,7 @@ namespace Lyuma.Av3Emulator.Editor
 
 		private static void DrawFoldout(string label, ref bool foldout, Action content)
 		{
-			foldout = EditorGUILayout.Foldout(foldout, label, true);
+			foldout = EditorGUILayout.Foldout(foldout, label, true, EditorStyles.foldoutHeader);
 			if (!foldout) return;
 
 			EditorGUI.indentLevel++;
