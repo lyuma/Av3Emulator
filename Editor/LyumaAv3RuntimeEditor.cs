@@ -156,7 +156,7 @@ namespace Lyuma.Av3Emulator.Editor
 			//emulator = serializedObject.FindProperty("emulator");
 		}
 		#endregion
-		
+
 		#region Foldout Variables
 		private static bool resetAndRefreshFoldout;
 		private static bool animatorToDebugFoldout;
@@ -178,7 +178,7 @@ namespace Lyuma.Av3Emulator.Editor
 			RefreshSerializedProperties();
 			EditorGUILayout.PropertyField(OriginalSourceClone);
 			EditorGUILayout.Space();
-			
+
 			DrawFoldout("Reset and Refresh", ref resetAndRefreshFoldout, DrawResetAndRefreshGUI);
 			DrawFoldout("Animator to Debug", ref animatorToDebugFoldout, DrawAnimatorToDebugGUI);
 			DrawFoldout("OSC", ref OSCFoldout, DrawOSCGUI);
@@ -190,16 +190,16 @@ namespace Lyuma.Av3Emulator.Editor
 			DrawFoldout("Credits and Links", ref creditsAndLinksFoldout, DrawCreditsAndLinksGUI);
 			//Not sure why this is visible in base inspector? It's set automatically
 			//EditorGUILayout.PropertyField(emulator);
-			
+
 			serializedObject.ApplyModifiedProperties();
 		}
-		
+
 		private void DrawBuiltInInputsGUI()
 		{
-			DrawFoldout("Viseme",ref visemeFoldout, DrawVisemeGUI);
-			DrawFoldout("Hand Gesture",ref handGestureFoldout, DrawHandGestureGUI);
-			DrawFoldout("Locomotion",ref locomotionFoldout, DrawLocomotionGUI);
-			DrawFoldout("Tracking Setup and Other",ref trackingSetupAndOtherFoldout, DrawTrackingSetupAndOtherGUI);
+			DrawFoldout("Viseme", ref visemeFoldout, DrawVisemeGUI);
+			DrawFoldout("Hand Gesture", ref handGestureFoldout, DrawHandGestureGUI);
+			DrawFoldout("Locomotion", ref locomotionFoldout, DrawLocomotionGUI);
+			DrawFoldout("Tracking Setup and Other", ref trackingSetupAndOtherFoldout, DrawTrackingSetupAndOtherGUI);
 		}
 
 		private void DrawUserInputsGUI()
@@ -232,7 +232,7 @@ namespace Lyuma.Av3Emulator.Editor
 			EditorGUILayout.PropertyField(OSCController);
 			EditorGUILayout.PropertyField(OSCConfigurationFile);
 		}
-		
+
 		private void DrawNetworkClonesAndSyncGUI()
 		{
 			EditorGUILayout.PropertyField(CreateNonLocalClone);
@@ -240,7 +240,7 @@ namespace Lyuma.Av3Emulator.Editor
 			EditorGUILayout.PropertyField(NonLocalSyncInterval);
 			EditorGUILayout.PropertyField(IKSyncRadialMenu);
 		}
-		
+
 		private void DrawPlayerLocalAndMirrorReflectionGUI()
 		{
 			EditorGUILayout.PropertyField(EnableHeadScaling);
@@ -253,14 +253,14 @@ namespace Lyuma.Av3Emulator.Editor
 			EditorGUILayout.PropertyField(ViewBothRealAndMirror);
 			EditorGUILayout.PropertyField(avadesc);
 		}
-		
+
 		private void DrawVisemeGUI()
 		{
 			EditorGUILayout.PropertyField(Viseme);
 			EditorGUILayout.PropertyField(VisemeIdx);
 			EditorGUILayout.PropertyField(Voice);
 		}
-		
+
 		private void DrawHandGestureGUI()
 		{
 			EditorGUILayout.PropertyField(GestureLeft);
@@ -270,7 +270,7 @@ namespace Lyuma.Av3Emulator.Editor
 			EditorGUILayout.PropertyField(GestureRightIdx);
 			EditorGUILayout.PropertyField(GestureRightWeight);
 		}
-		
+
 		private void DrawLocomotionGUI()
 		{
 			EditorGUILayout.PropertyField(Velocity);
@@ -285,7 +285,7 @@ namespace Lyuma.Av3Emulator.Editor
 			EditorGUILayout.PropertyField(TPoseCalibration);
 			EditorGUILayout.PropertyField(IKPoseCalibration);
 		}
-		
+
 		private void DrawTrackingSetupAndOtherGUI()
 		{
 			EditorGUILayout.PropertyField(TrackingType);
@@ -300,7 +300,7 @@ namespace Lyuma.Av3Emulator.Editor
 			EditorGUILayout.PropertyField(VisualOffset);
 			EditorGUILayout.PropertyField(IsOnFriendsList);
 		}
-		
+
 		private void DrawOutputStateGUI()
 		{
 			using (new EditorGUI.DisabledScope(true))
@@ -312,7 +312,7 @@ namespace Lyuma.Av3Emulator.Editor
 				EditorGUILayout.PropertyField(IKTrackingOutputData);
 			}
 		}
-		
+
 		private void DrawCreditsAndLinksGUI()
 		{
 			EditorGUILayout.PropertyField(VisitOurGithub);
@@ -331,6 +331,26 @@ namespace Lyuma.Av3Emulator.Editor
 			content();
 			EditorGUI.indentLevel--;
 		}
+
+		private static bool ClickableButton(GUIContent content)
+		{
+			GUIStyle style = GUI.skin.button;
+			var r = EditorGUILayout.GetControlRect(false, 20, style);
+			EditorGUIUtility.AddCursorRect(r, MouseCursor.Link);
+			return GUI.Button(r, content, style);
+		}
+
+		private static bool ClickableToggle(GUIContent content, bool value)
+		{
+			GUIStyle style = GUI.skin.toggle;
+			var r = EditorGUILayout.GetControlRect(false, 20, style);
+			EditorGUIUtility.AddCursorRect(r, MouseCursor.Link);
+			return GUI.Toggle(r, value, content, style);
+		}
+		
+		private static GUIContent GetContent(SerializedProperty property)
+		{ 
+			return new GUIContent(property.displayName, property.tooltip);
+		}
 	}
-	
 }
