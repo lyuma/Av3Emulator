@@ -2608,7 +2608,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				switch (outType)
 				{
 					case AnimatorControllerParameterType.Bool:
-						playable.SetBool(id, floatValue > 0.0f);
+						playable.SetBool(id, floatValue != 0.0f);
 						break;
 					case AnimatorControllerParameterType.Float:
 						playable.SetFloat(id, floatValue);
@@ -2623,7 +2623,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				switch (outType)
 				{
 					case AnimatorControllerParameterType.Bool:
-						playable.SetBool(id, intValue > 0.0f);
+						playable.SetBool(id, intValue != 0.0f);
 						break;
 					case AnimatorControllerParameterType.Float:
 						playable.SetFloat(id, (float)intValue);
@@ -2659,7 +2659,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					switch (outType)
 					{
 						case AnimatorControllerParameterType.Bool:
-							return floatValue > 0.0f;
+							return floatValue != 0.0f;
 						case AnimatorControllerParameterType.Float:
 							return floatValue;
 						case AnimatorControllerParameterType.Int:
@@ -2671,7 +2671,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					switch (outType)
 					{
 						case AnimatorControllerParameterType.Bool:
-							return intValue > 0;
+							return intValue != 0;
 						case AnimatorControllerParameterType.Float:
 							return (float)intValue;
 						case AnimatorControllerParameterType.Int:
