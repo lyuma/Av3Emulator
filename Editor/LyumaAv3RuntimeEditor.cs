@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Lyuma.Av3Emulator.Runtime;
 using UnityEditor;
 using UnityEngine;
@@ -19,7 +19,16 @@ namespace Lyuma.Av3Emulator.Editor
 		public SerializedProperty EnableAvatarOSC;
 		public SerializedProperty LogOSCWarnings;
 		public SerializedProperty OSCController;
-		public SerializedProperty OSCConfigurationFile;
+		public SerializedProperty UseRealPipelineIdJSONFile;
+		public SerializedProperty SendRecvAllParamsNotInJSON;
+		public SerializedProperty GenerateOSCConfig;
+		public SerializedProperty LoadOSCConfig;
+		public SerializedProperty SaveOSCConfig;
+		public SerializedProperty OSCAvatarID;
+		public SerializedProperty OSCFilePath;
+		public SerializedProperty OSCConfigId;
+		public SerializedProperty OSCConfigName;
+		public SerializedProperty OSCConfigParameters;
 		public SerializedProperty CreateNonLocalClone;
 		public SerializedProperty locally8bitQuantizedFloats;
 		public SerializedProperty NonLocalSyncInterval;
@@ -82,7 +91,16 @@ namespace Lyuma.Av3Emulator.Editor
 			EnableAvatarOSC = serializedObject.FindProperty("EnableAvatarOSC");
 			LogOSCWarnings = serializedObject.FindProperty("LogOSCWarnings");
 			OSCController = serializedObject.FindProperty("OSCController");
-			OSCConfigurationFile = serializedObject.FindProperty("OSCConfigurationFile");
+			UseRealPipelineIdJSONFile = serializedObject.FindProperty("OSCConfigurationFile.UseRealPipelineIdJSONFile");
+			SendRecvAllParamsNotInJSON = serializedObject.FindProperty("OSCConfigurationFile.SendRecvAllParamsNotInJSON");
+			GenerateOSCConfig = serializedObject.FindProperty("OSCConfigurationFile.GenerateOSCConfig");
+			LoadOSCConfig = serializedObject.FindProperty("OSCConfigurationFile.LoadOSCConfig");
+			SaveOSCConfig = serializedObject.FindProperty("OSCConfigurationFile.SaveOSCConfig");
+			OSCAvatarID = serializedObject.FindProperty("OSCConfigurationFile.OSCAvatarID");
+			OSCFilePath = serializedObject.FindProperty("OSCConfigurationFile.OSCFilePath");
+			OSCConfigId = serializedObject.FindProperty("OSCConfigurationFile.OSCJsonConfig.id");
+			OSCConfigName = serializedObject.FindProperty("OSCConfigurationFile.OSCJsonConfig.name");
+			OSCConfigParameters = serializedObject.FindProperty("OSCConfigurationFile.OSCJsonConfig.parameters");
 			CreateNonLocalClone = serializedObject.FindProperty("CreateNonLocalClone");
 			locally8bitQuantizedFloats = serializedObject.FindProperty("locally8bitQuantizedFloats");
 			NonLocalSyncInterval = serializedObject.FindProperty("NonLocalSyncInterval");
@@ -138,6 +156,7 @@ namespace Lyuma.Av3Emulator.Editor
 		private static bool resetAndRefreshFoldout;
 		private static bool animatorToDebugFoldout;
 		private static bool OSCFoldout;
+		private static bool OSCConfigFoldout;
 		private static bool networkClonesAndSyncFoldout;
 		private static bool playerLocalAndMirrorReflectionFoldout;
 		private static bool builtInInputsFoldout;
@@ -206,10 +225,27 @@ namespace Lyuma.Av3Emulator.Editor
 
 		private void DrawOSCGUI()
 		{
-			DrawAsClickableToggle(EnableAvatarOSC);
+			DrawAsClickableToggle(EnableAvatarOSC, true);
 			DrawAsClickableToggle(LogOSCWarnings);
 			EditorGUILayout.PropertyField(OSCController);
-			EditorGUILayout.PropertyField(OSCConfigurationFile);
+			DrawAsClickableToggle(UseRealPipelineIdJSONFile);
+			DrawAsClickableToggle(SendRecvAllParamsNotInJSON);
+			DrawAsClickableToggle(GenerateOSCConfig);
+			using (new GUILayout.HorizontalScope())
+			{
+				DrawAsClickableToggle(LoadOSCConfig);
+				DrawAsClickableToggle(SaveOSCConfig);	
+			}
+			EditorGUILayout.PropertyField(OSCAvatarID);
+			EditorGUILayout.PropertyField(OSCFilePath);
+			DrawFoldout("OSC Json Config", ref OSCConfigFoldout, DrawOSCConfig);
+		}
+
+		private void DrawOSCConfig()
+		{
+			EditorGUILayout.PropertyField(OSCConfigId);
+			EditorGUILayout.PropertyField(OSCConfigName);
+			EditorGUILayout.PropertyField(OSCConfigParameters);
 		}
 
 		private void DrawNetworkClonesAndSyncGUI()
@@ -352,12 +388,6 @@ namespace Lyuma.Av3Emulator.Editor
 				if (ClickableButton("View MIT License"))
 					Selection.activeObject = LyumaAv3Emulator.LICENSEAsset;
 			}
-
-			/*EditorGUILayout.PropertyField(VisitOurGithub);
-			EditorGUILayout.PropertyField(ViewREADMEManual);
-			EditorGUILayout.PropertyField(ViewChangelog);
-			EditorGUILayout.PropertyField(ViewMITLicense);
-			EditorGUILayout.PropertyField(SendBugsOrFeedback);*/
 		}
 
 		private void DrawCredits()
