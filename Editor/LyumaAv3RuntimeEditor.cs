@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using Lyuma.Av3Emulator.Runtime;
 using UnityEditor;
 using UnityEngine;
+using VRC.SDK3.Avatars.Components;
 
 namespace Lyuma.Av3Emulator.Editor
 {
@@ -79,6 +80,7 @@ namespace Lyuma.Av3Emulator.Editor
 		public SerializedProperty Bools;
 		//public SerializedProperty emulator;
 
+		public GUIContent warningIcon;
 		private void RefreshSerializedProperties()
 		{
 			OriginalSourceClone = serializedObject.FindProperty("OriginalSourceClone");
@@ -149,6 +151,8 @@ namespace Lyuma.Av3Emulator.Editor
 			Floats = serializedObject.FindProperty("Floats");
 			Ints = serializedObject.FindProperty("Ints");
 			Bools = serializedObject.FindProperty("Bools");
+			
+			warningIcon = EditorGUIUtility.IconContent("Warning@2x");
 		}
 		#endregion
 
@@ -219,7 +223,20 @@ namespace Lyuma.Av3Emulator.Editor
 
 		private void DrawAnimatorToDebugGUI()
 		{
-			EditorGUILayout.PropertyField(DebugDuplicateAnimator);
+			if (DebugDuplicateAnimator.enumValueIndex == (int)VRCAvatarDescriptor.AnimLayerType.Base)
+			{
+				EditorGUILayout.PropertyField(DebugDuplicateAnimator);
+				
+			}
+			else
+			{
+				EditorGUILayout.PropertyField(DebugDuplicateAnimator);
+				using (new EditorGUILayout.HorizontalScope())
+				{
+					GUILayout.Label(warningIcon, GUILayout.Width(warningIcon.image.width));
+					GUILayout.Label("Behaviour can differ from in game when not set to 'Base'");
+				}
+			}
 			EditorGUILayout.PropertyField(ViewAnimatorOnlyNoParams);
 		}
 
