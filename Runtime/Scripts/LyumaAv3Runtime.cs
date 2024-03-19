@@ -68,7 +68,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool RefreshExpressionParams;
 		[Tooltip("Simulates saving and reloading the avatar")]
 		public bool KeepSavedParametersOnReset = true;
-		[Header("Animator to Debug. Unity is glitchy when not 'Base'.")]
+		//[Header("Animator to Debug. Unity is glitchy when not 'Base'.")]
 		[Tooltip("Selects the playable layer to be visible with parameters in the Animator. If you view any other playable in the Animator window, parameters will say 0 and will not update.")]
 		public VRCAvatarDescriptor.AnimLayerType DebugDuplicateAnimator;
 		private char PrevAnimatorToDebug;
@@ -78,20 +78,20 @@ namespace Lyuma.Av3Emulator.Runtime
 		[HideInInspector] public string SourceObjectPath;
 		[HideInInspector] public LyumaAv3Runtime AvatarSyncSource;
 		private float nextUpdateTime = 0.0f;
-		[Header("OSC (double click OSC Controller for debug and port settings)")]
+		//[Header("OSC (double click OSC Controller for debug and port settings)")]
 		public bool EnableAvatarOSC = false;
 		public bool LogOSCWarnings = false;
 		public LyumaAv3Osc OSCController = null;
 		public A3EOSCConfiguration OSCConfigurationFile = new A3EOSCConfiguration();
 
-		[Header("Network Clones and Sync")]
+		//[Header("Network Clones and Sync")]
 		public bool CreateNonLocalClone;
 		[Tooltip("In VRChat, 8-bit float quantization only happens remotely. Check this to test your robustness to quantization locally, too. (example: 0.5 -> 0.503")]
 		public bool locally8bitQuantizedFloats = false;
 		private int CloneCount;
 		[Range(0.0f, 2.0f)] public float NonLocalSyncInterval = 0.2f;
 		[Tooltip("Parameters visible in the radial menu will IK sync")] public bool IKSyncRadialMenu = true;
-		[Header("PlayerLocal and MirrorReflection")]
+		//[Header("PlayerLocal and MirrorReflection")]
 		public bool EnableHeadScaling;
 		public bool DisableMirrorAndShadowClones;
 		[HideInInspector] public LyumaAv3Runtime MirrorClone;
@@ -446,13 +446,13 @@ namespace Lyuma.Av3Emulator.Runtime
 		};
 		public static readonly HashSet<string> CloneStringComponentBlacklist = new HashSet<string>() { "DynamicBone", "VRCContact", "VRCPhysBone", "VRCSpatialAudioSource" };
 
-		[Header("Built-in inputs / Viseme")]
+		//[Header("Built-in inputs / Viseme")]
 		public VisemeIndex Viseme;
 		[Range(0, 15)] public int VisemeIdx;
 		private int VisemeInt;
 		[Tooltip("Voice amount from 0.0f to 1.0f for the current viseme")]
 		[Range(0,1)] public float Voice;
-		[Header("Built-in inputs / Hand Gestures")]
+		//[Header("Built-in inputs / Hand Gestures")]
 		public GestureIndex GestureLeft;
 		[Range(0, 9)] public int GestureLeftIdx;
 		private char GestureLeftIdxInt;
@@ -463,7 +463,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		private char GestureRightIdxInt;
 		[Range(0, 1)] public float GestureRightWeight;
 		private float OldGestureRightWeight;
-		[Header("Built-in inputs / Locomotion")]
+		//[Header("Built-in inputs / Locomotion")]
 		public Vector3 Velocity;
 		[Range(-400, 400)] public float AngularY;
 		[Range(0, 1)] public float Upright;
@@ -479,7 +479,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool AFK;
 		public bool TPoseCalibration;
 		public bool IKPoseCalibration;
-		[Header("Built-in inputs / Tracking Setup and Other")]
+		//[Header("Built-in inputs / Tracking Setup and Other")]
 		public TrackingTypeIndex TrackingType;
 		[Range(0, 6)] public int TrackingTypeIdx;
 		private char TrackingTypeIdxInt;
@@ -499,7 +499,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		private bool IsCurrentlyVisuallyOffset = false;
 		public bool IsOnFriendsList = false;
 
-		[Header("Output State (Read-only)")]
+		//[Header("Output State (Read-only)")]
 		public bool IsLocal;
 		[HideInInspector] public bool IsMirrorClone;
 		[HideInInspector] public bool IsShadowClone;
@@ -545,7 +545,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			[HideInInspector] public float lastValue;
 		}
-		[Header("User-generated inputs")]
+		//[Header("User-generated inputs")]
 		public List<FloatParam> Floats = new List<FloatParam>();
 		public Dictionary<string, int> FloatToIndex = new Dictionary<string, int>();
 
