@@ -1,6 +1,7 @@
 ﻿using System;
 using Lyuma.Av3Emulator.Runtime;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 
@@ -78,6 +79,12 @@ namespace Lyuma.Av3Emulator.Editor
 		public SerializedProperty Floats;
 		public SerializedProperty Ints;
 		public SerializedProperty Bools;
+
+		public string searchFilter;
+		public ReorderableList floatsRL;
+		public ReorderableList intsRL;
+		public ReorderableList boolsRL;
+
 		//public SerializedProperty emulator;
 
 		public GUIContent warningIcon;
@@ -204,9 +211,9 @@ namespace Lyuma.Av3Emulator.Editor
 
 		private void DrawUserInputsGUI()
 		{
-			EditorGUILayout.PropertyField(Floats);
-			EditorGUILayout.PropertyField(Ints);
-			EditorGUILayout.PropertyField(Bools);
+			DrawRLWithFoldout(floatsRL);
+			DrawRLWithFoldout(intsRL);
+			DrawRLWithFoldout(boolsRL);
 		}
 
 		private void DrawResetAndRefreshGUI()
@@ -430,6 +437,24 @@ namespace Lyuma.Av3Emulator.Editor
 			
 		}
 
+		private void OnEnable()
+		{
+			RefreshSerializedProperties();
+			floatsRL = new ReorderableList(serializedObject, Floats, false, false, false, false);
+			intsRL = new ReorderableList(serializedObject, Ints, false, false, false, false);
+			boolsRL = new ReorderableList(serializedObject, Bools, false, false, false, false);
+			
+			floatsRL.drawHeaderCallback = intsRL.drawHeaderCallback = boolsRL.drawHeaderCallback = DrawSearchHeader;
+
+			floatsRL.drawElementCallback = DrawFloatsElementCallback;
+			intsRL.drawElementCallback = DrawIntsElementCallback;
+			boolsRL.drawElementCallback = DrawBoolsElementCallback;
+
+			floatsRL.elementHeightCallback = i => ElementIsSearchableHeightCallback(Floats.GetArrayElementAtIndex(i));
+			intsRL.elementHeightCallback = i => ElementIsSearchableHeightCallback(Ints.GetArrayElementAtIndex(i));
+			boolsRL.elementHeightCallback = i => ElementIsSearchableHeightCallback(Bools.GetArrayElementAtIndex(i));
+		}
+
 		#region Clickables
 		private static bool ClickableButton(string content, params GUILayoutOption[] options) => ClickableButton(new GUIContent(content), options);
 		private static bool ClickableButton(GUIContent content, params GUILayoutOption[] options)
@@ -466,6 +491,60 @@ namespace Lyuma.Av3Emulator.Editor
 				EditorGUILayout.PropertyField(enumProperty, GUIContent.none, GUILayout.Width(width));
 			}
 		}
+		#endregion
+		
+		#region Reorderable List Stuff
+
+		private void DrawRLWithFoldout(ReorderableList list)
+		{
+			var arrayProp = list.serializedProperty;
+			var label = arrayProp.displayName;
+			arrayProp.isExpanded = EditorGUILayout.Foldout(arrayProp.isExpanded, label, true, EditorStyles.foldoutHeader);
+			if (!arrayProp.isExpanded) return;
+			list.DoLayoutList();
+		}
+
+		private void DrawSearchHeader(Rect r) => searchFilter = EditorGUI.TextField(r, "Search", searchFilter);
+		
+
+		private void DrawFloatsElementCallback(Rect r, int i, bool _, bool __)
+		{
+			if (!WillDrawElement(Floats, i, out var el)) return;
+			var value = el.FindPropertyRelative("value");
+			value.floatValue = EditorGUI.Slider(r, GetContent(el), value.floatValue, -1, 1);
+		}
+		private void DrawBoolsElementCallback(Rect r, int i, bool _, bool __)
+		{
+			if (!WillDrawElement(Bools, i, out var el)) return;
+			var value = el.FindPropertyRelative("value");
+			value.boolValue = EditorGUI.Toggle(r, GetContent(el), value.boolValue);
+		}
+		
+		private void DrawIntsElementCallback(Rect r, int i, bool _, bool __)
+		{
+			if (!WillDrawElement(Ints, i, out var el)) return;
+			var value = el.FindPropertyRelative("value");
+			value.intValue = EditorGUI.IntField(r, GetContent(el), value.intValue);
+		}
+
+		private bool WillDrawElement(SerializedProperty array, int index, out SerializedProperty element)
+		{
+			element = null;
+			if (index >= array.arraySize || index < 0) return false;
+			element = array.GetArrayElementAtIndex(index);
+			return IsElementSearchable(element);
+		}
+		
+		private const float SEARCHABLE_ELEMENT_HEIGHT = 18;
+		private float ElementIsSearchableHeightCallback(SerializedProperty element) => IsElementSearchable(element) ? SEARCHABLE_ELEMENT_HEIGHT : 0;
+
+		private bool IsElementSearchable(SerializedProperty element)
+		{
+			if (string.IsNullOrEmpty(searchFilter)) return true;
+			var s = element.FindPropertyRelative("name").stringValue;
+			return !string.IsNullOrEmpty(s) && s.IndexOf(searchFilter, StringComparison.OrdinalIgnoreCase) >= 0;
+		}
+
 		#endregion
 		
 		private static GUIContent GetContent(SerializedProperty property)
