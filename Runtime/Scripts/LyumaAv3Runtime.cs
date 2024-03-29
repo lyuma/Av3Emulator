@@ -444,7 +444,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Light), typeof(ParticleSystemRenderer), typeof(Rigidbody), typeof(Joint)
 		
 		};
-		public static readonly HashSet<string> CloneStringComponentBlacklist = new HashSet<string>() { "DynamicBone", "VRCContact", "VRCPhysBone", "VRCSpatialAudioSource" };
+		public static readonly HashSet<string> CloneStringComponentBlacklist = new HashSet<string>() { "DynamicBone", "VRCContact", "VRCPhysBone", "VRCSpatialAudioSource", "VRCHeadChop" };
 
 		[Header("Built-in inputs / Viseme")]
 		public VisemeIndex Viseme;
@@ -594,7 +594,9 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		private (ParentConstraint, Vector3[])[] ParentConstraints;
 		private Cloth[] ClothComponents;
-
+		private object[] headChopData;
+		private Dictionary<Transform, Vector3> originalHeadChopScales;
+		
 		const float BASE_HEIGHT = 1.4f;
 
 		public IEnumerator DelayedEnterPoseSpace(bool setView, float time) {
@@ -2100,6 +2102,56 @@ namespace Lyuma.Av3Emulator.Runtime
 						defaultHeadScale = head.localScale;
 					}
 					head.localScale = EnableHeadScaling ? new Vector3(0.0001f, 0.0001f, 0.0001f) : defaultHeadScale; // head bone is set to 0.0001 locally (not multiplied
+
+					Type headChopType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+					if (headChopType != null)
+					{
+						Type headChopDataType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop+HeadChopData, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+						Type dictType = typeof(Dictionary<,>).MakeGenericType(typeof(Transform), headChopDataType);
+
+						if (headChopData == null)
+						{
+							Component[] headChops = GetComponentsInChildren(headChopType);
+							headChopData = new object[headChops.Length];
+							originalHeadChopScales = new Dictionary<Transform, Vector3>();
+							for (var i = 0; i < headChops.Length; i++)
+							{
+								object dictionary = dictType.GetConstructor(Type.EmptyTypes).Invoke(new object[] {});
+								headChopType.GetMethod("AppendDesiredTransformScaleFactors")
+									.Invoke(headChops[i], new object[] { dictionary ,VRMode, avadesc.gameObject.transform });
+								headChopData[i] = dictionary;
+								
+								foreach (Transform t in (IEnumerable<Transform>)dictType.GetProperty("Keys").GetValue(headChopData[i]))
+								{
+									originalHeadChopScales[t] = t.lossyScale;
+								}
+							}
+						}
+						
+						for (var i = 0; i < headChopData.Length; i++)
+						{
+							foreach (Transform t in (IEnumerable<Transform>)dictType.GetProperty("Keys").GetValue(headChopData[i]))
+							{
+								object data = dictType.GetMethod("get_Item").Invoke(headChopData[i], new[] { t });
+								float DesiredAppliedScaleFactor = (float)headChopDataType.GetField("DesiredAppliedScaleFactor").GetValue(data);
+								Vector3 OriginalLocalPosition = (Vector3)headChopDataType.GetField("OriginalLocalPosition").GetValue(data);
+								Vector3 OriginalRootSpacePosition = (Vector3)headChopDataType.GetField("OriginalRootSpacePosition").GetValue(data);
+								Vector3 OriginalLocalScale = (Vector3)headChopDataType.GetField("OriginalLocalScale").GetValue(data);
+								if (EnableHeadScaling)
+								{
+									Vector3 originalParentScale = new Vector3(originalHeadChopScales[t].x / OriginalLocalScale.x, originalHeadChopScales[t].y / OriginalLocalScale.y, originalHeadChopScales[t].z / OriginalLocalScale.z);
+									Vector3 newLocalScale = (OriginalLocalScale * DesiredAppliedScaleFactor);
+									t.localScale = new Vector3(originalParentScale.x * newLocalScale.x / t.parent.lossyScale.x, originalParentScale.y * newLocalScale.y / t.parent.lossyScale.y, originalParentScale.z * newLocalScale.z / t.parent.lossyScale.z);
+									t.position = OriginalRootSpacePosition - avadesc.transform.position;
+								}
+								else
+								{
+									t.localScale = OriginalLocalScale;
+									t.localPosition = OriginalLocalPosition;
+								}
+							}
+						}
+					}
 				}
 			}
 			if (DisableMirrorAndShadowClones && (MirrorClone != null || ShadowClone != null)) {
