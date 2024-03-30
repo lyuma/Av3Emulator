@@ -1160,7 +1160,7 @@ namespace Lyuma.Av3Emulator.Runtime
 
 			if ((bool)audioSubType.GetField("PlayOnEnter").GetValue(playAudio) && audioSource.clip != null) 
 			{
-				audioSource.PlayDelayed((float)audioSubType.GetField("delayInSeconds").GetValue(playAudio));
+				audioSource.PlayDelayed((float)audioSubType.GetField("DelayInSeconds").GetValue(playAudio));
 			}
 		}
 
