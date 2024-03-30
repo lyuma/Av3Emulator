@@ -591,6 +591,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		static public Dictionary<Animator, LyumaAv3Runtime> animatorToTopLevelRuntime = new Dictionary<Animator, LyumaAv3Runtime>();
 		private HashSet<Animator> attachedAnimators;
 		private HashSet<string> duplicateParameterAdds = new HashSet<string>();
+		private List<object> vrcPlayAudios = new List<object>();
 
 		private (ParentConstraint, Vector3[])[] ParentConstraints;
 		private Cloth[] ClothComponents;
@@ -1018,8 +1019,194 @@ namespace Lyuma.Av3Emulator.Runtime
 					}
 				};
 			};
+			
+			Type audioType = Type.GetType("VRC.SDK3.Avatars.Components.VRCAnimatorPlayAudio, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			Type audioSubType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			if (audioType != null)
+			{
+				FieldInfo initialize = audioSubType.GetField("Initialize");
+				Type initializationDelegateType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio+InitializationDelegate, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+				initialize.SetValue(null, Delegate.Combine((Delegate)initialize.GetValue(null), Delegate.CreateDelegate(initializationDelegateType, typeof(LyumaAv3Runtime).GetMethod(nameof(SetupPlayAudio), BindingFlags.Static | BindingFlags.Public))));
+			}
+		}
+		public static void SetupPlayAudio(object x) {
+			Type audioSubType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			
+			FieldInfo enterState = audioSubType.GetField("EnterState");
+			Type enterDelegateType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio+EnterStateDelegate, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			enterState.SetValue(x, Delegate.Combine((Delegate)enterState.GetValue(x), Delegate.CreateDelegate(enterDelegateType, typeof(LyumaAv3Runtime).GetMethod(nameof(SetupEnterState), BindingFlags.Static | BindingFlags.Public))));
+
+			FieldInfo exitState = audioSubType.GetField("ExitState");
+			Type exitDelegateType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio+ExitStateDelegate, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			exitState.SetValue(x, Delegate.Combine((Delegate)exitState.GetValue(x), Delegate.CreateDelegate(exitDelegateType, typeof(LyumaAv3Runtime).GetMethod(nameof(SetupExitState), BindingFlags.Static | BindingFlags.Public))));
 		}
 
+		public static void SetupEnterState(object playAudio, Animator animator)
+		{
+			Type audioSubType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			Type applySettingsType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio+ApplySettings, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			Type randomOrderType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio+Order, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			LyumaAv3Runtime runtime;
+			if (!getTopLevelRuntime("VRCAnimatorPlayAudio", animator, out runtime)) {
+				return;
+			}
+			if (runtime.IsMirrorClone && runtime.IsShadowClone) {
+				return;
+			}
+			if (!runtime)
+			{
+				return;
+			}
+
+			int index = runtime.vrcPlayAudios.IndexOf(playAudio);
+			if (index == -1)
+			{
+				runtime.vrcPlayAudios.Add(playAudio);
+				index = runtime.vrcPlayAudios.IndexOf(playAudio);
+			}
+			if (index % 2 == 0)
+			{
+				return;
+			}
+
+			AudioSource audioSource = animator.transform.Find((string)audioSubType.GetField("SourcePath").GetValue(playAudio))?.GetComponent<AudioSource>();
+			if (audioSource == null)
+			{
+				return;
+			}
+
+			if ((bool)audioSubType.GetField("StopOnEnter").GetValue(playAudio))
+			{
+				audioSource.Stop();
+			}
+
+			object alwaysApply = applySettingsType.GetEnumValues().GetValue(0);
+			object applyIfStopped = applySettingsType.GetEnumValues().GetValue(1);
+
+			if (audioSubType.GetField("LoopApplySettings").GetValue(playAudio).ToString() == alwaysApply.ToString() ||
+			    audioSubType.GetField("LoopApplySettings").GetValue(playAudio).ToString() == applyIfStopped.ToString() &&
+			    !audioSource.isPlaying)
+			{
+				audioSource.loop = (bool)audioSubType.GetField("Loop").GetValue(playAudio);
+			}
+
+			if (audioSubType.GetField("PitchApplySettings").GetValue(playAudio).ToString() == alwaysApply.ToString() ||
+			    audioSubType.GetField("PitchApplySettings").GetValue(playAudio).ToString() == applyIfStopped.ToString() &&
+			    !audioSource.isPlaying)
+			{
+				Vector2 pitch = (Vector2)audioSubType.GetField("Pitch").GetValue(playAudio);
+				audioSource.pitch = UnityEngine.Random.Range(pitch.x, pitch.y);
+			}
+			
+			if (audioSubType.GetField("VolumeApplySettings").GetValue(playAudio).ToString() == alwaysApply.ToString() ||
+			    audioSubType.GetField("VolumeApplySettings").GetValue(playAudio).ToString() == applyIfStopped.ToString() &&
+			    !audioSource.isPlaying)
+			{
+				Vector2 volume = (Vector2)audioSubType.GetField("Volume").GetValue(playAudio);
+				audioSource.volume = UnityEngine.Random.Range(volume.x, volume.y);
+			}
+
+			AudioClip[] clips = (AudioClip[])audioSubType.GetField("Clips").GetValue(playAudio);
+			if (clips.Length > 0 && 
+			    (audioSubType.GetField("ClipsApplySettings").GetValue(playAudio).ToString() == alwaysApply.ToString() ||
+			     audioSubType.GetField("ClipsApplySettings").GetValue(playAudio).ToString() == applyIfStopped.ToString() && !audioSource.isPlaying))
+			{
+				AudioClip clip = null;
+				
+				object Random = randomOrderType.GetEnumValues().GetValue(0);
+				object UniqueRandom = randomOrderType.GetEnumValues().GetValue(1);
+				object Roundabout = randomOrderType.GetEnumValues().GetValue(2);
+				object Parameter = randomOrderType.GetEnumValues().GetValue(3);
+				object playbackOrder = audioSubType.GetField("PlaybackOrder").GetValue(playAudio);
+				FieldInfo playbackIndex = audioSubType.GetField("playbackIndex");
+				if (playbackOrder.ToString() == Random.ToString())
+				{
+					int newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
+					playbackIndex.SetValue(playAudio, newPlayIndex);
+					clip = clips[newPlayIndex];
+				} 
+				
+				if (playbackOrder.ToString() == UniqueRandom.ToString())
+				{
+					int newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
+					while (newPlayIndex == (int)playbackIndex.GetValue(playAudio) && clips.Length > 1)
+					{
+						newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
+					}
+					playbackIndex.SetValue(playAudio, newPlayIndex);
+					clip = clips[newPlayIndex];
+				}
+				
+				if (playbackOrder.ToString() == Roundabout.ToString())
+				{
+					int newPlayIndex = ((int)playbackIndex.GetValue(playAudio) + 1) % clips.Length;
+					playbackIndex.SetValue(playAudio, newPlayIndex);
+					clip = clips[newPlayIndex];
+				}
+				
+				if (playbackOrder.ToString() == Parameter.ToString())
+				{
+					string parameterName = (string)audioSubType.GetField("ParameterName").GetValue(playAudio);
+					int? newPlayIndex = runtime.Ints.FirstOrDefault(x => x.name == parameterName)?.value;
+					if (newPlayIndex.HasValue && newPlayIndex.Value < clips.Length)
+					{
+						playbackIndex.SetValue(playAudio, newPlayIndex.Value);
+						clip = clips[newPlayIndex.Value];
+					}
+				}
+				audioSource.clip = clip;
+			}
+
+
+			if ((bool)audioSubType.GetField("PlayOnEnter").GetValue(playAudio) && audioSource.clip != null) 
+			{
+				audioSource.PlayDelayed((float)audioSubType.GetField("delayInSeconds").GetValue(playAudio));
+			}
+		}
+
+		public static void SetupExitState(object playAudio, Animator animator)
+		{
+			Type audioSubType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			LyumaAv3Runtime runtime;
+			if (!getTopLevelRuntime("VRCAnimatorPlayAudio", animator, out runtime)) {
+				return;
+			}
+			if (runtime.IsMirrorClone && runtime.IsShadowClone) {
+				return;
+			}
+			if (!runtime)
+			{
+				return;
+			}
+				
+			int index = runtime.vrcPlayAudios.IndexOf(playAudio);
+			if (index == -1)
+			{
+				runtime.vrcPlayAudios.Add(playAudio);
+				index = runtime.vrcPlayAudios.IndexOf(playAudio);
+				if (index % 2 == 0)
+				{
+					return;
+				}
+			}
+
+			AudioSource audioSource = animator.transform.Find((string)audioSubType.GetField("SourcePath").GetValue(playAudio))?.GetComponent<AudioSource>();
+			if (audioSource == null)
+			{
+				return;
+			}
+				
+			if ((bool)audioSubType.GetField("StopOnExit").GetValue(playAudio))
+			{
+				audioSource.Stop();
+			}
+
+			if ((bool)audioSubType.GetField("PlayOnExit").GetValue(playAudio))
+			{
+				audioSource.Play();
+			}
+		}
+		
 		void OnDestroy () {
 			if (this.playableGraph.IsValid()) {
 				this.playableGraph.Destroy();
