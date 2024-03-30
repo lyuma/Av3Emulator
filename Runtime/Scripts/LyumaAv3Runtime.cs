@@ -601,7 +601,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		private class HeadChopDataStorage
 		{
 			public Vector3 originalLocalPosition; 
-			public Vector3 originalRootSpacePosition;
+			public Vector3 originalGlobalHeadOffset;
 			public Vector3 originalLocalScale;
 			public Vector3 originalGlobalScale;
 		}
@@ -2318,7 +2318,7 @@ namespace Lyuma.Av3Emulator.Runtime
 									headChopData[t] = new HeadChopDataStorage()
 									{
 										originalLocalPosition = t.localPosition,
-										originalRootSpacePosition = mul(avadesc.transform.InverseTransformPoint(t.position), avadesc.transform.lossyScale),
+										originalGlobalHeadOffset = mul(avadesc.transform.InverseTransformPoint(t.position), avadesc.transform.lossyScale) - animator.GetBoneTransform(HumanBodyBones.Head).transform.position,
 										originalLocalScale = t.localScale,
 										originalGlobalScale = t.lossyScale
 									};
@@ -2338,7 +2338,8 @@ namespace Lyuma.Av3Emulator.Runtime
 
 								var data = headChopData[t];
 								Vector3 originalLocalPosition = data.originalLocalPosition;
-								Vector3 originalRootSpacePosition = data.originalRootSpacePosition;
+								Transform headBone = animator.GetBoneTransform(HumanBodyBones.Head).transform;
+								Vector3 originalRootSpacePosition = headBone.position + headBone.rotation * data.originalGlobalHeadOffset;
 								Vector3 originalLocalScale = data.originalLocalScale;
 								Vector3 originalGlobalScale = data.originalGlobalScale;
 
