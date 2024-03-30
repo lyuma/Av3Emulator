@@ -1069,12 +1069,12 @@ namespace Lyuma.Av3Emulator.Runtime
 			int index = runtime.vrcPlayAudios.IndexOf(playAudio);
 			if (index == -1)
 			{
+				index = runtime.vrcPlayAudios.Count;
 				runtime.vrcPlayAudios.Add(playAudio);
-				index = runtime.vrcPlayAudios.IndexOf(playAudio);
 			}
 			if (index % 2 == 0)
 			{
-				return;
+				return; // We add a copy of every state behaviour, which is fine when operations are idempotent, but since these are not, we need to ignore every second SetupEnterState, since those get called on both behaviours in succession.
 			}
 
 			AudioSource audioSource = animator.transform.Find(playAudio.SourcePath)?.GetComponent<AudioSource>();
