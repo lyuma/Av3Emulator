@@ -711,16 +711,16 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (!getTopLevelRuntime("VRCAvatarParameterDriver", animator, out runtime)) {
 						return;
 					}
+					if (!runtime)
+					{
+						return;
+					}
 					if (runtime.IsMirrorClone || runtime.IsShadowClone) {
 						return;
 					}
 					if (behaviour.debugString != null && behaviour.debugString.Length > 0)
 					{
 						Debug.Log("[VRCAvatarParameterDriver:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
-					}
-					if (!runtime)
-					{
-						return;
 					}
 					if (animator != runtime.animator && (!runtime.emulator || !runtime.emulator.legacySubAnimatorParameterDriverMode)) {
 						return;
@@ -835,16 +835,16 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (!getTopLevelRuntime("VRCPlayableLayerControl", animator, out runtime)) {
 						return;
 					}
+					if (!runtime)
+					{
+						return;
+					}
 					if (runtime.IsMirrorClone && runtime.IsShadowClone) {
 						return;
 					}
 					if (behaviour.debugString != null && behaviour.debugString.Length > 0)
 					{
 						Debug.Log("[VRCPlayableLayerControl:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
-					}
-					if (!runtime)
-					{
-						return;
 					}
 					int idx = -1;
 					switch (behaviour.layer)
@@ -876,6 +876,10 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (!getTopLevelRuntime("VRCAnimatorLayerControl", animator, out runtime)) {
 						return;
 					}
+					if (!runtime)
+					{
+						return;
+					}
 					if (runtime.IsMirrorClone) {
 						return;
 					}
@@ -883,10 +887,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					{
 						Debug.Log("[VRCAnimatorLayerControl:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
 					}
-					if (!runtime)
-					{
-						return;
-					}
+
 					int idx = -1, altidx = -1;
 					switch (behaviour.playable)
 					{
@@ -928,16 +929,16 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (!getTopLevelRuntime("VRCAnimatorLocomotionControl", animator, out runtime)) {
 						return;
 					}
+					if (!runtime)
+					{
+						return;
+					}
 					if (runtime.IsMirrorClone && runtime.IsShadowClone) {
 						return;
 					}
 					if (behaviour.debugString != null && behaviour.debugString.Length > 0)
 					{
 						Debug.Log("[VRCAnimatorLocomotionControl:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
-					}
-					if (!runtime)
-					{
-						return;
 					}
 					// I legit don't know
 					runtime.LocomotionIsDisabled = behaviour.disableLocomotion;
@@ -950,16 +951,16 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (!getTopLevelRuntime("VRCAnimatorSetView", animator, out runtime)) {
 						return;
 					}
+					if (!runtime)
+					{
+						return;
+					}
 					if (runtime.IsMirrorClone && runtime.IsShadowClone) {
 						return;
 					}
 					if (behaviour.debugString != null && behaviour.debugString.Length > 0)
 					{
 						Debug.Log("[VRCAnimatorSetView:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
-					}
-					if (!runtime)
-					{
-						return;
 					}
 					// fixedDelay: Is the delay fixed or normalized...
 					// The layerIndex is not passed into the delegate, so we cannot reimplement fixedDelay.
@@ -973,16 +974,16 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (!getTopLevelRuntime("VRCAnimatorTrackingControl", animator, out runtime)) {
 						return;
 					}
+					if (!runtime)
+					{
+						return;
+					}
 					if (runtime.IsMirrorClone && runtime.IsShadowClone) {
 						return;
 					}
 					if (behaviour.debugString != null && behaviour.debugString.Length > 0)
 					{
 						Debug.Log("[VRCAnimatorTrackingControl:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
-					}
-					if (!runtime)
-					{
-						return;
 					}
 
 					if (behaviour.trackingMouth != VRCAnimatorTrackingControl.TrackingType.NoChange)
@@ -1057,11 +1058,11 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (!getTopLevelRuntime("VRCAnimatorPlayAudio", animator, out runtime)) {
 				return;
 			}
-			if (runtime.IsMirrorClone && runtime.IsShadowClone) {
-				return;
-			}
 			if (!runtime)
 			{
+				return;
+			}
+			if (runtime.IsMirrorClone && runtime.IsShadowClone) {
 				return;
 			}
 
@@ -1177,11 +1178,11 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (!getTopLevelRuntime("VRCAnimatorPlayAudio", animator, out runtime)) {
 				return;
 			}
-			if (runtime.IsMirrorClone && runtime.IsShadowClone) {
-				return;
-			}
 			if (!runtime)
 			{
+				return;
+			}
+			if (runtime.IsMirrorClone && runtime.IsShadowClone) {
 				return;
 			}
 				
