@@ -596,8 +596,15 @@ namespace Lyuma.Av3Emulator.Runtime
 		private (ParentConstraint, Vector3[])[] ParentConstraints;
 		private Cloth[] ClothComponents;
 		private Component[] headChops;
-		private object[] headChopData;
-		private Dictionary<Transform, Vector3> originalHeadChopScales;
+		private Dictionary<Transform, HeadChopDataStorage> headChopData;
+
+		private class HeadChopDataStorage
+		{
+			public Vector3 originalLocalPosition; 
+			public Vector3 originalRootSpacePosition;
+			public Vector3 originalLocalScale;
+			public Vector3 originalGlobalScale;
+		}
 		
 		const float BASE_HEIGHT = 1.4f;
 
@@ -1042,9 +1049,8 @@ namespace Lyuma.Av3Emulator.Runtime
 			exitState.SetValue(x, Delegate.Combine((Delegate)exitState.GetValue(x), Delegate.CreateDelegate(exitDelegateType, typeof(LyumaAv3Runtime).GetMethod(nameof(SetupExitState), BindingFlags.Static | BindingFlags.Public))));
 		}
 
-		public static void SetupEnterState(object playAudio, Animator animator)
+		public static void SetupEnterState(dynamic playAudio, Animator animator)
 		{
-			Type audioSubType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 			Type applySettingsType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio+ApplySettings, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 			Type randomOrderType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio+Order, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 			LyumaAv3Runtime runtime;
@@ -1070,88 +1076,88 @@ namespace Lyuma.Av3Emulator.Runtime
 				return;
 			}
 
-			AudioSource audioSource = animator.transform.Find((string)audioSubType.GetField("SourcePath").GetValue(playAudio))?.GetComponent<AudioSource>();
+			AudioSource audioSource = animator.transform.Find(playAudio.SourcePath)?.GetComponent<AudioSource>();
 			if (audioSource == null)
 			{
 				return;
 			}
 
-			if ((bool)audioSubType.GetField("StopOnEnter").GetValue(playAudio))
+			if (playAudio.StopOnEnter)
 			{
 				audioSource.Stop();
 			}
 
-			object alwaysApply = applySettingsType.GetEnumValues().GetValue(0);
-			object applyIfStopped = applySettingsType.GetEnumValues().GetValue(1);
+			object alwaysApply =  Enum.ToObject(applySettingsType, 0);
+			object applyIfStopped = Enum.ToObject(applySettingsType, 1);
 
-			if (audioSubType.GetField("LoopApplySettings").GetValue(playAudio).ToString() == alwaysApply.ToString() ||
-			    audioSubType.GetField("LoopApplySettings").GetValue(playAudio).ToString() == applyIfStopped.ToString() &&
+			if (playAudio.LoopApplySettings.ToString() == alwaysApply.ToString() ||
+			    playAudio.LoopApplySettings.ToString() == applyIfStopped.ToString() &&
 			    !audioSource.isPlaying)
 			{
-				audioSource.loop = (bool)audioSubType.GetField("Loop").GetValue(playAudio);
+				audioSource.loop = (bool)playAudio.Loop;
 			}
 
-			if (audioSubType.GetField("PitchApplySettings").GetValue(playAudio).ToString() == alwaysApply.ToString() ||
-			    audioSubType.GetField("PitchApplySettings").GetValue(playAudio).ToString() == applyIfStopped.ToString() &&
+			if (playAudio.PitchApplySettings.ToString() == alwaysApply.ToString() ||
+			    playAudio.PitchApplySettings.ToString() == applyIfStopped.ToString() &&
 			    !audioSource.isPlaying)
 			{
-				Vector2 pitch = (Vector2)audioSubType.GetField("Pitch").GetValue(playAudio);
+				Vector2 pitch = (Vector2)playAudio.Pitch;
 				audioSource.pitch = UnityEngine.Random.Range(pitch.x, pitch.y);
 			}
 			
-			if (audioSubType.GetField("VolumeApplySettings").GetValue(playAudio).ToString() == alwaysApply.ToString() ||
-			    audioSubType.GetField("VolumeApplySettings").GetValue(playAudio).ToString() == applyIfStopped.ToString() &&
+			if (playAudio.VolumeApplySettings.ToString() == alwaysApply.ToString() ||
+			    playAudio.VolumeApplySettings.ToString() == applyIfStopped.ToString() &&
 			    !audioSource.isPlaying)
 			{
-				Vector2 volume = (Vector2)audioSubType.GetField("Volume").GetValue(playAudio);
+				Vector2 volume = (Vector2)playAudio.Volume;
 				audioSource.volume = UnityEngine.Random.Range(volume.x, volume.y);
 			}
 
-			AudioClip[] clips = (AudioClip[])audioSubType.GetField("Clips").GetValue(playAudio);
+			AudioClip[] clips = (AudioClip[])playAudio.Clips;
 			if (clips.Length > 0 && 
-			    (audioSubType.GetField("ClipsApplySettings").GetValue(playAudio).ToString() == alwaysApply.ToString() ||
-			     audioSubType.GetField("ClipsApplySettings").GetValue(playAudio).ToString() == applyIfStopped.ToString() && !audioSource.isPlaying))
+			    (playAudio.ClipsApplySettings.ToString() == alwaysApply.ToString() ||
+			     playAudio.ClipsApplySettings.ToString() == applyIfStopped.ToString() && !audioSource.isPlaying))
 			{
 				AudioClip clip = null;
 				
-				object Random = randomOrderType.GetEnumValues().GetValue(0);
-				object UniqueRandom = randomOrderType.GetEnumValues().GetValue(1);
-				object Roundabout = randomOrderType.GetEnumValues().GetValue(2);
-				object Parameter = randomOrderType.GetEnumValues().GetValue(3);
-				object playbackOrder = audioSubType.GetField("PlaybackOrder").GetValue(playAudio);
-				FieldInfo playbackIndex = audioSubType.GetField("playbackIndex");
+				object Random = Enum.ToObject(randomOrderType, 0);
+				object UniqueRandom =  Enum.ToObject(randomOrderType, 1);
+				object Roundabout =  Enum.ToObject(randomOrderType, 2);
+				object Parameter =  Enum.ToObject(randomOrderType, 3);
+				object playbackOrder = playAudio.PlaybackOrder;
 				if (playbackOrder.ToString() == Random.ToString())
 				{
 					int newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
-					playbackIndex.SetValue(playAudio, newPlayIndex);
+					playAudio.playbackIndex = newPlayIndex;
 					clip = clips[newPlayIndex];
 				} 
 				
 				if (playbackOrder.ToString() == UniqueRandom.ToString())
 				{
 					int newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
-					while (newPlayIndex == (int)playbackIndex.GetValue(playAudio) && clips.Length > 1)
+					while (newPlayIndex == (int)playAudio.playbackIndex && clips.Length > 1)
 					{
 						newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
 					}
-					playbackIndex.SetValue(playAudio, newPlayIndex);
+
+					playAudio.playbackIndex = newPlayIndex;
 					clip = clips[newPlayIndex];
 				}
 				
 				if (playbackOrder.ToString() == Roundabout.ToString())
 				{
-					int newPlayIndex = ((int)playbackIndex.GetValue(playAudio) + 1) % clips.Length;
-					playbackIndex.SetValue(playAudio, newPlayIndex);
+					int newPlayIndex = ((int)playAudio.playbackIndex + 1) % clips.Length;
+					playAudio.playbackIndex = newPlayIndex;
 					clip = clips[newPlayIndex];
 				}
 				
 				if (playbackOrder.ToString() == Parameter.ToString())
 				{
-					string parameterName = (string)audioSubType.GetField("ParameterName").GetValue(playAudio);
+					string parameterName = (string)playAudio.ParameterName;
 					int? newPlayIndex = runtime.Ints.FirstOrDefault(x => x.name == parameterName)?.value;
 					if (newPlayIndex.HasValue && newPlayIndex.Value < clips.Length)
 					{
-						playbackIndex.SetValue(playAudio, newPlayIndex.Value);
+						playAudio.playbackIndex = newPlayIndex.Value;
 						clip = clips[newPlayIndex.Value];
 					}
 				}
@@ -1159,15 +1165,14 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 
 
-			if ((bool)audioSubType.GetField("PlayOnEnter").GetValue(playAudio) && audioSource.clip != null) 
+			if ((bool)playAudio.PlayOnEnter && audioSource.clip != null) 
 			{
-				audioSource.PlayDelayed((float)audioSubType.GetField("DelayInSeconds").GetValue(playAudio));
+				audioSource.PlayDelayed((float)playAudio.DelayInSeconds);
 			}
 		}
 
-		public static void SetupExitState(object playAudio, Animator animator)
+		public static void SetupExitState(dynamic playAudio, Animator animator)
 		{
-			Type audioSubType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 			LyumaAv3Runtime runtime;
 			if (!getTopLevelRuntime("VRCAnimatorPlayAudio", animator, out runtime)) {
 				return;
@@ -1191,18 +1196,18 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 			}
 
-			AudioSource audioSource = animator.transform.Find((string)audioSubType.GetField("SourcePath").GetValue(playAudio))?.GetComponent<AudioSource>();
+			AudioSource audioSource = animator.transform.Find(playAudio.SourcePath)?.GetComponent<AudioSource>();
 			if (audioSource == null)
 			{
 				return;
 			}
 				
-			if ((bool)audioSubType.GetField("StopOnExit").GetValue(playAudio))
+			if (playAudio.StopOnExit)
 			{
 				audioSource.Stop();
 			}
 
-			if ((bool)audioSubType.GetField("PlayOnExit").GetValue(playAudio))
+			if (playAudio.PlayOnExit)
 			{
 				audioSource.Play();
 			}
@@ -2294,67 +2299,63 @@ namespace Lyuma.Av3Emulator.Runtime
 					Type headChopType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 					if (headChopType != null)
 					{
-						Type headChopDataType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop+HeadChopData, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
-						Type dictType = typeof(Dictionary<,>).MakeGenericType(typeof(Transform), headChopDataType);
-
-						if (originalHeadChopScales == null)
+						Vector3 div(Vector3 x, Vector3 y) => new(x.x / y.x, x.y / y.y, x.z / y.z);
+						Vector3 mul(Vector3 x, Vector3 y) => new(x.x * y.x, x.y * y.y, x.z * y.z);
+						if (headChopData == null)
 						{
 							headChops = GetComponentsInChildren(headChopType);
-							headChopData = new object[headChops.Length];
-							originalHeadChopScales = new Dictionary<Transform, Vector3>();
+							headChopData = new Dictionary<Transform, HeadChopDataStorage>();
 							for (var i = 0; i < headChops.Length; i++)
 							{
-								object dictionary = dictType.GetConstructor(Type.EmptyTypes).Invoke(new object[] {});
-								headChopType.GetMethod("AppendDesiredTransformScaleFactors")
-									.Invoke(headChops[i], new object[] { dictionary ,VRMode, avadesc.gameObject.transform });
-								headChopData[i] = dictionary;
-								
-								foreach (Transform t in (IEnumerable<Transform>)dictType.GetProperty("Keys").GetValue(headChopData[i]))
+								dynamic headChop = headChops[i];
+								object[] bones = headChop.targetBones;
+								for (var j = 0; j < bones.Length; j++)
 								{
-									originalHeadChopScales[t] = t.lossyScale;
+									dynamic bone = bones[j];
+									Transform t = bone.transform;
+									headChopData[t] = new HeadChopDataStorage()
+									{
+										originalLocalPosition = t.localPosition,
+										originalRootSpacePosition = mul(avadesc.transform.InverseTransformPoint(t.position), avadesc.transform.lossyScale),
+										originalLocalScale = t.localScale,
+										originalGlobalScale = t.lossyScale
+									};
 								}
 							}
 						}
+						
 						for (var i = 0; i < headChops.Length; i++)
 						{
-							Type headChopBoneType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop+HeadChopBone, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
-							object[] bones = (object[]) headChopType.GetField("targetBones").GetValue(headChops[i]);
+							dynamic headChop = headChops[i];
+							object[] bones = headChop.targetBones;
 							for (var j = 0; j < bones.Length; j++)
 							{
-								object bone = bones[j];
-								Transform t = (Transform)headChopBoneType.GetField("transform").GetValue(bone);
-								bool canApply = (bool)headChopBoneType.GetMethod("CanApply").Invoke(bone, new object[] { VRMode });
-								float scaleFactor = (float)headChopBoneType.GetField("scaleFactor").GetValue(bone);
-								float globalScaleFactor = (float)headChopType.GetField("globalScaleFactor").GetValue(headChops[i]);
-								if (canApply)
+								dynamic bone = bones[j];
+								Transform t = bone.transform;
+								float desiredScaleFactor = bone.scaleFactor * headChop.globalScaleFactor;
+
+								var data = headChopData[t];
+								Vector3 originalLocalPosition = data.originalLocalPosition;
+								Vector3 originalRootSpacePosition = data.originalRootSpacePosition;
+								Vector3 originalLocalScale = data.originalLocalScale;
+								Vector3 originalGlobalScale = data.originalGlobalScale;
+
+
+								if (EnableHeadScaling && bone.CanApply(VRMode))
 								{
-									object data = dictType.GetMethod("get_Item").Invoke(headChopData[i], new[] { t });
-									headChopDataType.GetField("DesiredAppliedScaleFactor").SetValue(data, canApply ? scaleFactor * globalScaleFactor : 1.0f);
-									dictType.GetMethod("set_Item").Invoke(headChopData[i], new[] { t, data });
-								}
-							}
-						}
-						for (var i = 0; i < headChopData.Length; i++)
-						{
-							foreach (Transform t in (IEnumerable<Transform>)dictType.GetProperty("Keys").GetValue(headChopData[i]))
-							{
-								object data = dictType.GetMethod("get_Item").Invoke(headChopData[i], new[] { t });
-								float DesiredAppliedScaleFactor = (float)headChopDataType.GetField("DesiredAppliedScaleFactor").GetValue(data);
-								Vector3 OriginalLocalPosition = (Vector3)headChopDataType.GetField("OriginalLocalPosition").GetValue(data);
-								Vector3 OriginalRootSpacePosition = (Vector3)headChopDataType.GetField("OriginalRootSpacePosition").GetValue(data);
-								Vector3 OriginalLocalScale = (Vector3)headChopDataType.GetField("OriginalLocalScale").GetValue(data);
-								if (EnableHeadScaling)
-								{
-									Vector3 originalParentGlobalScale = new Vector3(originalHeadChopScales[t].x / OriginalLocalScale.x, originalHeadChopScales[t].y / OriginalLocalScale.y, originalHeadChopScales[t].z / OriginalLocalScale.z);
-                                    Vector3 targetLocalScaleComparedToOldParentScale = (OriginalLocalScale * DesiredAppliedScaleFactor);
-                                    Vector3 targetGlobalScale = new Vector3(originalParentGlobalScale.x * targetLocalScaleComparedToOldParentScale.x, originalParentGlobalScale.y * targetLocalScaleComparedToOldParentScale.y, originalParentGlobalScale.z * targetLocalScaleComparedToOldParentScale.z);
-                                    t.localScale = new Vector3(Mathf.Clamp(targetGlobalScale.x / t.parent.lossyScale.x, 0.0001f, Mathf.Infinity), Mathf.Clamp(targetGlobalScale.y / t.parent.lossyScale.y, 0.0001f, Mathf.Infinity), Mathf.Clamp(targetGlobalScale.z / t.parent.lossyScale.z, 0.0001f, Mathf.Infinity));
-									t.position = OriginalRootSpacePosition - avadesc.transform.position;
+									Vector3 originalParentGlobalScale = div(originalGlobalScale, originalLocalScale);
+									Vector3 targetLocalScaleComparedToOldParentScale = (originalLocalScale * desiredScaleFactor);
+									Vector3 targetGlobalScale = mul(originalParentGlobalScale, targetLocalScaleComparedToOldParentScale);
+									Vector3 unclampedTargetLocalScale = div(targetGlobalScale, t.parent.lossyScale);
+									
+									
+									t.localScale = new Vector3(Mathf.Max(unclampedTargetLocalScale.x, 0.0001f), Mathf.Max(unclampedTargetLocalScale.y, 0.0001f), Mathf.Max(unclampedTargetLocalScale.z, 0.0001f));
+									t.position = originalRootSpacePosition - avadesc.transform.position;
 								}
 								else
 								{
-									t.localScale = OriginalLocalScale;
-									t.localPosition = OriginalLocalPosition;
+									t.localScale = originalLocalScale;
+									t.localPosition = originalLocalPosition;
 								}
 							}
 						}
