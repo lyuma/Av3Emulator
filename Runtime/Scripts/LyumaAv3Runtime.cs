@@ -1087,26 +1087,26 @@ namespace Lyuma.Av3Emulator.Runtime
 				audioSource.Stop();
 			}
 
-			object alwaysApply =  Enum.ToObject(applySettingsType, 0);
-			object applyIfStopped = Enum.ToObject(applySettingsType, 1);
+			dynamic alwaysApply =  Enum.ToObject(applySettingsType, 0);
+			dynamic applyIfStopped = Enum.ToObject(applySettingsType, 1);
 
-			if (playAudio.LoopApplySettings.ToString() == alwaysApply.ToString() ||
-			    playAudio.LoopApplySettings.ToString() == applyIfStopped.ToString() &&
+			if (playAudio.LoopApplySettings == alwaysApply ||
+			    playAudio.LoopApplySettings == applyIfStopped &&
 			    !audioSource.isPlaying)
 			{
 				audioSource.loop = (bool)playAudio.Loop;
 			}
 
-			if (playAudio.PitchApplySettings.ToString() == alwaysApply.ToString() ||
-			    playAudio.PitchApplySettings.ToString() == applyIfStopped.ToString() &&
+			if (playAudio.PitchApplySettings == alwaysApply ||
+			    playAudio.PitchApplySettings == applyIfStopped &&
 			    !audioSource.isPlaying)
 			{
 				Vector2 pitch = (Vector2)playAudio.Pitch;
 				audioSource.pitch = UnityEngine.Random.Range(pitch.x, pitch.y);
 			}
 			
-			if (playAudio.VolumeApplySettings.ToString() == alwaysApply.ToString() ||
-			    playAudio.VolumeApplySettings.ToString() == applyIfStopped.ToString() &&
+			if (playAudio.VolumeApplySettings == alwaysApply ||
+			    playAudio.VolumeApplySettings == applyIfStopped &&
 			    !audioSource.isPlaying)
 			{
 				Vector2 volume = (Vector2)playAudio.Volume;
@@ -1115,24 +1115,24 @@ namespace Lyuma.Av3Emulator.Runtime
 
 			AudioClip[] clips = (AudioClip[])playAudio.Clips;
 			if (clips.Length > 0 && 
-			    (playAudio.ClipsApplySettings.ToString() == alwaysApply.ToString() ||
-			     playAudio.ClipsApplySettings.ToString() == applyIfStopped.ToString() && !audioSource.isPlaying))
+			    (playAudio.ClipsApplySettings == alwaysApply ||
+			     playAudio.ClipsApplySettings == applyIfStopped && !audioSource.isPlaying))
 			{
 				AudioClip clip = null;
 				
-				object Random = Enum.ToObject(randomOrderType, 0);
-				object UniqueRandom =  Enum.ToObject(randomOrderType, 1);
-				object Roundabout =  Enum.ToObject(randomOrderType, 2);
-				object Parameter =  Enum.ToObject(randomOrderType, 3);
-				object playbackOrder = playAudio.PlaybackOrder;
-				if (playbackOrder.ToString() == Random.ToString())
+				dynamic Random = Enum.ToObject(randomOrderType, 0);
+				dynamic UniqueRandom =  Enum.ToObject(randomOrderType, 1);
+				dynamic Roundabout =  Enum.ToObject(randomOrderType, 2);
+				dynamic Parameter =  Enum.ToObject(randomOrderType, 3);
+				dynamic playbackOrder = playAudio.PlaybackOrder;
+				if (playbackOrder == Random)
 				{
 					int newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
 					playAudio.playbackIndex = newPlayIndex;
 					clip = clips[newPlayIndex];
 				} 
 				
-				if (playbackOrder.ToString() == UniqueRandom.ToString())
+				if (playbackOrder == UniqueRandom)
 				{
 					int newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
 					while (newPlayIndex == (int)playAudio.playbackIndex && clips.Length > 1)
@@ -1144,14 +1144,14 @@ namespace Lyuma.Av3Emulator.Runtime
 					clip = clips[newPlayIndex];
 				}
 				
-				if (playbackOrder.ToString() == Roundabout.ToString())
+				if (playbackOrder == Roundabout)
 				{
 					int newPlayIndex = ((int)playAudio.playbackIndex + 1) % clips.Length;
 					playAudio.playbackIndex = newPlayIndex;
 					clip = clips[newPlayIndex];
 				}
 				
-				if (playbackOrder.ToString() == Parameter.ToString())
+				if (playbackOrder == Parameter)
 				{
 					string parameterName = (string)playAudio.ParameterName;
 					int? newPlayIndex = runtime.Ints.FirstOrDefault(x => x.name == parameterName)?.value;
