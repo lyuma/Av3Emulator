@@ -1072,7 +1072,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				index = runtime.vrcPlayAudios.Count;
 				runtime.vrcPlayAudios.Add(playAudio);
 			}
-			if (index % 2 == 0)
+			if (runtime.DebugDuplicateAnimator != VRCAvatarDescriptor.AnimLayerType.Base && index % 2 == 0)
 			{
 				return; // We add a copy of every state behaviour, which is fine when operations are idempotent, but since these are not, we need to ignore every second SetupEnterState, since those get called on both behaviours in succession.
 			}
@@ -2325,7 +2325,6 @@ namespace Lyuma.Av3Emulator.Runtime
 								}
 							}
 						}
-						
 						for (var i = 0; i < headChops.Length; i++)
 						{
 							dynamic headChop = headChops[i];
