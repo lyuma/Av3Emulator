@@ -1126,14 +1126,15 @@ namespace Lyuma.Av3Emulator.Runtime
 				dynamic Roundabout =  Enum.ToObject(randomOrderType, 2);
 				dynamic Parameter =  Enum.ToObject(randomOrderType, 3);
 				dynamic playbackOrder = playAudio.PlaybackOrder;
+				
 				if (playbackOrder == Random)
 				{
 					int newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
 					playAudio.playbackIndex = newPlayIndex;
 					clip = clips[newPlayIndex];
-				} 
-				
-				if (playbackOrder == UniqueRandom)
+				}
+
+				else if (playbackOrder == UniqueRandom)
 				{
 					int newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
 					while (newPlayIndex == (int)playAudio.playbackIndex && clips.Length > 1)
@@ -1144,15 +1145,15 @@ namespace Lyuma.Av3Emulator.Runtime
 					playAudio.playbackIndex = newPlayIndex;
 					clip = clips[newPlayIndex];
 				}
-				
-				if (playbackOrder == Roundabout)
+
+				else if (playbackOrder == Roundabout)
 				{
 					int newPlayIndex = ((int)playAudio.playbackIndex + 1) % clips.Length;
 					playAudio.playbackIndex = newPlayIndex;
 					clip = clips[newPlayIndex];
 				}
 				
-				if (playbackOrder == Parameter)
+				else if (playbackOrder == Parameter)
 				{
 					string parameterName = (string)playAudio.ParameterName;
 					int? newPlayIndex = runtime.Ints.FirstOrDefault(x => x.name == parameterName)?.value;
