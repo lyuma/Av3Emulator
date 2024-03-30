@@ -595,6 +595,7 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		private (ParentConstraint, Vector3[])[] ParentConstraints;
 		private Cloth[] ClothComponents;
+		private Component[] headChops;
 		private object[] headChopData;
 		private Dictionary<Transform, Vector3> originalHeadChopScales;
 		
@@ -2298,14 +2299,14 @@ namespace Lyuma.Av3Emulator.Runtime
 
 						if (originalHeadChopScales == null)
 						{
-							Component[] headChopsForScale = GetComponentsInChildren(headChopType);
-							headChopData = new object[headChopsForScale.Length];
+							headChops = GetComponentsInChildren(headChopType);
+							headChopData = new object[headChops.Length];
 							originalHeadChopScales = new Dictionary<Transform, Vector3>();
-							for (var i = 0; i < headChopsForScale.Length; i++)
+							for (var i = 0; i < headChops.Length; i++)
 							{
 								object dictionary = dictType.GetConstructor(Type.EmptyTypes).Invoke(new object[] {});
 								headChopType.GetMethod("AppendDesiredTransformScaleFactors")
-									.Invoke(headChopsForScale[i], new object[] { dictionary ,VRMode, avadesc.gameObject.transform });
+									.Invoke(headChops[i], new object[] { dictionary ,VRMode, avadesc.gameObject.transform });
 								headChopData[i] = dictionary;
 								
 								foreach (Transform t in (IEnumerable<Transform>)dictType.GetProperty("Keys").GetValue(headChopData[i]))
@@ -2314,7 +2315,6 @@ namespace Lyuma.Av3Emulator.Runtime
 								}
 							}
 						}
-						Component[] headChops = GetComponentsInChildren(headChopType);
 						for (var i = 0; i < headChops.Length; i++)
 						{
 							Type headChopBoneType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop+HeadChopBone, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
