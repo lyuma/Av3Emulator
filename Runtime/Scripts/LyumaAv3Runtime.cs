@@ -2299,8 +2299,8 @@ namespace Lyuma.Av3Emulator.Runtime
 					Type headChopType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 					if (headChopType != null)
 					{
-						Vector3 div(Vector3 x, Vector3 y) => new(x.x / y.x, x.y / y.y, x.z / y.z);
-						Vector3 mul(Vector3 x, Vector3 y) => new(x.x * y.x, x.y * y.y, x.z * y.z);
+						Vector3 div(Vector3 x, Vector3 y) => new Vector3(x.x / y.x, x.y / y.y, x.z / y.z);
+						Vector3 mul(Vector3 x, Vector3 y) => new Vector3(x.x * y.x, x.y * y.y, x.z * y.z);
 						if (headChopData == null)
 						{
 							headChops = GetComponentsInChildren(headChopType);
