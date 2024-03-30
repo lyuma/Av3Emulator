@@ -2329,10 +2329,6 @@ namespace Lyuma.Av3Emulator.Runtime
 						for (var i = 0; i < headChops.Length; i++)
 						{
 							dynamic headChop = headChops[i];
-							if (!headChop.isActiveAndEnabled)
-							{
-								continue;
-							}
 							object[] bones = headChop.targetBones;
 							for (var j = 0; j < bones.Length; j++)
 							{
@@ -2347,7 +2343,7 @@ namespace Lyuma.Av3Emulator.Runtime
 								Vector3 originalGlobalScale = data.originalGlobalScale;
 
 								
-								if (EnableHeadScaling && bone.CanApply(VRMode))
+								if (EnableHeadScaling && bone.CanApply(VRMode) && headChop.isActiveAndEnabled)
 								{
 									Vector3 originalParentGlobalScale = div(originalGlobalScale, originalLocalScale);
 									Vector3 targetLocalScaleComparedToOldParentScale = (originalLocalScale * desiredScaleFactor);
