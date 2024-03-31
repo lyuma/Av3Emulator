@@ -444,7 +444,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			typeof(Camera), typeof(FlareLayer), typeof(AudioSource), typeof(Light), typeof(ParticleSystemRenderer), typeof(Rigidbody), typeof(Joint)
 		
 		};
-		public static readonly HashSet<string> CloneStringComponentBlacklist = new HashSet<string>() { "DynamicBone", "VRCContact", "VRCPhysBone", "VRCSpatialAudioSource" };
+		public static readonly HashSet<string> CloneStringComponentBlacklist = new HashSet<string>() { "DynamicBone", "VRCContact", "VRCPhysBone", "VRCSpatialAudioSource", "VRCHeadChop" };
 
 		[Header("Built-in inputs / Viseme")]
 		public VisemeIndex Viseme;
@@ -591,10 +591,21 @@ namespace Lyuma.Av3Emulator.Runtime
 		static public Dictionary<Animator, LyumaAv3Runtime> animatorToTopLevelRuntime = new Dictionary<Animator, LyumaAv3Runtime>();
 		private HashSet<Animator> attachedAnimators;
 		private HashSet<string> duplicateParameterAdds = new HashSet<string>();
+		private List<object> vrcPlayAudios = new List<object>();
 
 		private (ParentConstraint, Vector3[])[] ParentConstraints;
 		private Cloth[] ClothComponents;
+		private Component[] headChops;
+		private Dictionary<Transform, HeadChopDataStorage> headChopData;
 
+		private class HeadChopDataStorage
+		{
+			public Vector3 originalLocalPosition; 
+			public Vector3 originalGlobalHeadOffset;
+			public Vector3 originalLocalScale;
+			public Vector3 originalGlobalScale;
+		}
+		
 		const float BASE_HEIGHT = 1.4f;
 
 		public IEnumerator DelayedEnterPoseSpace(bool setView, float time) {
@@ -700,16 +711,16 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (!getTopLevelRuntime("VRCAvatarParameterDriver", animator, out runtime)) {
 						return;
 					}
+					if (!runtime)
+					{
+						return;
+					}
 					if (runtime.IsMirrorClone || runtime.IsShadowClone) {
 						return;
 					}
 					if (behaviour.debugString != null && behaviour.debugString.Length > 0)
 					{
 						Debug.Log("[VRCAvatarParameterDriver:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
-					}
-					if (!runtime)
-					{
-						return;
 					}
 					if (animator != runtime.animator && (!runtime.emulator || !runtime.emulator.legacySubAnimatorParameterDriverMode)) {
 						return;
@@ -824,16 +835,16 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (!getTopLevelRuntime("VRCPlayableLayerControl", animator, out runtime)) {
 						return;
 					}
+					if (!runtime)
+					{
+						return;
+					}
 					if (runtime.IsMirrorClone && runtime.IsShadowClone) {
 						return;
 					}
 					if (behaviour.debugString != null && behaviour.debugString.Length > 0)
 					{
 						Debug.Log("[VRCPlayableLayerControl:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
-					}
-					if (!runtime)
-					{
-						return;
 					}
 					int idx = -1;
 					switch (behaviour.layer)
@@ -865,6 +876,10 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (!getTopLevelRuntime("VRCAnimatorLayerControl", animator, out runtime)) {
 						return;
 					}
+					if (!runtime)
+					{
+						return;
+					}
 					if (runtime.IsMirrorClone) {
 						return;
 					}
@@ -872,10 +887,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					{
 						Debug.Log("[VRCAnimatorLayerControl:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
 					}
-					if (!runtime)
-					{
-						return;
-					}
+
 					int idx = -1, altidx = -1;
 					switch (behaviour.playable)
 					{
@@ -917,16 +929,16 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (!getTopLevelRuntime("VRCAnimatorLocomotionControl", animator, out runtime)) {
 						return;
 					}
+					if (!runtime)
+					{
+						return;
+					}
 					if (runtime.IsMirrorClone && runtime.IsShadowClone) {
 						return;
 					}
 					if (behaviour.debugString != null && behaviour.debugString.Length > 0)
 					{
 						Debug.Log("[VRCAnimatorLocomotionControl:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
-					}
-					if (!runtime)
-					{
-						return;
 					}
 					// I legit don't know
 					runtime.LocomotionIsDisabled = behaviour.disableLocomotion;
@@ -939,16 +951,16 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (!getTopLevelRuntime("VRCAnimatorSetView", animator, out runtime)) {
 						return;
 					}
+					if (!runtime)
+					{
+						return;
+					}
 					if (runtime.IsMirrorClone && runtime.IsShadowClone) {
 						return;
 					}
 					if (behaviour.debugString != null && behaviour.debugString.Length > 0)
 					{
 						Debug.Log("[VRCAnimatorSetView:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
-					}
-					if (!runtime)
-					{
-						return;
 					}
 					// fixedDelay: Is the delay fixed or normalized...
 					// The layerIndex is not passed into the delegate, so we cannot reimplement fixedDelay.
@@ -962,16 +974,16 @@ namespace Lyuma.Av3Emulator.Runtime
 					if (!getTopLevelRuntime("VRCAnimatorTrackingControl", animator, out runtime)) {
 						return;
 					}
+					if (!runtime)
+					{
+						return;
+					}
 					if (runtime.IsMirrorClone && runtime.IsShadowClone) {
 						return;
 					}
 					if (behaviour.debugString != null && behaviour.debugString.Length > 0)
 					{
 						Debug.Log("[VRCAnimatorTrackingControl:" + (runtime == null ? "null" : runtime.name) + "]" + behaviour.name + ": " + behaviour.debugString, behaviour);
-					}
-					if (!runtime)
-					{
-						return;
 					}
 
 					if (behaviour.trackingMouth != VRCAnimatorTrackingControl.TrackingType.NoChange)
@@ -1016,8 +1028,193 @@ namespace Lyuma.Av3Emulator.Runtime
 					}
 				};
 			};
+			
+			Type audioType = Type.GetType("VRC.SDK3.Avatars.Components.VRCAnimatorPlayAudio, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			Type audioSubType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			if (audioType != null)
+			{
+				FieldInfo initialize = audioSubType.GetField("Initialize");
+				Type initializationDelegateType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio+InitializationDelegate, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+				initialize.SetValue(null, Delegate.Combine((Delegate)initialize.GetValue(null), Delegate.CreateDelegate(initializationDelegateType, typeof(LyumaAv3Runtime).GetMethod(nameof(SetupPlayAudio), BindingFlags.Static | BindingFlags.Public))));
+			}
+		}
+		public static void SetupPlayAudio(object x) {
+			Type audioSubType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			
+			FieldInfo enterState = audioSubType.GetField("EnterState");
+			Type enterDelegateType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio+EnterStateDelegate, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			enterState.SetValue(x, Delegate.Combine((Delegate)enterState.GetValue(x), Delegate.CreateDelegate(enterDelegateType, typeof(LyumaAv3Runtime).GetMethod(nameof(SetupEnterState), BindingFlags.Static | BindingFlags.Public))));
+
+			FieldInfo exitState = audioSubType.GetField("ExitState");
+			Type exitDelegateType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio+ExitStateDelegate, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			exitState.SetValue(x, Delegate.Combine((Delegate)exitState.GetValue(x), Delegate.CreateDelegate(exitDelegateType, typeof(LyumaAv3Runtime).GetMethod(nameof(SetupExitState), BindingFlags.Static | BindingFlags.Public))));
 		}
 
+		public static void SetupEnterState(dynamic playAudio, Animator animator)
+		{
+			Type applySettingsType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio+ApplySettings, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			Type randomOrderType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio+Order, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+			LyumaAv3Runtime runtime;
+			if (!getTopLevelRuntime("VRCAnimatorPlayAudio", animator, out runtime)) {
+				return;
+			}
+			if (!runtime)
+			{
+				return;
+			}
+			if (runtime.IsMirrorClone && runtime.IsShadowClone) {
+				return;
+			}
+
+			int index = runtime.vrcPlayAudios.IndexOf(playAudio);
+			if (index == -1)
+			{
+				index = runtime.vrcPlayAudios.Count;
+				runtime.vrcPlayAudios.Add(playAudio);
+			}
+			if (runtime.DebugDuplicateAnimator != VRCAvatarDescriptor.AnimLayerType.Base && index % 2 == 0)
+			{
+				return; // We add a copy of every state behaviour, which is fine when operations are idempotent, but since these are not, we need to ignore every second SetupEnterState, since those get called on both behaviours in succession.
+			}
+
+			AudioSource audioSource = animator.transform.Find(playAudio.SourcePath)?.GetComponent<AudioSource>();
+			if (audioSource == null)
+			{
+				return;
+			}
+
+			if (playAudio.StopOnEnter)
+			{
+				audioSource.Stop();
+			}
+
+			dynamic alwaysApply =  Enum.ToObject(applySettingsType, 0);
+			dynamic applyIfStopped = Enum.ToObject(applySettingsType, 1);
+
+			if (playAudio.LoopApplySettings == alwaysApply ||
+			    playAudio.LoopApplySettings == applyIfStopped &&
+			    !audioSource.isPlaying)
+			{
+				audioSource.loop = (bool)playAudio.Loop;
+			}
+
+			if (playAudio.PitchApplySettings == alwaysApply ||
+			    playAudio.PitchApplySettings == applyIfStopped &&
+			    !audioSource.isPlaying)
+			{
+				Vector2 pitch = (Vector2)playAudio.Pitch;
+				audioSource.pitch = UnityEngine.Random.Range(pitch.x, pitch.y);
+			}
+			
+			if (playAudio.VolumeApplySettings == alwaysApply ||
+			    playAudio.VolumeApplySettings == applyIfStopped &&
+			    !audioSource.isPlaying)
+			{
+				Vector2 volume = (Vector2)playAudio.Volume;
+				audioSource.volume = UnityEngine.Random.Range(volume.x, volume.y);
+			}
+
+			AudioClip[] clips = (AudioClip[])playAudio.Clips;
+			if (clips.Length > 0 && 
+			    (playAudio.ClipsApplySettings == alwaysApply ||
+			     playAudio.ClipsApplySettings == applyIfStopped && !audioSource.isPlaying))
+			{
+				AudioClip clip = null;
+				
+				dynamic Random = Enum.ToObject(randomOrderType, 0);
+				dynamic UniqueRandom =  Enum.ToObject(randomOrderType, 1);
+				dynamic Roundabout =  Enum.ToObject(randomOrderType, 2);
+				dynamic Parameter =  Enum.ToObject(randomOrderType, 3);
+				dynamic playbackOrder = playAudio.PlaybackOrder;
+				
+				if (playbackOrder == Random)
+				{
+					int newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
+					playAudio.playbackIndex = newPlayIndex;
+					clip = clips[newPlayIndex];
+				}
+
+				else if (playbackOrder == UniqueRandom)
+				{
+					int newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
+					while (newPlayIndex == (int)playAudio.playbackIndex && clips.Length > 1)
+					{
+						newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
+					}
+
+					playAudio.playbackIndex = newPlayIndex;
+					clip = clips[newPlayIndex];
+				}
+
+				else if (playbackOrder == Roundabout)
+				{
+					int newPlayIndex = ((int)playAudio.playbackIndex + 1) % clips.Length;
+					playAudio.playbackIndex = newPlayIndex;
+					clip = clips[newPlayIndex];
+				}
+				
+				else if (playbackOrder == Parameter)
+				{
+					string parameterName = (string)playAudio.ParameterName;
+					int? newPlayIndex = runtime.Ints.FirstOrDefault(x => x.name == parameterName)?.value;
+					if (newPlayIndex.HasValue && newPlayIndex.Value < clips.Length)
+					{
+						playAudio.playbackIndex = newPlayIndex.Value;
+						clip = clips[newPlayIndex.Value];
+					}
+				}
+				audioSource.clip = clip;
+			}
+
+
+			if ((bool)playAudio.PlayOnEnter && audioSource.clip != null) 
+			{
+				audioSource.PlayDelayed((float)playAudio.DelayInSeconds);
+			}
+		}
+
+		public static void SetupExitState(dynamic playAudio, Animator animator)
+		{
+			LyumaAv3Runtime runtime;
+			if (!getTopLevelRuntime("VRCAnimatorPlayAudio", animator, out runtime)) {
+				return;
+			}
+			if (!runtime)
+			{
+				return;
+			}
+			if (runtime.IsMirrorClone && runtime.IsShadowClone) {
+				return;
+			}
+				
+			int index = runtime.vrcPlayAudios.IndexOf(playAudio);
+			if (index == -1)
+			{
+				runtime.vrcPlayAudios.Add(playAudio);
+				index = runtime.vrcPlayAudios.IndexOf(playAudio);
+				if (index % 2 == 0)
+				{
+					return;
+				}
+			}
+
+			AudioSource audioSource = animator.transform.Find(playAudio.SourcePath)?.GetComponent<AudioSource>();
+			if (audioSource == null)
+			{
+				return;
+			}
+				
+			if (playAudio.StopOnExit)
+			{
+				audioSource.Stop();
+			}
+
+			if (playAudio.PlayOnExit)
+			{
+				audioSource.Play();
+			}
+		}
+		
 		void OnDestroy () {
 			if (this.playableGraph.IsValid()) {
 				this.playableGraph.Destroy();
@@ -2100,6 +2297,71 @@ namespace Lyuma.Av3Emulator.Runtime
 						defaultHeadScale = head.localScale;
 					}
 					head.localScale = EnableHeadScaling ? new Vector3(0.0001f, 0.0001f, 0.0001f) : defaultHeadScale; // head bone is set to 0.0001 locally (not multiplied
+
+					Type headChopType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+					if (headChopType != null)
+					{
+						Vector3 div(Vector3 x, Vector3 y) => new Vector3(x.x / y.x, x.y / y.y, x.z / y.z);
+						Vector3 mul(Vector3 x, Vector3 y) => new Vector3(x.x * y.x, x.y * y.y, x.z * y.z);
+						if (headChopData == null)
+						{
+							headChops = GetComponentsInChildren(headChopType, true);
+							headChopData = new Dictionary<Transform, HeadChopDataStorage>();
+							for (var i = 0; i < headChops.Length; i++)
+							{
+								dynamic headChop = headChops[i];
+								object[] bones = headChop.targetBones;
+								for (var j = 0; j < bones.Length; j++)
+								{
+									dynamic bone = bones[j];
+									Transform t = bone.transform;
+									headChopData[t] = new HeadChopDataStorage()
+									{
+										originalLocalPosition = t.localPosition,
+										originalGlobalHeadOffset = mul(avadesc.transform.InverseTransformPoint(t.position), avadesc.transform.lossyScale) - animator.GetBoneTransform(HumanBodyBones.Head).transform.position,
+										originalLocalScale = t.localScale,
+										originalGlobalScale = t.lossyScale
+									};
+								}
+							}
+						}
+						for (var i = 0; i < headChops.Length; i++)
+						{
+							dynamic headChop = headChops[i];
+							object[] bones = headChop.targetBones;
+							for (var j = 0; j < bones.Length; j++)
+							{
+								dynamic bone = bones[j];
+								Transform t = bone.transform;
+								float desiredScaleFactor = bone.scaleFactor * headChop.globalScaleFactor;
+
+								var data = headChopData[t];
+								Vector3 originalLocalPosition = data.originalLocalPosition;
+								Transform headBone = animator.GetBoneTransform(HumanBodyBones.Head).transform;
+								Vector3 originalRootSpacePosition = headBone.position + headBone.rotation * data.originalGlobalHeadOffset;
+								Vector3 originalLocalScale = data.originalLocalScale;
+								Vector3 originalGlobalScale = data.originalGlobalScale;
+
+								
+								if (EnableHeadScaling && bone.CanApply(VRMode) && headChop.isActiveAndEnabled)
+								{
+									Vector3 originalParentGlobalScale = div(originalGlobalScale, originalLocalScale);
+									Vector3 targetLocalScaleComparedToOldParentScale = (originalLocalScale * desiredScaleFactor);
+									Vector3 targetGlobalScale = mul(originalParentGlobalScale, targetLocalScaleComparedToOldParentScale);
+									Vector3 unclampedTargetLocalScale = div(targetGlobalScale, t.parent.lossyScale);
+									
+									
+									t.localScale = new Vector3(Mathf.Max(unclampedTargetLocalScale.x, 0.0001f), Mathf.Max(unclampedTargetLocalScale.y, 0.0001f), Mathf.Max(unclampedTargetLocalScale.z, 0.0001f));
+									t.position = originalRootSpacePosition - avadesc.transform.position;
+								}
+								else
+								{
+									t.localScale = originalLocalScale;
+									t.localPosition = originalLocalPosition;
+								}
+							}
+						}
+					}
 				}
 			}
 			if (DisableMirrorAndShadowClones && (MirrorClone != null || ShadowClone != null)) {
