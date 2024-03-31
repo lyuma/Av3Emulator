@@ -1272,8 +1272,14 @@ namespace Lyuma.Av3Emulator.Runtime
 					transform = transform.parent;
 				}
 				AvatarSyncSource = this;
-			} else {
-				AvatarSyncSource = GameObject.Find(SourceObjectPath).GetComponent<LyumaAv3Runtime>();
+			} else if (AvatarSyncSource != this) {
+				GameObject srcGO = GameObject.Find(SourceObjectPath);
+				if (srcGO == null) {
+					AvatarSyncSource = this;
+					UnityEngine.Object.Destroy(this.gameObject);
+				} else {
+					AvatarSyncSource = srcGO.GetComponent<LyumaAv3Runtime>();
+				}
 			}
 
 			if (this.emulator != null) {
@@ -2465,17 +2471,17 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 			}
 
-			if (IsShadowClone || IsMirrorClone)
+			if ((IsShadowClone || IsMirrorClone) && AvatarSyncSource != null)
 			{
-				for (int i = 0; i < Ints.Count; i++)
+				for (int i = 0; i < Ints.Count && i < AvatarSyncSource.Ints.Count; i++)
 				{
 					Ints[i].value = AvatarSyncSource.Ints[i].value;
 				}
-				for (int i = 0; i < Floats.Count; i++) { 
+				for (int i = 0; i < Floats.Count && i < AvatarSyncSource.Floats.Count; i++) { 
 					Floats[i].value = AvatarSyncSource.Floats[i].value;
 					Floats[i].exportedValue = AvatarSyncSource.Floats[i].exportedValue;
 				}
-				for (int i = 0; i < Bools.Count; i++) {
+				for (int i = 0; i < Bools.Count && i < AvatarSyncSource.Bools.Count; i++) {
 					Bools[i].value = AvatarSyncSource.Bools[i].value;
 				}
 			}
@@ -2559,18 +2565,12 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			if (GestureLeftWeight != OldGestureLeftWeight) {
 				OldGestureLeftWeight = GestureLeftWeight;
-				if (GestureLeftWeight < 0.01f) {
-					GestureLeftIdx = 0;
-				}
 				if (GestureLeftWeight > 0.01f && (GestureLeftIdx == 0 || GestureLeftWeight < 0.99f)) {
 					GestureLeftIdx = 1;
 				} 
 			}
 			if (GestureRightWeight != OldGestureRightWeight) {
 				OldGestureRightWeight = GestureRightWeight;
-				if (GestureRightWeight < 0.01f) {
-					GestureRightIdx = 0;
-				}
 				if (GestureRightWeight > 0.01f && (GestureRightIdx == 0 || GestureRightWeight < 0.99f)) {
 					GestureRightIdx = 1;
 				} 
