@@ -1,4 +1,12 @@
-### New features in v 3.2.2:
+### New features in v 3.4.0:
+
+3.4.0:
+
+- Custom inspector! Special thanks to Dreadrith for the implementation, and to jellejurre for the integration.
+- Fix for legacyFolders in the json. Thanks to anatawa12 for finding this.
+- Implementation of VRCHeadChop. Thank you, jellejurre
+- Implemented support for the VRCAnimatorPlayAudio state machine behavior. Thanks to jellejurre
+- Convert negative values to true bool when casting parameter types.
 
 3.3.1:
 
