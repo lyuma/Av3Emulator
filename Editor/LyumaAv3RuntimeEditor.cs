@@ -165,19 +165,19 @@ namespace Lyuma.Av3Emulator.Editor
 
 		#region Foldout Variables
 		private static bool resetAndRefreshFoldout;
-		private static bool animatorToDebugFoldout;
+		private static bool animatorToDebugFoldout = true;
 		private static bool OSCFoldout;
 		private static bool OSCConfigFoldout;
 		private static bool networkClonesAndSyncFoldout;
 		private static bool playerLocalAndMirrorReflectionFoldout;
-		private static bool builtInInputsFoldout;
+		private static bool builtInInputsFoldout = true;
 		private static bool visemeFoldout;
-		private static bool handGestureFoldout;
-		private static bool locomotionFoldout;
+		private static bool handGestureFoldout = true;
+		private static bool locomotionFoldout = true;
 		private static bool trackingSetupAndOtherFoldout;
 		private static bool userInputsFoldout;
 		private static bool outputStateFoldout;
-		private static bool creditsAndLinksFoldout;
+		private static bool creditsAndLinksFoldout = true;
 		#endregion
 		public override void OnInspectorGUI()
 		{
@@ -305,10 +305,14 @@ namespace Lyuma.Av3Emulator.Editor
 		private void DrawHandGestureGUI()
 		{
 			DrawAsEnumWithIndex(GestureLeft, GestureLeftIdx);
-			EditorGUILayout.PropertyField(GestureLeftWeight);
+			if (GestureLeftIdx.intValue == 1) {
+				EditorGUILayout.PropertyField(GestureLeftWeight);
+			}
 			
 			DrawAsEnumWithIndex(GestureRight, GestureRightIdx);
-			EditorGUILayout.PropertyField(GestureRightWeight);
+			if (GestureRightIdx.intValue == 1) {
+				EditorGUILayout.PropertyField(GestureRightWeight);
+			}
 		}
 
 		private void DrawLocomotionGUI()
