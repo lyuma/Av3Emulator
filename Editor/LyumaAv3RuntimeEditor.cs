@@ -12,6 +12,7 @@ namespace Lyuma.Av3Emulator.Editor
 	{
 		#region SerializedProperties
 		public SerializedProperty OriginalSourceClone;
+		public SerializedProperty AvatarSyncSource;
 		public SerializedProperty ResetAvatar;
 		public SerializedProperty ResetAndHold;
 		public SerializedProperty RefreshExpressionParams;
@@ -91,6 +92,7 @@ namespace Lyuma.Av3Emulator.Editor
 		private void RefreshSerializedProperties()
 		{
 			OriginalSourceClone = serializedObject.FindProperty("OriginalSourceClone");
+			AvatarSyncSource = serializedObject.FindProperty("AvatarSyncSource");
 			ResetAvatar = serializedObject.FindProperty("ResetAvatar");
 			ResetAndHold = serializedObject.FindProperty("ResetAndHold");
 			RefreshExpressionParams = serializedObject.FindProperty("RefreshExpressionParams");
@@ -183,7 +185,10 @@ namespace Lyuma.Av3Emulator.Editor
 		{
 			serializedObject.Update();
 			RefreshSerializedProperties();
-			EditorGUILayout.PropertyField(OriginalSourceClone);
+			if (AvatarSyncSource.objectReferenceValue != target)
+			{
+				EditorGUILayout.PropertyField(AvatarSyncSource);
+			}
 			EditorGUILayout.Space();
 
 			DrawFoldout("Reset and Refresh", ref resetAndRefreshFoldout, DrawResetAndRefreshGUI);
@@ -226,6 +231,7 @@ namespace Lyuma.Av3Emulator.Editor
 
 			DrawAsClickableToggle(RefreshExpressionParams);
 			DrawAsClickableToggle(KeepSavedParametersOnReset);
+			EditorGUILayout.PropertyField(OriginalSourceClone);
 		}
 
 		private void DrawAnimatorToDebugGUI()

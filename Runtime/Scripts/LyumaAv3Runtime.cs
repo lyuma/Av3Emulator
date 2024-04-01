@@ -1272,7 +1272,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					transform = transform.parent;
 				}
 				AvatarSyncSource = this;
-			} else if (AvatarSyncSource != this) {
+			} else {
 				GameObject srcGO = GameObject.Find(SourceObjectPath);
 				if (srcGO == null) {
 					AvatarSyncSource = this;
@@ -1415,6 +1415,10 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		public void CreateMirrorClone() {
+			if (IsMirrorClone || IsShadowClone)
+			{
+				throw new InvalidOperationException("Mirror/shadow clones cannot create a mirror clone");
+			}
 			if (AvatarSyncSource == this && GetComponents<Component>().All(x => x.GetType().Name != "PipelineSaver"))
 			{
 				OriginalSourceClone.IsMirrorClone = true;
@@ -1440,6 +1444,10 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		public void CreateShadowClone() {
+			if (IsMirrorClone || IsShadowClone)
+			{
+				throw new InvalidOperationException("Mirror/shadow clones cannot create a shadow clone");
+			}
 			if (AvatarSyncSource == this && GetComponents<Component>().All(x => x.GetType().Name != "PipelineSaver")) {
 				OriginalSourceClone.IsShadowClone = true;
 				ShadowClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
@@ -2371,7 +2379,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				GameObject.Destroy(ShadowClone.gameObject);
 				ShadowClone = null;
 			}
-			if (!DisableMirrorAndShadowClones && MirrorClone == null && ShadowClone == null) {
+			if (!DisableMirrorAndShadowClones && !IsMirrorClone && !IsShadowClone && MirrorClone == null && ShadowClone == null && AvatarSyncSource == this) {
 				CreateMirrorClone();
 				CreateShadowClone();
 				SetupCloneCaches();
