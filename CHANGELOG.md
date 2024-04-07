@@ -1,4 +1,8 @@
-### New features in v 3.4.0:
+### New features in v 3.4.1:
+
+3.4.1:
+
+- Fix editing float User Input.
 
 3.4.0:
 
