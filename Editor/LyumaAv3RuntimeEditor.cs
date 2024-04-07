@@ -520,7 +520,7 @@ namespace Lyuma.Av3Emulator.Editor
 		private void DrawFloatsElementCallback(Rect r, int i, bool _, bool __)
 		{
 			if (!WillDrawElement(Floats, i, out var el)) return;
-			var value = el.FindPropertyRelative("value");
+			var value = el.FindPropertyRelative("expressionValue");
 			var dummyValue = value.floatValue;
 			EditorGUI.BeginChangeCheck();
 			dummyValue = EditorGUI.Slider(r, GetContent(el), dummyValue, -1, 1);
