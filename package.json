@@ -1,5 +1,8 @@
 {
   "name": "lyuma.av3emulator",
+  "author": "Lyuma et al.",
+  "license": "MIT",
+  "documentationUrl": "https://github.com/lyuma/Av3Emulator",
   "displayName": "Av3Emulator",
   "version": "3.4.0",
   "description": "An Emulator for VRChat's Avatar 3.0 System",
