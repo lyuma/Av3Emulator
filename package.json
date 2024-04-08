@@ -1,10 +1,10 @@
 {
   "name": "lyuma.av3emulator",
-  "author": "Lyuma et al.",
+  "author": {"name": "Lyuma et al.", "url": "https://github.com/v-sekai", "email": "xn.lyuma@gmail.com"},
   "license": "MIT",
   "documentationUrl": "https://github.com/lyuma/Av3Emulator",
   "displayName": "Av3Emulator",
-  "version": "3.4.1",
+  "version": "3.4.2",
   "description": "An Emulator for VRChat's Avatar 3.0 System",
   "gitDependencies": {},
   "legacyFolders" : {
