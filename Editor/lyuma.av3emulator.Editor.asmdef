@@ -23,6 +23,11 @@
             "name": "vrchat.blackstartx.gesture-manager",
             "expression": "3.8.3",
             "define": "GESTURE_MANAGER"
+        },
+        {
+            "name": "vrchat.blackstartx.gesture-manager",
+            "expression": "3.8.9",
+            "define": "GESTURE_MANAGER_3_8_9"
         }
     ],
     "noEngineReferences": false

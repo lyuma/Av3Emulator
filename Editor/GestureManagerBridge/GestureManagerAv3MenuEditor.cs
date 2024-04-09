@@ -45,7 +45,11 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 					this.axis = axis;
 					this.runtime = runtime;
 				}
+#if GESTURE_MANAGER_3_8_9
+				public override float FloatValue() {
+#else
 				public override float Get() {
+#endif
 					Vector3 vel = runtime.Velocity;
 					return vel[axis];
 				}
@@ -67,7 +71,11 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 					this.property = property;
 					this.runtime = runtime;
 				}
+#if GESTURE_MANAGER_3_8_9
+				public override float FloatValue() {
+#else
 				public override float Get() {
+#endif
 					if (property.FieldType == typeof(bool)) {
 						return ((bool)property.GetValue(runtime)) ? 1.0f : 0.0f;
 					} else if (property.FieldType == typeof(float)) {
@@ -94,7 +102,11 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 			class StubVrcBoolParam : BlackStartX.GestureManager.Editor.Modules.Vrc3.Params.Vrc3Param {
 				public LyumaAv3Runtime.BoolParam param;
 				public StubVrcBoolParam(string name, LyumaAv3Runtime.BoolParam param) : base(name, AnimatorControllerParameterType.Bool) { this.param = param; }
+#if GESTURE_MANAGER_3_8_9
+				public override float FloatValue() {
+#else
 				public override float Get() {
+#endif
 					return param.value ? 1.0f : 0.0f;
 				}
 				protected override void InternalSet(float value) {
@@ -105,7 +117,11 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 			class StubVrcIntParam : BlackStartX.GestureManager.Editor.Modules.Vrc3.Params.Vrc3Param {
 				public LyumaAv3Runtime.IntParam param;
 				public StubVrcIntParam(string name, LyumaAv3Runtime.IntParam param) : base(name, AnimatorControllerParameterType.Int) { this.param = param; }
+#if GESTURE_MANAGER_3_8_9
+				public override float FloatValue() {
+#else
 				public override float Get() {
+#endif
 					return param.value;
 				}
 				protected override void InternalSet(float value) {
@@ -116,7 +132,11 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 			class StubVrcFloatParam : BlackStartX.GestureManager.Editor.Modules.Vrc3.Params.Vrc3Param {
 				public LyumaAv3Runtime.FloatParam param;
 				public StubVrcFloatParam(string name, LyumaAv3Runtime.FloatParam param) : base(name, AnimatorControllerParameterType.Float) { this.param = param; }
+#if GESTURE_MANAGER_3_8_9
+				public override float FloatValue() {
+#else
 				public override float Get() {
+#endif
 					return param.value;
 				}
 				protected override void InternalSet(float value) {
