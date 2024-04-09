@@ -1,4 +1,8 @@
-### New features in v 3.4.1:
+### New features in v 3.4.3:
+
+3.4.3:
+
+- Add compatibility with GestureManager 3.8.9+
 
 3.4.1 + 3.4.2:
 
