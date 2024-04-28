@@ -108,7 +108,7 @@ namespace Lyuma.Av3Emulator.Editor
 
 				var type = System.Type.GetType("UnityEditor.Graphs.AnimatorControllerTool, UnityEditor.Graphs");
 				var prop = type?.GetProperty("animatorController");
-				if (type != null && prop != null)
+				if (type != null && prop != null && Resources.FindObjectsOfTypeAll(type)?.Length > 0)
 				{
 					prop.SetValue(EditorWindow.GetWindow(type, false, "Animator", false), rac);
 				}
