@@ -44,6 +44,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		static public Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController> animLayerToDefaultController = new Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController>();
 		public delegate void UpdateSelectionFunc(UnityEngine.Object obj);
 		public static UpdateSelectionFunc updateSelectionDelegate;
+		public delegate void UpdateAnimatorWindowFunc(RuntimeAnimatorController rac);
+		public static UpdateAnimatorWindowFunc updateAnimatorWindowDelegate;
 		public delegate void AddRuntime(Component runtime);
 		public static AddRuntime addRuntimeDelegate;
 		public delegate void UpdateSceneLayersFunc(int layers);
@@ -2286,7 +2288,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				PrevAnimatorToViewLiteParamsShow0 = (char)127;
 				RuntimeAnimatorController rac = null;
 				allControllers.TryGetValue(ViewAnimatorOnlyNoParams, out rac);
-				updateSelectionDelegate(rac == null ? (UnityEngine.Object)this.emulator : (UnityEngine.Object)rac);
+				updateAnimatorWindowDelegate(rac);
 			}
 			if (RefreshExpressionParams) {
 				RefreshExpressionParams = false;
