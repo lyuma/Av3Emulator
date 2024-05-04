@@ -116,8 +116,8 @@ namespace Lyuma.Av3Emulator.Editor
 			// Currently PhysBone and ContactManager cause exceptions if scripts reload during Play mode.
 			// This applies a workaround: disable the objects before compile; call RuntimeInit to recreate them after.
 			LyumaAv3Runtime.ApplyOnEnableWorkaroundDelegate = () => {
-				CompilationPipeline.assemblyCompilationStarted -= WorkaroundDestroyManagersBeforeCompile;
-				CompilationPipeline.assemblyCompilationStarted += WorkaroundDestroyManagersBeforeCompile;
+				CompilationPipeline.compilationStarted -= WorkaroundDestroyManagersBeforeCompile;
+				CompilationPipeline.compilationStarted += WorkaroundDestroyManagersBeforeCompile;
 				GameObject gotmp = GameObject.Find("/TempReloadDontDestroy");
 				if (gotmp != null) {
 					GameObject.DestroyImmediate(gotmp);
@@ -222,11 +222,11 @@ namespace Lyuma.Av3Emulator.Editor
 		public static void OnPlayModeStateChange(UnityEditor.PlayModeStateChange pmsc) {
 			// We don't want any of our callbacks causing trouble outside of play mode.
 			if (pmsc != UnityEditor.PlayModeStateChange.EnteredPlayMode) {
-				CompilationPipeline.assemblyCompilationStarted -= WorkaroundDestroyManagersBeforeCompile;
+				CompilationPipeline.compilationStarted -= WorkaroundDestroyManagersBeforeCompile;
 			}
 		}
 
-		private static void WorkaroundDestroyManagersBeforeCompile(string obj) {
+		private static void WorkaroundDestroyManagersBeforeCompile(object obj) {
 			Debug.Log("Compile Started");
 			if (!GameObject.Find("/TempReloadDontDestroy")) {
 				GameObject gotmp = new GameObject("TempReloadDontDestroy");
