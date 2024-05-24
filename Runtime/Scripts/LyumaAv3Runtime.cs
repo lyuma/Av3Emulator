@@ -1952,7 +1952,7 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		private (MeshRenderer, MeshRenderer, MeshRenderer)[] rendererCache;
 		private (SkinnedMeshRenderer, SkinnedMeshRenderer, SkinnedMeshRenderer)[] skinnedRendererCache;
-
+		private int frameIndex = 0;
 		public void SetupCloneCaches()
 		{
 			if (rendererCache != null)
@@ -2174,6 +2174,9 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		void Update() {
+			if ((IsMirrorClone || IsShadowClone) && frameIndex == 0) playableGraph.Stop();
+			if ((IsMirrorClone || IsShadowClone) && frameIndex == 1) playableGraph.Play();
+			frameIndex += 1;
 			if (animator == null)
 			{
 				animator = GetOrAddComponent<Animator>(this.gameObject);
@@ -2253,6 +2256,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 				isResetting = false;
 				isResettingHold = false;
+				frameIndex = 0;
 			}
 			if (PrevAnimatorToDebug != (char)(int)DebugDuplicateAnimator || ResetAvatar || attachedAnimators == null) {
 				actionIndex = fxIndex = gestureIndex = additiveIndex = sittingIndex = ikposeIndex = tposeIndex = -1;
