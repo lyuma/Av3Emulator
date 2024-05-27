@@ -1,5 +1,11 @@
 ### New features in v 3.4.3:
 
+3.4.4:
+
+- No longer force maxiumum version for VRCSDK
+- Fix weird runtime build issue with IL2CPP and dynamic keyword
+- Improve accuracy of mirror clone for mirror detection.
+
 3.4.3:
 
 - Add compatibility with GestureManager 3.8.9+
