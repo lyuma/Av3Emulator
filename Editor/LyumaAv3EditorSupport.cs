@@ -93,6 +93,27 @@ namespace Lyuma.Av3Emulator.Editor
 				// Highlighter.Highlight("Inspector", "Animator To Debug");
 			};
 
+			LyumaAv3Runtime.updateAnimatorWindowDelegate = (rac) =>
+			{
+				if (rac == null)
+				{
+					LyumaAv3Runtime.updateSelectionDelegate(LyumaAv3Emulator.emulatorInstance);
+					return;
+				}
+				if (LyumaAv3Emulator.emulatorInstance.SelectAssetOnChangeAnimatorToDebug)
+				{
+					LyumaAv3Runtime.updateSelectionDelegate(rac);
+					return;
+				}
+
+				var type = System.Type.GetType("UnityEditor.Graphs.AnimatorControllerTool, UnityEditor.Graphs");
+				var prop = type?.GetProperty("animatorController");
+				if (type != null && prop != null && Resources.FindObjectsOfTypeAll(type)?.Length > 0)
+				{
+					prop.SetValue(EditorWindow.GetWindow(type, false, "Animator", false), rac);
+				}
+			};
+
 			LyumaAv3Runtime.updateSceneLayersDelegate = (layers) => {
 				if (Tools.visibleLayers == layers) {
 					return;

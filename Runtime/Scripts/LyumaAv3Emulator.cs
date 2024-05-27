@@ -62,6 +62,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		public LyumaAv3Runtime.TrackingTypeIndex DefaultTrackingType = LyumaAv3Runtime.TrackingTypeIndex.HeadHands;
 		[Header("Emulation")]
 		public VRCAvatarDescriptor.AnimLayerType DefaultAnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base; 
+		public bool SelectAssetOnChangeAnimatorToDebug = true;
 		public DescriptorCollidersSendersHelper.DescriptorExtractionType DescriptorColliders = DescriptorCollidersSendersHelper.DescriptorExtractionType.CollidersAndSenders;
 		public bool RestartEmulator;
 		private bool RestartingEmulator;
