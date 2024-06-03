@@ -588,9 +588,17 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		private (ParentConstraint, Vector3[])[] ParentConstraints;
 		private Cloth[] ClothComponents;
-		private Component[] headChops;
-		private object[] headChopData;
-		private Dictionary<Transform, Vector3> originalHeadChopScales;
+		private Component[] headChops; 
+		
+		private Dictionary<Transform, HeadChopDataStorage> headChopData;
+
+		private class HeadChopDataStorage
+		{
+			public Vector3 originalLocalPosition; 
+			public Vector3 originalGlobalHeadOffset;
+			public Vector3 originalLocalScale;
+			public Vector3 originalGlobalScale;
+		}
 		
 		const float BASE_HEIGHT = 1.4f;
 
@@ -2304,69 +2312,72 @@ namespace Lyuma.Av3Emulator.Runtime
 					head.localScale = EnableHeadScaling ? new Vector3(0.0001f, 0.0001f, 0.0001f) : defaultHeadScale; // head bone is set to 0.0001 locally (not multiplied
 
 					Type headChopType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+					Type headChopBoneType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop+HeadChopBone, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 					if (headChopType != null)
 					{
-						Type headChopDataType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop+HeadChopData, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
-						Type dictType = typeof(Dictionary<,>).MakeGenericType(typeof(Transform), headChopDataType);
+						Vector3 div(Vector3 x, Vector3 y) => new Vector3(x.x / y.x, x.y / y.y, x.z / y.z);
+						Vector3 mul(Vector3 x, Vector3 y) => new Vector3(x.x * y.x, x.y * y.y, x.z * y.z);
 
-						if (originalHeadChopScales == null)
+						if (headChopData == null)
 						{
-							headChops = GetComponentsInChildren(headChopType);
-							headChopData = new object[headChops.Length];
-							originalHeadChopScales = new Dictionary<Transform, Vector3>();
+							headChops = GetComponentsInChildren(headChopType, true);
+							headChopData = new Dictionary<Transform, HeadChopDataStorage>();
 							for (var i = 0; i < headChops.Length; i++)
 							{
-								object dictionary = dictType.GetConstructor(Type.EmptyTypes).Invoke(new object[] {});
-								headChopType.GetMethod("AppendDesiredTransformScaleFactors")
-									.Invoke(headChops[i], new object[] { dictionary ,VRMode, avadesc.gameObject.transform });
-								headChopData[i] = dictionary;
-
-								foreach (Transform t in (IEnumerable<Transform>)dictType.GetProperty("Keys").GetValue(headChopData[i]))
+								object[] bones = (object[]) headChopType.GetField("targetBones").GetValue(headChops[i]);
+								for (var j = 0; j < bones.Length; j++)
 								{
-									originalHeadChopScales[t] = t.lossyScale;
+									object bone = bones[j];
+									Transform t = (Transform)headChopBoneType.GetField("transform").GetValue(bone);
+									if (t == null) continue;
+									headChopData[t] = new HeadChopDataStorage()
+									{
+										originalLocalPosition = t.localPosition,
+										originalGlobalHeadOffset = mul(avadesc.transform.InverseTransformPoint(t.position), avadesc.transform.lossyScale) - animator.GetBoneTransform(HumanBodyBones.Head).transform.position,
+										originalLocalScale = t.localScale,
+										originalGlobalScale = t.lossyScale
+									};
 								}
 							}
 						}
 						for (var i = 0; i < headChops.Length; i++)
 						{
-							Type headChopBoneType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop+HeadChopBone, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+							object headChop = headChops[i];
 							object[] bones = (object[]) headChopType.GetField("targetBones").GetValue(headChops[i]);
 							for (var j = 0; j < bones.Length; j++)
 							{
 								object bone = bones[j];
 								Transform t = (Transform)headChopBoneType.GetField("transform").GetValue(bone);
+								if (t == null) continue;
 								bool canApply = (bool)headChopBoneType.GetMethod("CanApply").Invoke(bone, new object[] { VRMode });
 								float scaleFactor = (float)headChopBoneType.GetField("scaleFactor").GetValue(bone);
 								float globalScaleFactor = (float)headChopType.GetField("globalScaleFactor").GetValue(headChops[i]);
-								if (canApply)
+								
+								float desiredScaleFactor = scaleFactor * globalScaleFactor;
+
+								var data = headChopData[t];
+								Vector3 originalLocalPosition = data.originalLocalPosition;
+								Transform headBone = animator.GetBoneTransform(HumanBodyBones.Head).transform;
+								Vector3 originalRootSpacePosition = headBone.position + headBone.rotation * data.originalGlobalHeadOffset;
+								Vector3 originalLocalScale = data.originalLocalScale;
+								Vector3 originalGlobalScale = data.originalGlobalScale;
+
+								
+								if (EnableHeadScaling && canApply && ((Behaviour)headChop).isActiveAndEnabled)
 								{
-									object data = dictType.GetMethod("get_Item").Invoke(headChopData[i], new[] { t });
-									headChopDataType.GetField("DesiredAppliedScaleFactor").SetValue(data, canApply ? scaleFactor * globalScaleFactor : 1.0f);
-									dictType.GetMethod("set_Item").Invoke(headChopData[i], new[] { t, data });
-								}
-							}
-						}
-						for (var i = 0; i < headChopData.Length; i++)
-						{
-							foreach (Transform t in (IEnumerable<Transform>)dictType.GetProperty("Keys").GetValue(headChopData[i]))
-							{
-								object data = dictType.GetMethod("get_Item").Invoke(headChopData[i], new[] { t });
-								float DesiredAppliedScaleFactor = (float)headChopDataType.GetField("DesiredAppliedScaleFactor").GetValue(data);
-								Vector3 OriginalLocalPosition = (Vector3)headChopDataType.GetField("OriginalLocalPosition").GetValue(data);
-								Vector3 OriginalRootSpacePosition = (Vector3)headChopDataType.GetField("OriginalRootSpacePosition").GetValue(data);
-								Vector3 OriginalLocalScale = (Vector3)headChopDataType.GetField("OriginalLocalScale").GetValue(data);
-								if (EnableHeadScaling)
-								{
-									Vector3 originalParentGlobalScale = new Vector3(originalHeadChopScales[t].x / OriginalLocalScale.x, originalHeadChopScales[t].y / OriginalLocalScale.y, originalHeadChopScales[t].z / OriginalLocalScale.z);
-                                    Vector3 targetLocalScaleComparedToOldParentScale = (OriginalLocalScale * DesiredAppliedScaleFactor);
-                                    Vector3 targetGlobalScale = new Vector3(originalParentGlobalScale.x * targetLocalScaleComparedToOldParentScale.x, originalParentGlobalScale.y * targetLocalScaleComparedToOldParentScale.y, originalParentGlobalScale.z * targetLocalScaleComparedToOldParentScale.z);
-                                    t.localScale = new Vector3(Mathf.Clamp(targetGlobalScale.x / t.parent.lossyScale.x, 0.0001f, Mathf.Infinity), Mathf.Clamp(targetGlobalScale.y / t.parent.lossyScale.y, 0.0001f, Mathf.Infinity), Mathf.Clamp(targetGlobalScale.z / t.parent.lossyScale.z, 0.0001f, Mathf.Infinity));
-									t.position = OriginalRootSpacePosition - avadesc.transform.position;
+									Vector3 originalParentGlobalScale = div(originalGlobalScale, originalLocalScale);
+									Vector3 targetLocalScaleComparedToOldParentScale = (originalLocalScale * desiredScaleFactor);
+									Vector3 targetGlobalScale = mul(originalParentGlobalScale, targetLocalScaleComparedToOldParentScale);
+									Vector3 unclampedTargetLocalScale = div(targetGlobalScale, t.parent.lossyScale);
+									
+									
+									t.localScale = new Vector3(Mathf.Max(unclampedTargetLocalScale.x, 0.0001f), Mathf.Max(unclampedTargetLocalScale.y, 0.0001f), Mathf.Max(unclampedTargetLocalScale.z, 0.0001f));
+									t.position = originalRootSpacePosition - avadesc.transform.position;
 								}
 								else
 								{
-									t.localScale = OriginalLocalScale;
-									t.localPosition = OriginalLocalPosition;
+									t.localScale = originalLocalScale;
+									t.localPosition = originalLocalPosition;
 								}
 							}
 						}
