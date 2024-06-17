@@ -41,13 +41,13 @@ namespace Lyuma.Av3Emulator.Runtime
 		public const string CREDIT1 = "By Lyuma, hai-vr, jellejurre, anatawa12,";
 		public const string CREDIT2 = "Dreadrith, BlackStartX, bd_, Mysteryem,";
 		public const string CREDIT3 = "NotAKidoS, and V-Sekai contributors";
-		//public const string CREDITX = "Created by\nLyuma, hai-vr, jellejurre, anatawa12,\nDreadrith, BlackStartX, bd_, Mysteryem,\nNotAKidoS, and V-Sekai contributors";
+		public const string CREDITS = CREDIT1 + "\n" + CREDIT2 + "\n" + CREDIT3;
 
 		public static TextAsset READMEAsset;
 		public static TextAsset CHANGELOGAsset;
 		public static TextAsset LICENSEAsset;
 
-		[Space(12)][Header(CREDIT3)][Space(-12)][Header(CREDIT2)][Space(-12)][Header(CREDIT1)][Header(EMULATOR_VERSION_STRING)]
+		[Space(12)][Header(CREDITS)][Header(EMULATOR_VERSION_STRING)]
 		// They added multiline [Header] in Unity 2021
 		//[Header(CREDITX)]
 		public string VisitOurGithub = GIT_REPO;
