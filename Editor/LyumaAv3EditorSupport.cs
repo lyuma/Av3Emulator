@@ -83,10 +83,27 @@ namespace Lyuma.Av3Emulator.Editor
 			LyumaAv3Emulator.LICENSEAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(AssetDatabase.GUIDToAssetPath("6eadcec0dbb74827b1adc0aedbb43fb9"));
 			LyumaAv3Emulator.CHANGELOGAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(AssetDatabase.GUIDToAssetPath("f60b10c20752a814a9df2299ce2a55a5"));
 		
-			LyumaAv3Runtime.updateSelectionDelegate = (obj) => {
+			LyumaAv3Runtime.updateSelectionDelegate = (obj, mode) => {
 				if (obj == null && LyumaAv3Emulator.emulatorInstance != null) {
 					// Debug.Log("Resetting selected object: " + LyumaAv3Emulator.emulatorInstance);
 					obj = LyumaAv3Emulator.emulatorInstance.gameObject;
+				}
+				GameObject go = obj as GameObject;
+				if (go == null) {
+					Component comp = obj as Component;
+					if (comp != null) {
+						go = comp.gameObject;
+					}
+				}
+				if (mode == 1) {
+					if (go != null && go == Selection.activeGameObject) {
+						return;
+					}
+				}
+				if (mode == 2) {
+					if (go != null && go.GetComponent<LyumaAv3Runtime>() != null && Selection.activeGameObject != null && Selection.activeGameObject.GetComponent<LyumaAv3Runtime>() != null) {
+						return;
+					}
 				}
 				// Debug.Log("Setting selected object: " + go);
 				Selection.SetActiveObjectWithContext(obj, obj);
@@ -97,12 +114,12 @@ namespace Lyuma.Av3Emulator.Editor
 			{
 				if (rac == null)
 				{
-					LyumaAv3Runtime.updateSelectionDelegate(LyumaAv3Emulator.emulatorInstance);
+					LyumaAv3Runtime.updateSelectionDelegate(LyumaAv3Emulator.emulatorInstance, 1);
 					return;
 				}
 				if (LyumaAv3Emulator.emulatorInstance.SelectAssetOnChangeAnimatorToDebug)
 				{
-					LyumaAv3Runtime.updateSelectionDelegate(rac);
+					LyumaAv3Runtime.updateSelectionDelegate(rac, 0);
 					return;
 				}
 

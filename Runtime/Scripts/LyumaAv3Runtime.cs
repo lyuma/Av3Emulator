@@ -42,7 +42,7 @@ namespace Lyuma.Av3Emulator.Runtime
 	public class LyumaAv3Runtime : MonoBehaviour
 	{
 		static public Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController> animLayerToDefaultController = new Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController>();
-		public delegate void UpdateSelectionFunc(UnityEngine.Object obj);
+		public delegate void UpdateSelectionFunc(UnityEngine.Object obj, int mode);
 		public static UpdateSelectionFunc updateSelectionDelegate;
 		public delegate void UpdateAnimatorWindowFunc(RuntimeAnimatorController rac);
 		public static UpdateAnimatorWindowFunc updateAnimatorWindowDelegate;
@@ -2023,15 +2023,15 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			if (ViewREADMEManual) {
 				ViewREADMEManual = false;
-				updateSelectionDelegate(LyumaAv3Emulator.READMEAsset);
+				updateSelectionDelegate(LyumaAv3Emulator.READMEAsset, 0);
 			}
 			if (ViewChangelog) {
 				ViewChangelog = false;
-				updateSelectionDelegate(LyumaAv3Emulator.CHANGELOGAsset);
+				updateSelectionDelegate(LyumaAv3Emulator.CHANGELOGAsset, 0);
 			}
 			if (ViewMITLicense) {
 				ViewMITLicense = false;
-				updateSelectionDelegate(LyumaAv3Emulator.LICENSEAsset);
+				updateSelectionDelegate(LyumaAv3Emulator.LICENSEAsset, 0);
 			}
 			if (SendBugsOrFeedback) {
 				SendBugsOrFeedback = false;
@@ -2179,8 +2179,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		void Update() {
 			if (!(IsMirrorClone || IsShadowClone) && frameIndex == 1) {
 				playableGraph.Play();
-				if (updateSelectionDelegate != null && AvatarSyncSource == this) {
-					updateSelectionDelegate(this.gameObject);
+				if (updateSelectionDelegate != null && AvatarSyncSource == this && emulator != null && emulator.SelectAvatarOnStartup) {
+					updateSelectionDelegate(this.gameObject, 2);
 				}
 			}
 			if ((IsMirrorClone || IsShadowClone) && frameIndex == 2) {
@@ -2233,7 +2233,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (isResettingSel) {
 				isResettingSel = false;
 				if (updateSelectionDelegate != null && AvatarSyncSource == this) {
-					updateSelectionDelegate(this.gameObject);
+					updateSelectionDelegate(this.gameObject, 1);
 					PrevAnimatorToViewLiteParamsShow0 = (char)126;
 				}
 			}
@@ -2241,7 +2241,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				ResetAndHold = ResetAvatar = false;
 				isResettingSel = true;
 				if (updateSelectionDelegate != null && AvatarSyncSource == this) {
-					updateSelectionDelegate(this.emulator != null ? this.emulator.gameObject : null);
+					updateSelectionDelegate(this.emulator != null ? this.emulator.gameObject : null, 1);
 					PrevAnimatorToViewLiteParamsShow0 = (char)126;
 				}
 			}
@@ -2285,15 +2285,15 @@ namespace Lyuma.Av3Emulator.Runtime
 				GameObject.DestroyImmediate(animator);
 				// animator.runtimeAnimatorController = EmptyController;
 				if (updateSelectionDelegate != null && AvatarSyncSource == this) {
-					updateSelectionDelegate(this.emulator != null ? this.emulator.gameObject : null);
+					updateSelectionDelegate(this.emulator != null ? this.emulator.gameObject : null, 1);
 				}
 				isResetting = true;
 				isResettingSel = true;
 				return;
 			}
 			if (PrevAnimatorToViewLiteParamsShow0 == (char)127) {
-				updateSelectionDelegate(this);
-				ViewAnimatorOnlyNoParams = (VRCAvatarDescriptor.AnimLayerType)(int)126;
+				updateSelectionDelegate(this, 1);
+				// ViewAnimatorOnlyNoParams = (VRCAvatarDescriptor.AnimLayerType)(int)126;
 				PrevAnimatorToViewLiteParamsShow0 = (char)(int)ViewAnimatorOnlyNoParams;
 			}
 			if ((char)(int)ViewAnimatorOnlyNoParams != PrevAnimatorToViewLiteParamsShow0) {

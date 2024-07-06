@@ -62,7 +62,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		public LyumaAv3Runtime.TrackingTypeIndex DefaultTrackingType = LyumaAv3Runtime.TrackingTypeIndex.HeadHands;
 		[Header("Emulation")]
 		public VRCAvatarDescriptor.AnimLayerType DefaultAnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base; 
-		public bool SelectAssetOnChangeAnimatorToDebug = true;
+		public bool SelectAssetOnChangeAnimatorToDebug = false;
+		public bool SelectAvatarOnStartup = true;
 		public DescriptorCollidersSendersHelper.DescriptorExtractionType DescriptorColliders = DescriptorCollidersSendersHelper.DescriptorExtractionType.CollidersAndSenders;
 		// VRCFury accesses "RestartEmulator" using reflection, so do not rename this field:
 		public bool RestartEmulator;
@@ -125,15 +126,15 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			if (ViewREADMEManual) {
 				ViewREADMEManual = false;
-				LyumaAv3Runtime.updateSelectionDelegate(READMEAsset);
+				LyumaAv3Runtime.updateSelectionDelegate(READMEAsset, 0);
 			}
 			if (ViewChangelog) {
 				ViewChangelog = false;
-				LyumaAv3Runtime.updateSelectionDelegate(CHANGELOGAsset);
+				LyumaAv3Runtime.updateSelectionDelegate(CHANGELOGAsset, 0);
 			}
 			if (ViewMITLicense) {
 				ViewMITLicense = false;
-				LyumaAv3Runtime.updateSelectionDelegate(LICENSEAsset);
+				LyumaAv3Runtime.updateSelectionDelegate(LICENSEAsset, 0);
 			}
 		}
 
