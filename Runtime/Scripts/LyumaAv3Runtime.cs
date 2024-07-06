@@ -2177,8 +2177,15 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		void Update() {
-			if (!(IsMirrorClone || IsShadowClone) && frameIndex == 1) playableGraph.Play();
-			if ((IsMirrorClone || IsShadowClone) && frameIndex == 2) playableGraph.Play();
+			if (!(IsMirrorClone || IsShadowClone) && frameIndex == 1) {
+				playableGraph.Play();
+				if (updateSelectionDelegate != null && AvatarSyncSource == this) {
+					updateSelectionDelegate(this.gameObject);
+				}
+			}
+			if ((IsMirrorClone || IsShadowClone) && frameIndex == 2) {
+				playableGraph.Play();
+			}
 			frameIndex += 1;
 			if (animator == null)
 			{

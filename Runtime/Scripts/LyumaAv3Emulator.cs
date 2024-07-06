@@ -64,6 +64,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		public VRCAvatarDescriptor.AnimLayerType DefaultAnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base; 
 		public bool SelectAssetOnChangeAnimatorToDebug = true;
 		public DescriptorCollidersSendersHelper.DescriptorExtractionType DescriptorColliders = DescriptorCollidersSendersHelper.DescriptorExtractionType.CollidersAndSenders;
+		// VRCFury accesses "RestartEmulator" using reflection, so do not rename this field:
 		public bool RestartEmulator;
 		private bool RestartingEmulator;
 		public bool disableRadialMenu = false;
@@ -97,9 +98,15 @@ namespace Lyuma.Av3Emulator.Runtime
 		static public LyumaAv3Emulator emulatorInstance;
 		static public RuntimeAnimatorController EmptyController;
 
+		// VRCFury uses reflection to access "runtimes", so do not rename:
 		[NonSerialized] public List<LyumaAv3Runtime> runtimes = new List<LyumaAv3Runtime>();
+		// VRCFury uses reflection to access "forceActiveRuntimes", so do not rename:
 		[NonSerialized] public LinkedList<LyumaAv3Runtime> forceActiveRuntimes = new LinkedList<LyumaAv3Runtime>();
+		// VRCFury uses reflection to access "scannedAvatars", so we must keep this field empty:
 		[NonSerialized] public HashSet<VRCAvatarDescriptor> scannedAvatars = new HashSet<VRCAvatarDescriptor>();
+		// We keep track of the list of enabled avatars from the previous time.
+		[NonSerialized] public HashSet<VRCAvatarDescriptor> scannedAvatars2 = new HashSet<VRCAvatarDescriptor>();
+		[NonSerialized] public HashSet<VRCAvatarDescriptor> enabledAvatars = new HashSet<VRCAvatarDescriptor>();
 
 		private bool usedLegacyAwake = false;
 
@@ -219,14 +226,24 @@ namespace Lyuma.Av3Emulator.Runtime
 		private void Start()
 		{
 			ScanForAvatars();
+			foreach (var avadesc in scannedAvatars2) {
+				if (!enabledAvatars.Contains(avadesc)) {
+					avadesc.gameObject.SetActive(true);
+				}
+			}
+			enabledAvatars.UnionWith(scannedAvatars2);
 		}
 
 		private void ScanForAvatars() {
-			VRCAvatarDescriptor[] avatars = FindObjectsOfType<VRCAvatarDescriptor>()
-				.Where(avatar => !scannedAvatars.Contains(avatar))
-				.ToArray();
-			scannedAvatars.UnionWith(avatars);
-			Debug.Log(this.name + ": Setting up Av3Emulator on "+avatars.Length + " avatars.", this);
+			HashSet<VRCAvatarDescriptor> avatars = new HashSet<VRCAvatarDescriptor>();
+			avatars.UnionWith(FindObjectsOfType<VRCAvatarDescriptor>()
+				.Where(avatar => !scannedAvatars2.Contains(avatar)));
+			Debug.Log(this.name + ": Setting up Av3Emulator on " + avatars.Count + " avatars.", this);
+			ScanForAvatarsFromSet(avatars);
+		}
+
+		private void ScanForAvatarsFromSet(HashSet<VRCAvatarDescriptor> avatars) {
+			scannedAvatars2.UnionWith(avatars);
 			foreach (var avadesc in avatars)
 			{
 				if (avadesc.GetComponents<Component>().Any(x => x.GetType().Name == "PipelineSaver")) {
@@ -331,7 +348,9 @@ namespace Lyuma.Av3Emulator.Runtime
 				RestartingEmulator = true;
 				runtimes.Clear();
 				forceActiveRuntimes.Clear();
-				scannedAvatars.Clear();
+				Debug.Log(this.name + ": Restarting Av3Emulator on " + scannedAvatars2.Count + " avatars.", this);
+				ScanForAvatarsFromSet(scannedAvatars2);
+				enabledAvatars.Clear();
 			}
 			foreach (var runtime in forceActiveRuntimes) {
 				runtime.gameObject.SetActive(true);
