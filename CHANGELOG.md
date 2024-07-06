@@ -1,5 +1,13 @@
 ### New features in v 3.4.3:
 
+3.4.5:
+
+- Remove use of dynamic completely, which should fix Av3Emulator on Android. Thanks, jellejurre.
+- Allow selection of animator layers without selecting the animators in the projects panel. Thanks, nekobako
+- Fix for mirror detection in animator start. Thanks, jellejurre
+- Auto-select avatar by default. There is a setting to turn this off.
+- Workaround VRCFury behavior causing the avatar to disable itself in play mode.
+
 3.4.4:
 
 - No longer force maxiumum version for VRCSDK
