@@ -1748,8 +1748,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			// Plays the Graph.
 			playableGraph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
 			Debug.Log(this.name + " : " + GetType() + " awoken and ready to Play.", this);
-			playableGraph.Play();
-		}
+		}	
 
 		Dictionary<string, float> EarlyRefreshExpressionParameters() {
 			Dictionary<string, float> stageNameToValue = new Dictionary<string, float>();
@@ -2176,8 +2175,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		void Update() {
-			if ((IsMirrorClone || IsShadowClone) && frameIndex == 0) playableGraph.Stop();
-			if ((IsMirrorClone || IsShadowClone) && frameIndex == 1) playableGraph.Play();
+			if (!(IsMirrorClone || IsShadowClone) && frameIndex == 1) playableGraph.Play();
+			if ((IsMirrorClone || IsShadowClone) && frameIndex == 2) playableGraph.Play();
 			frameIndex += 1;
 			if (animator == null)
 			{
