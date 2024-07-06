@@ -588,7 +588,8 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		private (ParentConstraint, Vector3[])[] ParentConstraints;
 		private Cloth[] ClothComponents;
-		private Component[] headChops;
+		private Component[] headChops; 
+		
 		private Dictionary<Transform, HeadChopDataStorage> headChopData;
 
 		private class HeadChopDataStorage
@@ -1043,8 +1044,9 @@ namespace Lyuma.Av3Emulator.Runtime
 			exitState.SetValue(x, Delegate.Combine((Delegate)exitState.GetValue(x), Delegate.CreateDelegate(exitDelegateType, typeof(LyumaAv3Runtime).GetMethod(nameof(SetupExitState), BindingFlags.Static | BindingFlags.Public))));
 		}
 
-		public static void SetupEnterState(dynamic playAudio, Animator animator)
+		public static void SetupEnterState(object playAudio, Animator animator)
 		{
+			Type audioSubType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 			Type applySettingsType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio+ApplySettings, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 			Type randomOrderType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio+Order, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 			LyumaAv3Runtime runtime;
@@ -1070,89 +1072,88 @@ namespace Lyuma.Av3Emulator.Runtime
 				return; // We add a copy of every state behaviour, which is fine when operations are idempotent, but since these are not, we need to ignore every second SetupEnterState, since those get called on both behaviours in succession.
 			}
 
-			AudioSource audioSource = animator.transform.Find(playAudio.SourcePath)?.GetComponent<AudioSource>();
+			AudioSource audioSource = animator.transform.Find((string)audioSubType.GetField("SourcePath").GetValue(playAudio))?.GetComponent<AudioSource>();
 			if (audioSource == null)
 			{
 				return;
 			}
 
-			if (playAudio.StopOnEnter)
+			if ((bool)audioSubType.GetField("StopOnEnter").GetValue(playAudio))
 			{
 				audioSource.Stop();
 			}
 
-			dynamic alwaysApply =  Enum.ToObject(applySettingsType, 0);
-			dynamic applyIfStopped = Enum.ToObject(applySettingsType, 1);
+			object alwaysApply = applySettingsType.GetEnumValues().GetValue(0);
+			object applyIfStopped = applySettingsType.GetEnumValues().GetValue(1);
 
-			if (playAudio.LoopApplySettings == alwaysApply ||
-			    playAudio.LoopApplySettings == applyIfStopped &&
+			if (audioSubType.GetField("LoopApplySettings").GetValue(playAudio).ToString() == alwaysApply.ToString() ||
+			    audioSubType.GetField("LoopApplySettings").GetValue(playAudio).ToString() == applyIfStopped.ToString() &&
 			    !audioSource.isPlaying)
 			{
-				audioSource.loop = (bool)playAudio.Loop;
+				audioSource.loop = (bool)audioSubType.GetField("Loop").GetValue(playAudio);
 			}
 
-			if (playAudio.PitchApplySettings == alwaysApply ||
-			    playAudio.PitchApplySettings == applyIfStopped &&
+			if (audioSubType.GetField("PitchApplySettings").GetValue(playAudio).ToString() == alwaysApply.ToString() ||
+			    audioSubType.GetField("PitchApplySettings").GetValue(playAudio).ToString() == applyIfStopped.ToString() &&
 			    !audioSource.isPlaying)
 			{
-				Vector2 pitch = (Vector2)playAudio.Pitch;
+				Vector2 pitch = (Vector2)audioSubType.GetField("Pitch").GetValue(playAudio);
 				audioSource.pitch = UnityEngine.Random.Range(pitch.x, pitch.y);
 			}
 			
-			if (playAudio.VolumeApplySettings == alwaysApply ||
-			    playAudio.VolumeApplySettings == applyIfStopped &&
+			if (audioSubType.GetField("VolumeApplySettings").GetValue(playAudio).ToString() == alwaysApply.ToString() ||
+			    audioSubType.GetField("VolumeApplySettings").GetValue(playAudio).ToString() == applyIfStopped.ToString() &&
 			    !audioSource.isPlaying)
 			{
-				Vector2 volume = (Vector2)playAudio.Volume;
+				Vector2 volume = (Vector2)audioSubType.GetField("Volume").GetValue(playAudio);
 				audioSource.volume = UnityEngine.Random.Range(volume.x, volume.y);
 			}
 
-			AudioClip[] clips = (AudioClip[])playAudio.Clips;
+			AudioClip[] clips = (AudioClip[])audioSubType.GetField("Clips").GetValue(playAudio);
 			if (clips.Length > 0 && 
-			    (playAudio.ClipsApplySettings == alwaysApply ||
-			     playAudio.ClipsApplySettings == applyIfStopped && !audioSource.isPlaying))
+			    (audioSubType.GetField("ClipsApplySettings").GetValue(playAudio).ToString() == alwaysApply.ToString() ||
+			     audioSubType.GetField("ClipsApplySettings").GetValue(playAudio).ToString() == applyIfStopped.ToString() && !audioSource.isPlaying))
 			{
 				AudioClip clip = null;
 				
-				dynamic Random = Enum.ToObject(randomOrderType, 0);
-				dynamic UniqueRandom =  Enum.ToObject(randomOrderType, 1);
-				dynamic Roundabout =  Enum.ToObject(randomOrderType, 2);
-				dynamic Parameter =  Enum.ToObject(randomOrderType, 3);
-				dynamic playbackOrder = playAudio.PlaybackOrder;
-				
-				if (playbackOrder == Random)
+				object Random = randomOrderType.GetEnumValues().GetValue(0);
+				object UniqueRandom = randomOrderType.GetEnumValues().GetValue(1);
+				object Roundabout = randomOrderType.GetEnumValues().GetValue(2);
+				object Parameter = randomOrderType.GetEnumValues().GetValue(3);
+				object playbackOrder = audioSubType.GetField("PlaybackOrder").GetValue(playAudio);
+				FieldInfo playbackIndex = audioSubType.GetField("playbackIndex");
+				if (playbackOrder.ToString() == Random.ToString())
 				{
 					int newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
-					playAudio.playbackIndex = newPlayIndex;
+					playbackIndex.SetValue(playAudio, newPlayIndex);
 					clip = clips[newPlayIndex];
 				}
 
 				else if (playbackOrder == UniqueRandom)
 				{
 					int newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
-					while (newPlayIndex == (int)playAudio.playbackIndex && clips.Length > 1)
+					while (newPlayIndex == (int)playbackIndex.GetValue(playAudio) && clips.Length > 1)
 					{
 						newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
 					}
-
-					playAudio.playbackIndex = newPlayIndex;
+					playbackIndex.SetValue(playAudio, newPlayIndex);
 					clip = clips[newPlayIndex];
 				}
 
 				else if (playbackOrder == Roundabout)
 				{
-					int newPlayIndex = ((int)playAudio.playbackIndex + 1) % clips.Length;
-					playAudio.playbackIndex = newPlayIndex;
+					int newPlayIndex = ((int)playbackIndex.GetValue(playAudio) + 1) % clips.Length;
+					playbackIndex.SetValue(playAudio, newPlayIndex);
 					clip = clips[newPlayIndex];
 				}
 				
 				else if (playbackOrder == Parameter)
 				{
-					string parameterName = (string)playAudio.ParameterName;
+					string parameterName = (string)audioSubType.GetField("ParameterName").GetValue(playAudio);
 					int? newPlayIndex = runtime.Ints.FirstOrDefault(x => x.name == parameterName)?.value;
 					if (newPlayIndex.HasValue && newPlayIndex.Value < clips.Length)
 					{
-						playAudio.playbackIndex = newPlayIndex.Value;
+						playbackIndex.SetValue(playAudio, newPlayIndex.Value);
 						clip = clips[newPlayIndex.Value];
 					}
 				}
@@ -1160,14 +1161,15 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 
 
-			if ((bool)playAudio.PlayOnEnter && audioSource.clip != null) 
+			if ((bool)audioSubType.GetField("PlayOnEnter").GetValue(playAudio) && audioSource.clip != null)
 			{
-				audioSource.PlayDelayed((float)playAudio.DelayInSeconds);
+				audioSource.PlayDelayed((float)audioSubType.GetField("DelayInSeconds").GetValue(playAudio));
 			}
 		}
 
-		public static void SetupExitState(dynamic playAudio, Animator animator)
+		public static void SetupExitState(object playAudio, Animator animator)
 		{
+			Type audioSubType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 			LyumaAv3Runtime runtime;
 			if (!getTopLevelRuntime("VRCAnimatorPlayAudio", animator, out runtime)) {
 				return;
@@ -1191,18 +1193,18 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 			}
 
-			AudioSource audioSource = animator.transform.Find(playAudio.SourcePath)?.GetComponent<AudioSource>();
+			AudioSource audioSource = animator.transform.Find((string)audioSubType.GetField("SourcePath").GetValue(playAudio))?.GetComponent<AudioSource>();
 			if (audioSource == null)
 			{
 				return;
 			}
 				
-			if (playAudio.StopOnExit)
+			if ((bool)audioSubType.GetField("StopOnExit").GetValue(playAudio))
 			{
 				audioSource.Stop();
 			}
 
-			if (playAudio.PlayOnExit)
+			if ((bool)audioSubType.GetField("PlayOnExit").GetValue(playAudio))
 			{
 				audioSource.Play();
 			}
@@ -2310,22 +2312,24 @@ namespace Lyuma.Av3Emulator.Runtime
 					head.localScale = EnableHeadScaling ? new Vector3(0.0001f, 0.0001f, 0.0001f) : defaultHeadScale; // head bone is set to 0.0001 locally (not multiplied
 
 					Type headChopType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+					Type headChopBoneType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop+HeadChopBone, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 					if (headChopType != null)
 					{
 						Vector3 div(Vector3 x, Vector3 y) => new Vector3(x.x / y.x, x.y / y.y, x.z / y.z);
 						Vector3 mul(Vector3 x, Vector3 y) => new Vector3(x.x * y.x, x.y * y.y, x.z * y.z);
+
 						if (headChopData == null)
 						{
 							headChops = GetComponentsInChildren(headChopType, true);
 							headChopData = new Dictionary<Transform, HeadChopDataStorage>();
 							for (var i = 0; i < headChops.Length; i++)
 							{
-								dynamic headChop = headChops[i];
-								object[] bones = headChop.targetBones;
+								object[] bones = (object[]) headChopType.GetField("targetBones").GetValue(headChops[i]);
 								for (var j = 0; j < bones.Length; j++)
 								{
-									dynamic bone = bones[j];
-									Transform t = bone.transform;
+									object bone = bones[j];
+									Transform t = (Transform)headChopBoneType.GetField("transform").GetValue(bone);
+									if (t == null) continue;
 									headChopData[t] = new HeadChopDataStorage()
 									{
 										originalLocalPosition = t.localPosition,
@@ -2338,13 +2342,18 @@ namespace Lyuma.Av3Emulator.Runtime
 						}
 						for (var i = 0; i < headChops.Length; i++)
 						{
-							dynamic headChop = headChops[i];
-							object[] bones = headChop.targetBones;
+							object headChop = headChops[i];
+							object[] bones = (object[]) headChopType.GetField("targetBones").GetValue(headChops[i]);
 							for (var j = 0; j < bones.Length; j++)
 							{
-								dynamic bone = bones[j];
-								Transform t = bone.transform;
-								float desiredScaleFactor = bone.scaleFactor * headChop.globalScaleFactor;
+								object bone = bones[j];
+								Transform t = (Transform)headChopBoneType.GetField("transform").GetValue(bone);
+								if (t == null) continue;
+								bool canApply = (bool)headChopBoneType.GetMethod("CanApply").Invoke(bone, new object[] { VRMode });
+								float scaleFactor = (float)headChopBoneType.GetField("scaleFactor").GetValue(bone);
+								float globalScaleFactor = (float)headChopType.GetField("globalScaleFactor").GetValue(headChops[i]);
+								
+								float desiredScaleFactor = scaleFactor * globalScaleFactor;
 
 								var data = headChopData[t];
 								Vector3 originalLocalPosition = data.originalLocalPosition;
@@ -2354,7 +2363,7 @@ namespace Lyuma.Av3Emulator.Runtime
 								Vector3 originalGlobalScale = data.originalGlobalScale;
 
 								
-								if (EnableHeadScaling && bone.CanApply(VRMode) && headChop.isActiveAndEnabled)
+								if (EnableHeadScaling && canApply && ((Behaviour)headChop).isActiveAndEnabled)
 								{
 									Vector3 originalParentGlobalScale = div(originalGlobalScale, originalLocalScale);
 									Vector3 targetLocalScaleComparedToOldParentScale = (originalLocalScale * desiredScaleFactor);
