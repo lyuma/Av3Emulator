@@ -805,13 +805,6 @@ namespace Lyuma.Av3Emulator.Runtime
 									}
 									whichController++;
 								}
-								whichController = 0;
-								foreach (var p in runtime.playables) {
-									if (bp.hasTrigger[whichController]) {
-										p.SetTrigger(actualName);
-									}
-									whichController++;
-								}
 								bp.lastValue = newValue;
 							}
 							bp.value = newValue;
@@ -2900,6 +2893,9 @@ namespace Lyuma.Av3Emulator.Runtime
 					case AnimatorControllerParameterType.Int:
 						playable.SetInteger(id, (int)Math.Round(floatValue, 0));
 						break;
+					case AnimatorControllerParameterType.Trigger:
+						playable.SetTrigger(id);
+						break;
 				}
 			}
 			if (value is int intValue)
@@ -2915,6 +2911,9 @@ namespace Lyuma.Av3Emulator.Runtime
 					case AnimatorControllerParameterType.Int:
 						playable.SetInteger(id, intValue);
 						break;
+					case AnimatorControllerParameterType.Trigger:
+						playable.SetTrigger(id);
+						break;
 				}
 			}
 			if (value is bool boolValue)
@@ -2929,6 +2928,9 @@ namespace Lyuma.Av3Emulator.Runtime
 						break;
 					case AnimatorControllerParameterType.Int:
 						playable.SetInteger(id, boolValue ? 1 : 0);
+						break;
+					case AnimatorControllerParameterType.Trigger:
+						playable.SetTrigger(id);
 						break;
 				}
 			}
