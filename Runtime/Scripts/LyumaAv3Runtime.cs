@@ -593,6 +593,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		private Component[] headChops; 
 		
 		private Dictionary<Transform, HeadChopDataStorage> headChopData;
+		private static int globalContactPlayerId;
+		private  int contactPlayerId;
 
 		private class HeadChopDataStorage
 		{
@@ -1260,7 +1262,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				Debug.Log("Deduplicating Awake() call if we already got awoken by our children.", this);
 				return;
 			}
-
+			
 			// Debug.Log("AWOKEN " + gameObject.name, this);
 			attachedAnimators = new HashSet<Animator>();
 			if (AvatarSyncSource == null) {
@@ -1286,6 +1288,8 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 			}
 
+			IsLocal = AvatarSyncSource == this;
+			
 			if (this.emulator != null) {
 				DebugDuplicateAnimator = this.emulator.DefaultAnimatorToDebug;
 				ViewAnimatorOnlyNoParams = this.emulator.DefaultAnimatorToDebug;
@@ -1416,6 +1420,35 @@ namespace Lyuma.Av3Emulator.Runtime
 					return new Vector3(offset.x / lossyScale.x, offset.y / lossyScale.y, offset.z / lossyScale.z); // We want offsets to be in world space;
 				}).ToArray())).ToArray();
 			ClothComponents = gameObject.GetComponentsInChildren<Cloth>(true).ToArray();
+
+			if (this.IsMirrorClone || this.IsShadowClone)
+			{
+				contactPlayerId = this.AvatarSyncSource.contactPlayerId;
+			}
+			else
+			{
+				contactPlayerId = globalContactPlayerId++;
+			}
+
+			if (this.emulator.EnablePlayerContactPermissions)
+			{
+				ContactBase[] contacts = gameObject.GetComponentsInChildren<ContactBase>(true).ToArray();
+				if (!IsLocal)
+				{
+					foreach (ContactBase contact in contacts)
+					{
+						if (contact is ContactReceiver receiver)
+						{
+							if (receiver.localOnly) GameObject.DestroyImmediate(contact);
+						}
+					}
+				}
+				else
+				{
+					foreach (ContactBase contact in contacts) contact.playerId = contactPlayerId;
+				}
+
+			}
 		}
 
 		public void CreateMirrorClone() {

@@ -71,6 +71,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool disableRadialMenu = false;
 		private bool lastDisableRadialMenu = false;
 		public bool EnableAvatarScaling = true;
+		public bool EnablePlayerContactPermissions = false;
 		[Header("Unity Integrations")]
 		public bool RunPreprocessAvatarHook = true;
 		public bool DisableAvatarDynamicsIntegration;
