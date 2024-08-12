@@ -1814,7 +1814,7 @@ namespace Lyuma.Av3Emulator.Runtime
 						param.synced = networkSynced;
 						param.name = stageParam.name;
 						param.value = (int)lastDefault;
-						param.lastValue = 0;
+						param.lastValue = param.value + 1;
 						IntToIndex[param.name] = Ints.Count;
 						Ints.Add(param);
 					}
@@ -1826,7 +1826,7 @@ namespace Lyuma.Av3Emulator.Runtime
 						param.name = stageParam.name;
 						param.value = lastDefault;
 						param.exportedValue = lastDefault;
-						param.lastValue = 0;
+						param.lastValue = param.value + 1;
 						FloatToIndex[param.name] = Floats.Count;
 						Floats.Add(param);
 					}
@@ -1837,7 +1837,7 @@ namespace Lyuma.Av3Emulator.Runtime
 						param.synced = networkSynced;
 						param.name = stageParam.name;
 						param.value = lastDefault != 0.0;
-						param.lastValue = false;
+						param.lastValue = !param.value ;
 						param.hasBool = new bool[playables.Count];
 						param.hasTrigger = new bool[playables.Count];
 						BoolToIndex[param.name] = Bools.Count;
