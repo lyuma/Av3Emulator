@@ -3042,7 +3042,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			DataToShoveIntoOSCAnyway.Clear();
 			if (OSCConfigurationFile.SendRecvAllParamsNotInJSON) {
 				foreach (var b in Bools) {
-					if (b.synced) {
+					if (!b.name.Contains("(local)")) {
 						messages.Add(new A3ESimpleOSC.OSCMessage {
 							arguments = new object[1] {(object)(int)((bool)b.value ? 1 : 0)},
 							path = "/avatar/parameters/" + b.name,
@@ -3051,7 +3051,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					}
 				}
 				foreach (var i in Ints) {
-					if (i.synced) {
+					if (!i.name.Contains("(local)")) {
 						messages.Add(new A3ESimpleOSC.OSCMessage {
 							arguments = new object[1] {(object)(int)i.value},
 							path = "/avatar/parameters/" + i.name,
@@ -3060,7 +3060,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					}
 				}
 				foreach (var f in Floats) {
-					if (f.synced) {
+					if (!f.name.Contains("(local)")) {
 						messages.Add(new A3ESimpleOSC.OSCMessage {
 							arguments = new object[1] {(object)(float)f.value},
 							path = "/avatar/parameters/" + f.name,
@@ -3075,19 +3075,19 @@ namespace Lyuma.Av3Emulator.Runtime
 						float outputf = 0.0f;
 						string typ = "?";
 						if (BoolToIndex.TryGetValue(prop.name, out var bidx)) {
-							if (!Bools[bidx].synced) {
+							if (Bools[bidx].name.Contains("(local)")) {
 								continue;
 							}
 							outputf = Bools[bidx].value ? 1.0f : 0.0f;
 							typ = "bool";
 						} else if (IntToIndex.TryGetValue(prop.name, out var iidx)) {
-							if (!Ints[iidx].synced) {
+							if (Ints[iidx].name.Contains("(local)")) {
 								continue;
 							}
 							outputf = (float)Ints[iidx].value;
 							typ = "int";
 						} else if (FloatToIndex.TryGetValue(prop.name, out var fidx)) {
-							if (!Floats[fidx].synced) {
+							if (Floats[fidx].name.Contains("(local)")) {
 								continue;
 							}
 							outputf = Floats[fidx].value;
