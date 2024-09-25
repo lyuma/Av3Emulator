@@ -221,10 +221,31 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 		}
 
+		private bool isBeingSynced(string paramName)
+		{
+			int idx;
+			if (IntToIndex.TryGetValue(paramName, out idx)) {
+				if (Ints[idx].synced) {
+					return true;
+				}
+			}
+			if (FloatToIndex.TryGetValue(paramName, out idx)) {
+				if (Floats[idx].synced) {
+					return true;
+				}
+			}
+			if (BoolToIndex.TryGetValue(paramName, out idx)) {
+				if (Bools[idx].synced) {
+					return true;
+				}
+			}
+			return false;
+		}
+
 		public void assignContactParameters(VRCContactReceiver[] behaviours) {
 			AvDynamicsContactReceivers = behaviours;
 			foreach (var mb in AvDynamicsContactReceivers) {
-				if (!IsLocal && mb.localOnly)
+				if (!IsLocal && (mb.localOnly || isBeingSynced(mb.parameter)))
 				{
 					continue;
 				}				
@@ -243,27 +264,38 @@ namespace Lyuma.Av3Emulator.Runtime
 				Av3EmuParameterAccess accessInst = new Av3EmuParameterAccess();
 				accessInst.runtime = this;
 				accessInst.paramName = parameter + VRCPhysBone.PARAM_ANGLE;
-				mb.param_Angle = accessInst;
-				accessInst.floatVal = mb.param_AngleValue;
+				if (IsLocal || !isBeingSynced(accessInst.paramName))
+				{
+					mb.param_Angle = accessInst;
+					accessInst.floatVal = mb.param_AngleValue;
+				}
 				accessInst = new Av3EmuParameterAccess();
 				accessInst.runtime = this;
 				accessInst.paramName = parameter + VRCPhysBone.PARAM_ISGRABBED;
-				mb.param_IsGrabbed = accessInst;
-				accessInst.boolVal = mb.param_IsGrabbedValue;
+				if (IsLocal || !isBeingSynced(accessInst.paramName))
+				{
+					mb.param_IsGrabbed = accessInst;
+					accessInst.boolVal = mb.param_IsGrabbedValue;
+				}
 				accessInst = new Av3EmuParameterAccess();
 				accessInst.runtime = this;
 				accessInst.paramName = parameter + VRCPhysBone.PARAM_STRETCH;
-				mb.param_Stretch = accessInst;
-				accessInst.floatVal = mb.param_StretchValue;
-				
+				if (IsLocal || !isBeingSynced(accessInst.paramName))
+				{
+					mb.param_Stretch = accessInst;
+					accessInst.floatVal = mb.param_StretchValue;
+				}
 				FieldInfo posedParam = typeof(VRCPhysBoneBase).GetField("PARAM_ISPOSED", BindingFlags.Public | BindingFlags.Static);
 				if (posedParam != null)
 				{
 					accessInst = new Av3EmuParameterAccess();
 					accessInst.runtime = this;
 					accessInst.paramName = parameter + posedParam.GetValue(null);
-					typeof(VRCPhysBoneBase).GetField("param_IsPosed").SetValue(mb, accessInst);
-					accessInst.boolVal = (bool)typeof(VRCPhysBoneBase).GetField("param_IsPosedValue").GetValue(mb);
+					if (IsLocal || !isBeingSynced(accessInst.paramName))
+					{
+						typeof(VRCPhysBoneBase).GetField("param_IsPosed").SetValue(mb, accessInst);
+						accessInst.boolVal = (bool)typeof(VRCPhysBoneBase).GetField("param_IsPosedValue").GetValue(mb);
+					}
 				}
 				
 				FieldInfo squishParam = typeof(VRCPhysBoneBase).GetField("PARAM_SQUISH", BindingFlags.Public | BindingFlags.Static);
@@ -272,8 +304,11 @@ namespace Lyuma.Av3Emulator.Runtime
 					accessInst = new Av3EmuParameterAccess();
 					accessInst.runtime = this;
 					accessInst.paramName = parameter + squishParam.GetValue(null);
-					typeof(VRCPhysBoneBase).GetField("param_Squish").SetValue(mb, accessInst);
-					accessInst.floatVal = (float)typeof(VRCPhysBoneBase).GetField("param_SquishValue").GetValue(mb);
+					if (IsLocal || !isBeingSynced(accessInst.paramName))
+					{
+						typeof(VRCPhysBoneBase).GetField("param_Squish").SetValue(mb, accessInst);
+						accessInst.floatVal = (float)typeof(VRCPhysBoneBase).GetField("param_SquishValue").GetValue(mb);
+					}
 				}
 				// Debug.Log("Assigned strech access " + physBoneState.param_Stretch.GetValue(mb) + " to param " + parameter + ": was " + old_value);
 			}
