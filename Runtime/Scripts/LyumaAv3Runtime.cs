@@ -538,7 +538,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					this.expressionValue = value;
 				}
 			}
-			[HideInInspector] public float lastValue;
+			[HideInInspector] public float? lastValue;
 		}
 		//[Header("User-generated inputs")]
 		public List<FloatParam> Floats = new List<FloatParam>();
@@ -551,7 +551,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			public string name;
 			[HideInInspector] public bool synced;
 			public int value;
-			[HideInInspector] public int lastValue;
+			[HideInInspector] public int? lastValue;
 		}
 		public List<IntParam> Ints = new List<IntParam>();
 		public Dictionary<string, int> IntToIndex = new Dictionary<string, int>();
@@ -564,7 +564,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			public string name;
 			[HideInInspector] public bool synced;
 			public bool value;
-			[HideInInspector] public bool lastValue;
+			[HideInInspector] public bool? lastValue;
 			[HideInInspector] public bool[] hasTrigger;
 			[HideInInspector] public bool[] hasBool;
 		}
@@ -1840,7 +1840,7 @@ namespace Lyuma.Av3Emulator.Runtime
 						param.synced = networkSynced;
 						param.name = stageParam.name;
 						param.value = (int)lastDefault;
-						param.lastValue = 0;
+						param.lastValue = null;
 						IntToIndex[param.name] = Ints.Count;
 						Ints.Add(param);
 					}
@@ -1852,7 +1852,7 @@ namespace Lyuma.Av3Emulator.Runtime
 						param.name = stageParam.name;
 						param.value = lastDefault;
 						param.exportedValue = lastDefault;
-						param.lastValue = 0;
+						param.lastValue = null;
 						FloatToIndex[param.name] = Floats.Count;
 						Floats.Add(param);
 					}
@@ -1863,7 +1863,7 @@ namespace Lyuma.Av3Emulator.Runtime
 						param.synced = networkSynced;
 						param.name = stageParam.name;
 						param.value = lastDefault != 0.0;
-						param.lastValue = false;
+						param.lastValue = null;
 						param.hasBool = new bool[playables.Count];
 						param.hasTrigger = new bool[playables.Count];
 						BoolToIndex[param.name] = Bools.Count;
@@ -2791,7 +2791,8 @@ namespace Lyuma.Av3Emulator.Runtime
 						{
 							float f = (float)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Float);
 							if (fparam != f) {
-								param.value = param.lastValue = f;
+								param.value = f;
+								param.lastValue = param.value;
 								if (!playable.IsParameterControlledByCurve(paramid)) {
 									param.exportedValue = param.value;
 								}
@@ -2808,7 +2809,8 @@ namespace Lyuma.Av3Emulator.Runtime
 						if (paramterInts.TryGetValue(paramid, out iparam)) {
 							int i = (int)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Int);
 							if (iparam != i) {
-								param.value = param.lastValue = i;
+								param.value = i;
+								param.lastValue = param.value;
 							}
 						}
 						paramterInts[paramid] = param.value;
@@ -2822,7 +2824,8 @@ namespace Lyuma.Av3Emulator.Runtime
 						if (paramterBools.TryGetValue(paramid, out bparam)) {
 							bool b = (bool)GetTypeWithMismatch(playable, paramid, inType, AnimatorControllerParameterType.Bool);
 							if (bparam != b) {
-								param.value = param.lastValue = b;
+								param.value = b;
+								param.lastValue = param.value;
 							}
 						}
 						paramterBools[paramid] = param.value;
