@@ -64,7 +64,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		public VRCAvatarDescriptor.AnimLayerType DefaultAnimatorToDebug = VRCAvatarDescriptor.AnimLayerType.Base; 
 		public bool SelectAssetOnChangeAnimatorToDebug = false;
 		public bool SelectAvatarOnStartup = true;
-		public DescriptorCollidersSendersHelper.DescriptorExtractionType DescriptorColliders = DescriptorCollidersSendersHelper.DescriptorExtractionType.CollidersAndSenders;
+		public DescriptorCollidersSendersHelper.DescriptorExtractionType DescriptorColliders = DescriptorCollidersSendersHelper.DescriptorExtractionType.SendersOnly;
 		// VRCFury accesses "RestartEmulator" using reflection, so do not rename this field:
 		public bool RestartEmulator;
 		private bool RestartingEmulator;
