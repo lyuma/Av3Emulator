@@ -1,4 +1,16 @@
-### New features in v 3.4.3:
+### New features in v 3.4.6:
+
+3.4.6:
+
+Thanks to jellejurre for their work in all of these changes.
+
+- Also emit unsynced variables to OSC.
+- If physbone/contacts are synced, dont set the access insts on remote #187
+- Performance fix: Change default emulator settings to disable colliders from avatar descriptor.
+- Use nullable lastValue instead
+- Fix default parameter values not applied if they are 0 or false
+- Add support for mismatched parameter Trigger types
+- Support contact permissions
 
 3.4.5:
 
