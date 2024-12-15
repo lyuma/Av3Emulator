@@ -53,7 +53,11 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 					Vector3 vel = runtime.Velocity;
 					return vel[axis];
 				}
+#if GESTURE_MANAGER_3_9_3
+				protected override void InternalSet(float value, object ignored) {
+#else
 				protected override void InternalSet(float value) {
+#endif
 					Vector3 vel = runtime.Velocity;
 					if (axis == 3) {
 						vel = vel.normalized * value;
@@ -86,7 +90,11 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 						return (float)(int)Convert.ChangeType(property.GetValue(runtime), typeof(int));
 					}
 				}
+#if GESTURE_MANAGER_3_9_3
+				protected override void InternalSet(float value, object ignored) {
+#else
 				protected override void InternalSet(float value) {
+#endif
 					// UnityEngine.Debug.Log("Internal set bool " + param.name + " to " + value + " was " + param.value + "(" + param.lastValue + ")");
 					if (property.FieldType == typeof(bool)) {
 						property.SetValue(runtime, value > 0.5f);
@@ -109,7 +117,11 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 #endif
 					return param.value ? 1.0f : 0.0f;
 				}
+#if GESTURE_MANAGER_3_9_3
+				protected override void InternalSet(float value, object ignored) {
+#else
 				protected override void InternalSet(float value) {
+#endif
 					UnityEngine.Debug.Log("Internal set bool " + param.name + " to " + value + " was " + param.value + "(" + param.lastValue + ")");
 					param.value = value > 0.5f ? true: false;
 				}
@@ -124,7 +136,12 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 #endif
 					return param.value;
 				}
+				
+#if GESTURE_MANAGER_3_9_3
+				protected override void InternalSet(float value, object ignored) {
+#else
 				protected override void InternalSet(float value) {
+#endif
 					UnityEngine.Debug.Log("Internal set int " + param.name + " to " + value + " was " + param.value + "(" + param.lastValue + ")");
 					param.value = (int)value;
 				}
@@ -139,7 +156,11 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 #endif
 					return param.value;
 				}
+#if GESTURE_MANAGER_3_9_3
+				protected override void InternalSet(float value, object ignored) {
+#else
 				protected override void InternalSet(float value) {
+#endif
 					param.value = value;
 					param.exportedValue = value;
 				}
