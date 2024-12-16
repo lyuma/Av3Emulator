@@ -52,8 +52,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		//[Header(CREDITX)]
 		public string VisitOurGithub = GIT_REPO;
 		public bool ViewREADMEManual;
-		public bool ViewChangelog;
-		[Header("Lyuma's Av3Emulator is open source!")][Space(-12)]
+		public bool ViewChangelog;[Space(-12)]
+		[Header("Lyuma's Av3Emulator is open source!")]
 		public bool ViewMITLicense;
 		public bool SendBugsOrFeedback;
 		[Header("Fake VR or Desktop mode selection")]
@@ -73,6 +73,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool EnableAvatarScaling = true;
 		public bool EnablePlayerContactPermissions = false;
 		[Header("Unity Integrations")]
+		[Tooltip("Runs the same function as the Avatar Descriptor Editor Inspector. May disrupt custom usages of colliders in Debug mode.")]
+		public bool ForceUpdateDescriptorColliders = false;
 		public bool RunPreprocessAvatarHook = true;
 		public bool DisableAvatarDynamicsIntegration;
 		public bool WorkaroundPlayModeScriptCompile = true;

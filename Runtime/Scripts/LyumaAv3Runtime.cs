@@ -1396,7 +1396,9 @@ namespace Lyuma.Av3Emulator.Runtime
 				convertDynamicBones(this.gameObject);
 				if (this.emulator != null) {
 					if (this.emulator.DescriptorColliders != DescriptorCollidersSendersHelper.DescriptorExtractionType.None) {
-						forceUpdateDescriptorColliders(avadesc);
+						if (this.emulator.ForceUpdateDescriptorColliders) {
+							forceUpdateDescriptorColliders(avadesc);
+						}
 						DescriptorCollidersSendersHelper.ExtractDescriptorColliders(avadesc, this.emulator.DescriptorColliders);
 					}
 				}
