@@ -1,4 +1,13 @@
-### New features in v 3.4.6:
+### New features in v 3.4.7:
+
+3.4.7:
+
+- Fix non-local clone default parameters (Thanks, DorCoMaNdO)
+- Add setting for force update colliders and disable by default to better emulate custom colliders from debug inspector (Thanks for the report, anatawa12)
+- Implement eye look and blinking.
+- Attempt to override viseme blend shapes in LateUpdate so they override animation.
+- Fix parameter types being set wrong when mismatched between animators. (Thanks, jellejurre)
+- Add GestureManager 3.9.3 support (Thanks, jellejurre)
 
 3.4.6:
 
