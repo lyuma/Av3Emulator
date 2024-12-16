@@ -2105,6 +2105,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				// Experimental. Attempt to reproduce the 1-frame desync in some cases between normal and mirror copy.
 				NormalUpdate();
 			}
+			UpdateVisemeBlendShapes();
 			if(animator != null && this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
 				if (MirrorClone != null) {
 					MirrorClone.gameObject.SetActive(true);
@@ -2202,6 +2203,28 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (IsCurrentlyVisuallyOffset) {
 				transform.position = SavedPosition;
 				IsCurrentlyVisuallyOffset = false;
+			}
+		}
+
+		void UpdateVisemeBlendShapes() {
+			if (avadesc.lipSync == VRC.SDKBase.VRC_AvatarDescriptor.LipSyncStyle.JawFlapBone && avadesc.lipSyncJawBone != null) {
+				if (Viseme == VisemeIndex.sil) {
+					avadesc.lipSyncJawBone.transform.rotation = avadesc.lipSyncJawClosed;
+				} else {
+					avadesc.lipSyncJawBone.transform.rotation = avadesc.lipSyncJawOpen;
+				}
+			} else if (avadesc.lipSync == VRC.SDKBase.VRC_AvatarDescriptor.LipSyncStyle.JawFlapBlendShape && avadesc.VisemeSkinnedMesh != null && mouthOpenBlendShapeIdx != -1) {
+				if (Viseme == VisemeIndex.sil) {
+					avadesc.VisemeSkinnedMesh.SetBlendShapeWeight(mouthOpenBlendShapeIdx, 0.0f);
+				} else {
+					avadesc.VisemeSkinnedMesh.SetBlendShapeWeight(mouthOpenBlendShapeIdx, 100.0f);
+				}
+			} else if (avadesc.lipSync == VRC.SDKBase.VRC_AvatarDescriptor.LipSyncStyle.VisemeBlendShape && avadesc.VisemeSkinnedMesh != null) {
+				for (int i = 0; i < visemeBlendShapeIdxs.Length; i++) {
+					if (visemeBlendShapeIdxs[i] != -1) {
+						avadesc.VisemeSkinnedMesh.SetBlendShapeWeight(visemeBlendShapeIdxs[i], (i == VisemeIdx ? 100.0f : 0.0f));
+					}
+				}
 			}
 		}
 
@@ -2924,25 +2947,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					}
 				}
 			}
-			if (avadesc.lipSync == VRC.SDKBase.VRC_AvatarDescriptor.LipSyncStyle.JawFlapBone && avadesc.lipSyncJawBone != null) {
-				if (Viseme == VisemeIndex.sil) {
-					avadesc.lipSyncJawBone.transform.rotation = avadesc.lipSyncJawClosed;
-				} else {
-					avadesc.lipSyncJawBone.transform.rotation = avadesc.lipSyncJawOpen;
-				}
-			} else if (avadesc.lipSync == VRC.SDKBase.VRC_AvatarDescriptor.LipSyncStyle.JawFlapBlendShape && avadesc.VisemeSkinnedMesh != null && mouthOpenBlendShapeIdx != -1) {
-				if (Viseme == VisemeIndex.sil) {
-					avadesc.VisemeSkinnedMesh.SetBlendShapeWeight(mouthOpenBlendShapeIdx, 0.0f);
-				} else {
-					avadesc.VisemeSkinnedMesh.SetBlendShapeWeight(mouthOpenBlendShapeIdx, 100.0f);
-				}
-			} else if (avadesc.lipSync == VRC.SDKBase.VRC_AvatarDescriptor.LipSyncStyle.VisemeBlendShape && avadesc.VisemeSkinnedMesh != null) {
-				for (int i = 0; i < visemeBlendShapeIdxs.Length; i++) {
-					if (visemeBlendShapeIdxs[i] != -1) {
-						avadesc.VisemeSkinnedMesh.SetBlendShapeWeight(visemeBlendShapeIdxs[i], (i == VisemeIdx ? 100.0f : 0.0f));
-					}
-				}
-			}
+			UpdateVisemeBlendShapes();
 		}
 
 		void SetTypeWithMismatch(AnimatorControllerPlayable playable, int id, object value, AnimatorControllerParameterType outType)
