@@ -131,6 +131,9 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		private int mouthOpenBlendShapeIdx;
 		private int[] visemeBlendShapeIdxs;
+		private int blinkBlendShapeIdx = -1;
+		private int lookDownBlendShapeIdx = -1;
+		private int lookUpBlendShapeIdx = -1;
 
 		public Dictionary<String, object> DataLastShovedIntoOSCAnyway = new Dictionary<String, object>();
 		public Dictionary<String, object> DataToShoveIntoOSCAnyway = new Dictionary<String, object>();
@@ -482,6 +485,10 @@ namespace Lyuma.Av3Emulator.Runtime
 		private int VisemeInt;
 		[Tooltip("Voice amount from 0.0f to 1.0f for the current viseme")]
 		[Range(0,1)] public float Voice;
+		[Range(0,1)] public float BlinkRate = 0.1f;
+
+		[Range(-1,1)] public float EyeTargetX = 0.0f;
+		[Range(-1,1)] public float EyeTargetY = 0.0f;
 		//[Header("Built-in inputs / Hand Gestures")]
 		public GestureIndex GestureLeft;
 		[Range(0, 9)] public int GestureLeftIdx;
@@ -1364,6 +1371,15 @@ namespace Lyuma.Av3Emulator.Runtime
 				TrackingType = TrackingTypeIndex.HeadHands;
 			}
 			avadesc = this.gameObject.GetComponent<VRCAvatarDescriptor>();
+			if (avadesc.customEyeLookSettings.eyelidsSkinnedMesh != null) {
+				if (avadesc.customEyeLookSettings.eyelidsBlendshapes.Length > 0) {
+					blinkBlendShapeIdx = avadesc.customEyeLookSettings.eyelidsBlendshapes[0];
+				}
+				if (avadesc.customEyeLookSettings.eyelidsBlendshapes.Length > 2) {
+					lookDownBlendShapeIdx = avadesc.customEyeLookSettings.eyelidsBlendshapes[1];
+					lookUpBlendShapeIdx = avadesc.customEyeLookSettings.eyelidsBlendshapes[2];
+				}
+			}
 			if (avadesc.VisemeSkinnedMesh == null) {
 				mouthOpenBlendShapeIdx = -1;
 				visemeBlendShapeIdxs = new int[0];
@@ -2226,6 +2242,84 @@ namespace Lyuma.Av3Emulator.Runtime
 					}
 				}
 			}
+			float xysum = Mathf.Sqrt(EyeTargetX * EyeTargetX + EyeTargetY * EyeTargetY);
+			float xabs = Mathf.Abs(EyeTargetX);
+			float yabs = Mathf.Abs(EyeTargetY);
+			bool blink = false;
+			int interval = (int)(10 + 40.0f / (BlinkRate * BlinkRate));
+			if (BlinkRate > 0.00001f && interval > 0 && (frameIndex % interval) < 60 && ((frameIndex % interval) % 30) < 10) {
+				blink = true;
+			}
+			if (BlinkRate > 0.99999f) {
+				blink = true;
+			}
+			if (avadesc.customEyeLookSettings.eyelidType == VRCAvatarDescriptor.EyelidType.Blendshapes && avadesc.customEyeLookSettings.eyelidsSkinnedMesh != null) {
+				if (blinkBlendShapeIdx != -1) {
+					avadesc.customEyeLookSettings.eyelidsSkinnedMesh.SetBlendShapeWeight(blinkBlendShapeIdx, blink ? 100.0f : 0.0f);
+				}
+				if (lookDownBlendShapeIdx != -1) {
+					avadesc.customEyeLookSettings.eyelidsSkinnedMesh.SetBlendShapeWeight(lookDownBlendShapeIdx,
+							-100.0f * Mathf.Clamp(EyeTargetY, -1.0f, 0.0f));
+				}
+				if (lookUpBlendShapeIdx != -1) {
+					avadesc.customEyeLookSettings.eyelidsSkinnedMesh.SetBlendShapeWeight(lookUpBlendShapeIdx,
+							100.0f * Mathf.Clamp(EyeTargetY, 0.0f, 1.0f));
+				}
+			}
+			if (avadesc.customEyeLookSettings.eyelidType == VRCAvatarDescriptor.EyelidType.Bones) {
+				VRCAvatarDescriptor.CustomEyeLookSettings.EyelidRotations rotations = EyeTargetY < 0 ? avadesc.customEyeLookSettings.eyelidsLookingDown : avadesc.customEyeLookSettings.eyelidsLookingUp;
+				if (avadesc.customEyeLookSettings.upperLeftEyelid != null) {
+					avadesc.customEyeLookSettings.upperLeftEyelid.rotation = Quaternion.Slerp(
+						Quaternion.Slerp(
+							avadesc.customEyeLookSettings.eyelidsDefault.upper.left,
+							rotations.upper.left,
+							yabs),
+						avadesc.customEyeLookSettings.eyelidsClosed.upper.left,
+						blink ? 100.0f : 0.0f);
+				}
+				if (avadesc.customEyeLookSettings.upperRightEyelid != null) {
+					avadesc.customEyeLookSettings.upperRightEyelid.rotation = Quaternion.Slerp(
+						Quaternion.Slerp(
+							avadesc.customEyeLookSettings.eyelidsDefault.upper.right,
+							rotations.upper.right,
+							yabs),
+						avadesc.customEyeLookSettings.eyelidsClosed.upper.right,
+						blink ? 100.0f : 0.0f);
+				}
+				if (avadesc.customEyeLookSettings.lowerLeftEyelid != null) {
+					avadesc.customEyeLookSettings.lowerLeftEyelid.rotation = Quaternion.Slerp(
+						Quaternion.Slerp(
+							avadesc.customEyeLookSettings.eyelidsDefault.lower.left,
+							rotations.lower.left,
+							yabs),
+						avadesc.customEyeLookSettings.eyelidsClosed.lower.left,
+						blink ? 100.0f : 0.0f);
+				}
+				if (avadesc.customEyeLookSettings.lowerRightEyelid != null) {
+					avadesc.customEyeLookSettings.lowerRightEyelid.rotation = Quaternion.Slerp(
+						Quaternion.Slerp(
+							avadesc.customEyeLookSettings.eyelidsDefault.lower.right,
+							rotations.lower.right,
+							yabs),
+						avadesc.customEyeLookSettings.eyelidsClosed.lower.right,
+						blink ? 100.0f : 0.0f);
+				}
+
+			}
+			VRCAvatarDescriptor.CustomEyeLookSettings.EyeRotations leftright = EyeTargetX < 0 ? avadesc.customEyeLookSettings.eyesLookingLeft : avadesc.customEyeLookSettings.eyesLookingRight;
+			VRCAvatarDescriptor.CustomEyeLookSettings.EyeRotations updown = EyeTargetY < 0 ? avadesc.customEyeLookSettings.eyesLookingDown : avadesc.customEyeLookSettings.eyesLookingUp;
+			if (avadesc.customEyeLookSettings.leftEye != null) {
+				avadesc.customEyeLookSettings.leftEye.rotation = Quaternion.Slerp(
+						avadesc.customEyeLookSettings.eyesLookingStraight.left,
+						Quaternion.Slerp(leftright.left, updown.left, yabs / (0.00001f + xabs + yabs)),
+						Mathf.Clamp(xysum, 0.0f, 1.0f));
+			}
+			if (avadesc.customEyeLookSettings.rightEye != null) {
+				avadesc.customEyeLookSettings.rightEye.rotation = Quaternion.Slerp(
+						avadesc.customEyeLookSettings.eyesLookingStraight.right,
+						Quaternion.Slerp(leftright.right, updown.right, yabs / (0.00001f + xabs + yabs)),
+						Mathf.Clamp(xysum, 0.0f, 1.0f));
+			}
 		}
 
 		void FixedUpdate() {
@@ -2260,6 +2354,8 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 		}
 
+		private Vector3 lastMousePosition;
+
 		void Update() {
 			if (!(IsMirrorClone || IsShadowClone) && frameIndex == 1) {
 				playableGraph.Play();
@@ -2282,6 +2378,11 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			if (emulator != null && (!emulator.enabled || !emulator.gameObject.activeInHierarchy)) {
 				return;
+			}
+			if (Input.mousePosition != lastMousePosition) {
+				lastMousePosition = Input.mousePosition;
+				EyeTargetX = Mathf.Clamp(-2.0f * (Input.mousePosition.x / (Screen.width + 1) - 0.5f), -1.0f, 1.0f);
+				EyeTargetY = Mathf.Clamp(2.0f * (Input.mousePosition.y / (Screen.height + 1) - 0.5f), -1.0f, 1.0f);
 			}
 			if (!IsMirrorClone && !IsShadowClone) {
 				NormalUpdate();
@@ -2611,6 +2712,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				GestureRightIdx = AvatarSyncSource.GestureRightIdx;
 				GestureRightIdxInt = AvatarSyncSource.GestureRightIdxInt;
 				GestureRightWeight = AvatarSyncSource.GestureRightWeight;
+				BlinkRate = AvatarSyncSource.BlinkRate;
 				Velocity = AvatarSyncSource.Velocity;
 				AngularY = AvatarSyncSource.AngularY;
 				Upright = AvatarSyncSource.Upright;

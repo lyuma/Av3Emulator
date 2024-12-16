@@ -50,6 +50,9 @@ namespace Lyuma.Av3Emulator.Editor
 		public SerializedProperty GestureRight;
 		public SerializedProperty GestureRightIdx;
 		public SerializedProperty GestureRightWeight;
+		public SerializedProperty BlinkRate;
+		public SerializedProperty EyeTargetX;
+		public SerializedProperty EyeTargetY;
 		public SerializedProperty Velocity;
 		public SerializedProperty AngularY;
 		public SerializedProperty Upright;
@@ -130,6 +133,9 @@ namespace Lyuma.Av3Emulator.Editor
 			GestureRight = serializedObject.FindProperty("GestureRight");
 			GestureRightIdx = serializedObject.FindProperty("GestureRightIdx");
 			GestureRightWeight = serializedObject.FindProperty("GestureRightWeight");
+			BlinkRate = serializedObject.FindProperty("BlinkRate");
+			EyeTargetX = serializedObject.FindProperty("EyeTargetX");
+			EyeTargetY = serializedObject.FindProperty("EyeTargetY");
 			Velocity = serializedObject.FindProperty("Velocity");
 			AngularY = serializedObject.FindProperty("AngularY");
 			Upright = serializedObject.FindProperty("Upright");
@@ -306,6 +312,9 @@ namespace Lyuma.Av3Emulator.Editor
 		{
 			DrawAsEnumWithIndex(Viseme, VisemeIdx, 50);
 			EditorGUILayout.PropertyField(Voice);
+			EditorGUILayout.PropertyField(BlinkRate);
+			EditorGUILayout.PropertyField(EyeTargetX);
+			EditorGUILayout.PropertyField(EyeTargetY);
 		}
 
 		private void DrawHandGestureGUI()
