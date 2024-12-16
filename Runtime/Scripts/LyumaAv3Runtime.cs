@@ -2832,8 +2832,8 @@ namespace Lyuma.Av3Emulator.Runtime
 									param.exportedValue = param.value;
 								}
 							}
+							paramterFloats[paramid] = param.value;
 						}
-						paramterFloats[paramid] = param.value;
 					}
 				}
 				foreach (IntParam param in Ints)
@@ -2847,8 +2847,8 @@ namespace Lyuma.Av3Emulator.Runtime
 								param.value = i;
 								param.lastValue = param.value;
 							}
+							paramterInts[paramid] = param.value;
 						}
-						paramterInts[paramid] = param.value;
 					}
 				}
 				foreach (BoolParam param in Bools)
@@ -2862,8 +2862,8 @@ namespace Lyuma.Av3Emulator.Runtime
 								param.value = b;
 								param.lastValue = param.value;
 							}
+							paramterBools[paramid] = param.value;
 						}
-						paramterBools[paramid] = param.value;
 					}
 				}
 				
