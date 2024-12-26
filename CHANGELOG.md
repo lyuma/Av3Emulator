@@ -1,5 +1,11 @@
 ### New features in v 3.4.7:
 
+3.4.8:
+
+- Do not overwrite eyes/eyelids and lipsync/jaw when TrackingControl is Animation
+- Rotate eyes in local space (oops)
+- Fix for Generic Avatars or when Head is null..
+
 3.4.7:
 
 - Fix non-local clone default parameters (Thanks, DorCoMaNdO)
