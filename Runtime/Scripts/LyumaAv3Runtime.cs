@@ -638,6 +638,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		private static int globalContactPlayerId;
 		private  int contactPlayerId;
 
+		private Transform head = null;
 		private class HeadChopDataStorage
 		{
 			public Vector3 originalLocalPosition; 
@@ -651,7 +652,6 @@ namespace Lyuma.Av3Emulator.Runtime
 		public IEnumerator DelayedEnterPoseSpace(bool setView, float time) {
 			yield return new WaitForSeconds(time);
 			if (setView) {
-				Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
 				if (head != null) {
 					IKTrackingOutputData.ViewPosition = animator.transform.InverseTransformPoint(head.TransformPoint(IKTrackingOutputData.HeadRelativeViewPosition));
 				}
@@ -1584,9 +1584,9 @@ namespace Lyuma.Av3Emulator.Runtime
 			IKTrackingOutputData.ViewPosition = avadesc.ViewPosition;
 			IKTrackingOutputData.AvatarScaleFactorGuess = IKTrackingOutputData.ViewPosition.magnitude / BASE_HEIGHT; // mostly guessing...
 			IKTrackingOutputData.HeadRelativeViewPosition = IKTrackingOutputData.ViewPosition;
-			if (animator.avatar != null)
+			if (animator.avatar != null && animator.avatar.isValid && animator.avatar.isHuman)
 			{
-				Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
+				head = animator.GetBoneTransform(HumanBodyBones.Head);
 				if (head != null) {
 					IKTrackingOutputData.HeadRelativeViewPosition = head.InverseTransformPoint(animator.transform.TransformPoint(IKTrackingOutputData.ViewPosition));
 				}
@@ -2142,7 +2142,6 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 				foreach (Transform[] allXTransforms in new Transform[][]{allMirrorTransforms, allShadowTransforms}) {
 					if (allXTransforms != null) {
-						Transform head = animator.avatar == null ? null : animator.GetBoneTransform(HumanBodyBones.Head);
 						for(int i = 0; i < allTransforms.Length && i < allXTransforms.Length; i++) {
 							if (allXTransforms[i] == null || allTransforms[i] == this.transform) {
 								continue;
@@ -2510,7 +2509,6 @@ namespace Lyuma.Av3Emulator.Runtime
 				IsOnFriendsList = false;
 			}
 			if(this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone && animator.avatar != null) {
-				Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
 				if (head != null) {
 					if (defaultHeadScale == new Vector3(0, 0, 0))
 					{
@@ -2540,7 +2538,7 @@ namespace Lyuma.Av3Emulator.Runtime
 									headChopData[t] = new HeadChopDataStorage()
 									{
 										originalLocalPosition = t.localPosition,
-										originalGlobalHeadOffset = mul(avadesc.transform.InverseTransformPoint(t.position), avadesc.transform.lossyScale) - animator.GetBoneTransform(HumanBodyBones.Head).transform.position,
+										originalGlobalHeadOffset = mul(avadesc.transform.InverseTransformPoint(t.position), avadesc.transform.lossyScale) - head.transform.position,
 										originalLocalScale = t.localScale,
 										originalGlobalScale = t.lossyScale
 									};
@@ -2564,8 +2562,7 @@ namespace Lyuma.Av3Emulator.Runtime
 
 								var data = headChopData[t];
 								Vector3 originalLocalPosition = data.originalLocalPosition;
-								Transform headBone = animator.GetBoneTransform(HumanBodyBones.Head).transform;
-								Vector3 originalRootSpacePosition = headBone.position + headBone.rotation * data.originalGlobalHeadOffset;
+								Vector3 originalRootSpacePosition = head.position + head.rotation * data.originalGlobalHeadOffset;
 								Vector3 originalLocalScale = data.originalLocalScale;
 								Vector3 originalGlobalScale = data.originalGlobalScale;
 
