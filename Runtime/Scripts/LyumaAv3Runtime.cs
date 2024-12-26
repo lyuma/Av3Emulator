@@ -2225,11 +2225,20 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		void UpdateVisemeBlendShapes() {
+			if (IKTrackingOutputData.trackingMouthAndJaw != VRC_AnimatorTrackingControl.TrackingType.Animation) {
+				PerformLipSyncVisemesTracking();
+			}
+			if (IKTrackingOutputData.trackingEyesAndEyelids != VRC_AnimatorTrackingControl.TrackingType.Animation) {
+				PerformEyesAndEyeLidsTracking();
+			}
+		}
+
+		void PerformLipSyncVisemesTracking() {
 			if (avadesc.lipSync == VRC.SDKBase.VRC_AvatarDescriptor.LipSyncStyle.JawFlapBone && avadesc.lipSyncJawBone != null) {
 				if (Viseme == VisemeIndex.sil) {
-					avadesc.lipSyncJawBone.transform.rotation = avadesc.lipSyncJawClosed;
+					avadesc.lipSyncJawBone.transform.localRotation = avadesc.lipSyncJawClosed;
 				} else {
-					avadesc.lipSyncJawBone.transform.rotation = avadesc.lipSyncJawOpen;
+					avadesc.lipSyncJawBone.transform.localRotation = avadesc.lipSyncJawOpen;
 				}
 			} else if (avadesc.lipSync == VRC.SDKBase.VRC_AvatarDescriptor.LipSyncStyle.JawFlapBlendShape && avadesc.VisemeSkinnedMesh != null && mouthOpenBlendShapeIdx != -1) {
 				if (Viseme == VisemeIndex.sil) {
@@ -2244,6 +2253,9 @@ namespace Lyuma.Av3Emulator.Runtime
 					}
 				}
 			}
+		}
+
+		void PerformEyesAndEyeLidsTracking() {
 			float xysum = Mathf.Sqrt(EyeTargetX * EyeTargetX + EyeTargetY * EyeTargetY);
 			float xabs = Mathf.Abs(EyeTargetX);
 			float yabs = Mathf.Abs(EyeTargetY);
@@ -2271,7 +2283,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (avadesc.customEyeLookSettings.eyelidType == VRCAvatarDescriptor.EyelidType.Bones) {
 				VRCAvatarDescriptor.CustomEyeLookSettings.EyelidRotations rotations = EyeTargetY < 0 ? avadesc.customEyeLookSettings.eyelidsLookingDown : avadesc.customEyeLookSettings.eyelidsLookingUp;
 				if (avadesc.customEyeLookSettings.upperLeftEyelid != null) {
-					avadesc.customEyeLookSettings.upperLeftEyelid.rotation = Quaternion.Slerp(
+					avadesc.customEyeLookSettings.upperLeftEyelid.localRotation = Quaternion.Slerp(
 						Quaternion.Slerp(
 							avadesc.customEyeLookSettings.eyelidsDefault.upper.left,
 							rotations.upper.left,
@@ -2280,7 +2292,7 @@ namespace Lyuma.Av3Emulator.Runtime
 						blink ? 100.0f : 0.0f);
 				}
 				if (avadesc.customEyeLookSettings.upperRightEyelid != null) {
-					avadesc.customEyeLookSettings.upperRightEyelid.rotation = Quaternion.Slerp(
+					avadesc.customEyeLookSettings.upperRightEyelid.localRotation = Quaternion.Slerp(
 						Quaternion.Slerp(
 							avadesc.customEyeLookSettings.eyelidsDefault.upper.right,
 							rotations.upper.right,
@@ -2289,7 +2301,7 @@ namespace Lyuma.Av3Emulator.Runtime
 						blink ? 100.0f : 0.0f);
 				}
 				if (avadesc.customEyeLookSettings.lowerLeftEyelid != null) {
-					avadesc.customEyeLookSettings.lowerLeftEyelid.rotation = Quaternion.Slerp(
+					avadesc.customEyeLookSettings.lowerLeftEyelid.localRotation = Quaternion.Slerp(
 						Quaternion.Slerp(
 							avadesc.customEyeLookSettings.eyelidsDefault.lower.left,
 							rotations.lower.left,
@@ -2298,7 +2310,7 @@ namespace Lyuma.Av3Emulator.Runtime
 						blink ? 100.0f : 0.0f);
 				}
 				if (avadesc.customEyeLookSettings.lowerRightEyelid != null) {
-					avadesc.customEyeLookSettings.lowerRightEyelid.rotation = Quaternion.Slerp(
+					avadesc.customEyeLookSettings.lowerRightEyelid.localRotation = Quaternion.Slerp(
 						Quaternion.Slerp(
 							avadesc.customEyeLookSettings.eyelidsDefault.lower.right,
 							rotations.lower.right,
@@ -2311,13 +2323,13 @@ namespace Lyuma.Av3Emulator.Runtime
 			VRCAvatarDescriptor.CustomEyeLookSettings.EyeRotations leftright = EyeTargetX < 0 ? avadesc.customEyeLookSettings.eyesLookingLeft : avadesc.customEyeLookSettings.eyesLookingRight;
 			VRCAvatarDescriptor.CustomEyeLookSettings.EyeRotations updown = EyeTargetY < 0 ? avadesc.customEyeLookSettings.eyesLookingDown : avadesc.customEyeLookSettings.eyesLookingUp;
 			if (avadesc.customEyeLookSettings.leftEye != null) {
-				avadesc.customEyeLookSettings.leftEye.rotation = Quaternion.Slerp(
+				avadesc.customEyeLookSettings.leftEye.localRotation = Quaternion.Slerp(
 						avadesc.customEyeLookSettings.eyesLookingStraight.left,
 						Quaternion.Slerp(leftright.left, updown.left, yabs / (0.00001f + xabs + yabs)),
 						Mathf.Clamp(xysum, 0.0f, 1.0f));
 			}
 			if (avadesc.customEyeLookSettings.rightEye != null) {
-				avadesc.customEyeLookSettings.rightEye.rotation = Quaternion.Slerp(
+				avadesc.customEyeLookSettings.rightEye.localRotation = Quaternion.Slerp(
 						avadesc.customEyeLookSettings.eyesLookingStraight.right,
 						Quaternion.Slerp(leftright.right, updown.right, yabs / (0.00001f + xabs + yabs)),
 						Mathf.Clamp(xysum, 0.0f, 1.0f));

@@ -204,7 +204,7 @@ namespace Lyuma.Av3Emulator.Editor
 			DrawFoldout("Player Local and Mirror Reflection", ref playerLocalAndMirrorReflectionFoldout, DrawPlayerLocalAndMirrorReflectionGUI);
 			DrawFoldout("Built-in Inputs", ref builtInInputsFoldout, DrawBuiltInInputsGUI);
 			DrawFoldout("User Inputs", ref userInputsFoldout, DrawUserInputsGUI);
-			DrawFoldout("Output State (Read-Only)", ref outputStateFoldout, DrawOutputStateGUI);
+			DrawFoldout("Output State", ref outputStateFoldout, DrawOutputStateGUI);
 			DrawFoldout("Credits and Links", ref creditsAndLinksFoldout, DrawCreditsAndLinksGUI);
 			//Not sure why this is visible in base inspector? It's set automatically
 			//EditorGUILayout.PropertyField(emulator);
@@ -404,8 +404,8 @@ namespace Lyuma.Av3Emulator.Editor
 					string label = locomotionState ? "Locomotion Is Enabled" : "Locomotion Is Disabled";
 					GUILayout.Button(label);
 				}
-				EditorGUILayout.PropertyField(IKTrackingOutputData, true);
 			}
+			EditorGUILayout.PropertyField(IKTrackingOutputData, true);
 		}
 
 		private void DrawCreditsAndLinksGUI()
