@@ -72,6 +72,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		private bool lastDisableRadialMenu = false;
 		public bool EnableAvatarScaling = true;
 		public bool EnablePlayerContactPermissions = false;
+		public bool HaveEyesFollowMouse = true;
 		[Header("Unity Integrations")]
 		[Tooltip("Runs the same function as the Avatar Descriptor Editor Inspector. May disrupt custom usages of colliders in Debug mode.")]
 		public bool ForceUpdateDescriptorColliders = false;

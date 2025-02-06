@@ -2392,7 +2392,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (emulator != null && (!emulator.enabled || !emulator.gameObject.activeInHierarchy)) {
 				return;
 			}
-			if (Input.mousePosition != lastMousePosition) {
+			if (Input.mousePosition != lastMousePosition && emulator.HaveEyesFollowMouse) {
 				lastMousePosition = Input.mousePosition;
 				EyeTargetX = Mathf.Clamp(-2.0f * (Input.mousePosition.x / (Screen.width + 1) - 0.5f), -1.0f, 1.0f);
 				EyeTargetY = Mathf.Clamp(2.0f * (Input.mousePosition.y / (Screen.height + 1) - 0.5f), -1.0f, 1.0f);
