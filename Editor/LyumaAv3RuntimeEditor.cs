@@ -69,6 +69,8 @@ namespace Lyuma.Av3Emulator.Editor
 		public SerializedProperty VRMode;
 		public SerializedProperty MuteSelf;
 		public SerializedProperty Earmuffs;
+		public SerializedProperty IsAnimatorEnabled;
+		public SerializedProperty PreviewMode;
 		public SerializedProperty InStation;
 		public SerializedProperty AvatarVersion;
 		public SerializedProperty EnableAvatarScaling;
@@ -152,6 +154,8 @@ namespace Lyuma.Av3Emulator.Editor
 			VRMode = serializedObject.FindProperty("VRMode");
 			MuteSelf = serializedObject.FindProperty("MuteSelf");
 			Earmuffs = serializedObject.FindProperty("Earmuffs");
+			IsAnimatorEnabled = serializedObject.FindProperty("IsAnimatorEnabled");
+			PreviewMode = serializedObject.FindProperty("PreviewMode");
 			InStation = serializedObject.FindProperty("InStation");
 			AvatarVersion = serializedObject.FindProperty("AvatarVersion");
 			EnableAvatarScaling = serializedObject.FindProperty("EnableAvatarScaling");
@@ -376,6 +380,12 @@ namespace Lyuma.Av3Emulator.Editor
 			{
 				DrawAsClickableToggle(MuteSelf);
 				DrawAsClickableToggle(Earmuffs);
+			}
+			
+			using (new GUILayout.HorizontalScope())
+			{
+				DrawAsClickableToggle(PreviewMode);
+				DrawAsClickableToggle(IsAnimatorEnabled);
 			}
 
 			using (new GUILayout.HorizontalScope())
