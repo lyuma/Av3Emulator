@@ -2396,6 +2396,9 @@ namespace Lyuma.Av3Emulator.Runtime
 				lastMousePosition = Input.mousePosition;
 				EyeTargetX = Mathf.Clamp(-2.0f * (Input.mousePosition.x / (Screen.width + 1) - 0.5f), -1.0f, 1.0f);
 				EyeTargetY = Mathf.Clamp(2.0f * (Input.mousePosition.y / (Screen.height + 1) - 0.5f), -1.0f, 1.0f);
+				// NaNs can be produced when using "Play Unfocused"
+				if (float.IsNaN(EyeTargetX)) EyeTargetX = 0f;
+				if (float.IsNaN(EyeTargetY)) EyeTargetY = 0f;
 			}
 			if (!IsMirrorClone && !IsShadowClone) {
 				NormalUpdate();
