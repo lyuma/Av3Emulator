@@ -1384,8 +1384,8 @@ namespace Lyuma.Av3Emulator.Runtime
 					blinkBlendShapeIdx = avadesc.customEyeLookSettings.eyelidsBlendshapes[0];
 				}
 				if (avadesc.customEyeLookSettings.eyelidsBlendshapes.Length > 2) {
-					lookDownBlendShapeIdx = avadesc.customEyeLookSettings.eyelidsBlendshapes[1];
-					lookUpBlendShapeIdx = avadesc.customEyeLookSettings.eyelidsBlendshapes[2];
+					lookUpBlendShapeIdx = avadesc.customEyeLookSettings.eyelidsBlendshapes[1];
+					lookDownBlendShapeIdx = avadesc.customEyeLookSettings.eyelidsBlendshapes[2];
 				}
 			}
 			if (avadesc.VisemeSkinnedMesh == null) {
