@@ -1,4 +1,12 @@
-### New features in v 3.4.7:
+### New features in v 3.4.9:
+
+3.4.9:
+
+- Fix NaN error spam from eye look when using play unfocused (Thanks, d4rkpl4y3r)
+- Add IsAnimatorEnabled and PreviewMode
+- Looking up and down were flipped.
+- Add IsAnimatorEnabled and PreviewMode
+- Add "Have Eyes Follow Mouse" option in Settings (Thanks, jellejurre)
 
 3.4.8:
 
