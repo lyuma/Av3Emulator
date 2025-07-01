@@ -450,6 +450,12 @@ namespace Lyuma.Av3Emulator.Runtime
 			new BuiltinParameterDefinition("Earmuffs", VRCExpressionParameters.ValueType.Bool, 
 				runtime => runtime.Earmuffs,
 				(runtime, value) => runtime.Earmuffs = (bool)value),
+			new BuiltinParameterDefinition("IsAnimatorEnabled", VRCExpressionParameters.ValueType.Bool,
+				runtime => runtime.IsAnimatorEnabled,
+				(runtime, value) => runtime.IsAnimatorEnabled = (bool)value),
+			new BuiltinParameterDefinition("PreviewMode", VRCExpressionParameters.ValueType.Int,
+				runtime => runtime.PreviewMode ? 1 : 0,
+				(runtime, value) => runtime.PreviewMode = (int)value == 1),
 			new BuiltinParameterDefinition("ScaleModified", VRCExpressionParameters.ValueType.Bool, 
 				runtime => runtime.EnableAvatarScaling && runtime.AvatarHeight != runtime.DefaultViewPosition.y,
 				(runtime, value) => { }), //Modifying this doesn't make sense, this field is un-editable in VRC
@@ -524,6 +530,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool MuteSelf;
 		private bool MuteTogglerOn;
 		public bool Earmuffs;
+		public bool PreviewMode;
+		public bool IsAnimatorEnabled = true;
 		public bool InStation;
 		[HideInInspector] public int AvatarVersion = 3;
 		public bool EnableAvatarScaling = false;
@@ -2739,6 +2747,8 @@ namespace Lyuma.Av3Emulator.Runtime
 				VRMode = AvatarSyncSource.VRMode;
 				MuteSelf = AvatarSyncSource.MuteSelf;
 				Earmuffs = AvatarSyncSource.Earmuffs;
+				IsAnimatorEnabled = AvatarSyncSource.IsAnimatorEnabled;
+				PreviewMode = AvatarSyncSource.PreviewMode;
 				InStation = AvatarSyncSource.InStation;
 				EnableAvatarScaling = AvatarSyncSource.EnableAvatarScaling;
 				AvatarHeight = AvatarSyncSource.AvatarHeight;
