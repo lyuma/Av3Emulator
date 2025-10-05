@@ -230,6 +230,7 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 				addParam("TPoseCalibration", "PoseT");
 				addParam("Jump", "Av3 Emu Jump");
 				foreach (var xbool in _runtime.Bools) {
+					if (LyumaAv3Runtime.BUILTIN_PARAMETERS.Any(x => x.name == xbool.name)) continue;
 					if (Params.ContainsKey(xbool.name)) {
 						UnityEngine.Debug.LogWarning("Duplicate parameter " + xbool.name);
 					} else {
@@ -237,6 +238,7 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 					}
 				}
 				foreach (var xint in _runtime.Ints) {
+					if (LyumaAv3Runtime.BUILTIN_PARAMETERS.Any(x => x.name == xint.name)) continue;
 					if (Params.ContainsKey(xint.name)) {
 						UnityEngine.Debug.LogWarning("Duplicate parameter " + xint.name + " maybe with different type.");
 					} else {
@@ -244,6 +246,7 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 					}
 				}
 				foreach (var xfloat in _runtime.Floats) {
+					if (LyumaAv3Runtime.BUILTIN_PARAMETERS.Any(x => x.name == xfloat.name)) continue;
 					if (Params.ContainsKey(xfloat.name)) {
 						UnityEngine.Debug.LogWarning("Duplicate parameter " + xfloat.name + " maybe with different type.");
 					} else {
