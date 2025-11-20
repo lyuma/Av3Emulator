@@ -2154,12 +2154,21 @@ namespace Lyuma.Av3Emulator.Runtime
 							if (allXTransforms[i] == null || allTransforms[i] == this.transform) {
 								continue;
 							}
-							allXTransforms[i].localPosition = allTransforms[i].localPosition;
-							allXTransforms[i].localRotation = allTransforms[i].localRotation;
+							if (allTransforms[i].localPosition == allTransforms[i].localPosition) {
+								// self-comparison to prevent copying NaN. See issue #215
+								allXTransforms[i].localPosition = allTransforms[i].localPosition;
+							}
+							if (allTransforms[i].localRotation == allTransforms[i].localRotation) {
+								// self-comparison to prevent copying NaN. See issue #215
+								allXTransforms[i].localRotation = allTransforms[i].localRotation;
+							}
 							if(allTransforms[i] == head && EnableHeadScaling) {
 								allXTransforms[i].localScale = new Vector3(1.0f, 1.0f, 1.0f);
 							} else {
-								allXTransforms[i].localScale = allTransforms[i].localScale;
+								if (allTransforms[i].localScale == allTransforms[i].localScale) {
+									// self-comparison to prevent copying NaN. See issue #215
+									allXTransforms[i].localScale = allTransforms[i].localScale;
+								}
 							}
 							bool theirs = allTransforms[i].gameObject.activeSelf;
 							if (allXTransforms[i].gameObject.activeSelf != theirs) {
