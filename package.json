@@ -4,7 +4,7 @@
   "license": "MIT",
   "documentationUrl": "https://github.com/lyuma/Av3Emulator",
   "displayName": "Av3Emulator",
-  "version": "3.4.9",
+  "version": "3.4.10",
   "description": "An Emulator for VRChat's Avatar 3.0 System",
   "gitDependencies": {},
   "legacyFolders" : {

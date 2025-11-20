@@ -1,4 +1,9 @@
-### New features in v 3.4.9:
+### New features in v 3.4.10:
+
+3.4.10:
+
+- Fix NaN error spam from transform copying with NaNimation toggles (Thanks to bd_ for the report)
+- Add builtin parameter cloning (Thanks, jellejurre)
 
 3.4.9:
 
