@@ -1867,7 +1867,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			return stageNameToValue;
 		}
 		void LateRefreshExpressionParameters(Dictionary<string, float> stageNameToValue) {
-			HashSet<string> usedparams = new HashSet<string>(BUILTIN_PARAMETERS.Select(x => x.name));
+			HashSet<string> usedparams = new HashSet<string>();
 			int i = 0;
 			if (stageParameters != null)
 			{
@@ -2753,6 +2753,26 @@ namespace Lyuma.Av3Emulator.Runtime
 				EnableAvatarScaling = AvatarSyncSource.EnableAvatarScaling;
 				AvatarHeight = AvatarSyncSource.AvatarHeight;
 			}
+			
+			foreach (BuiltinParameterDefinition definition in BUILTIN_PARAMETERS)
+			{
+				if (definition.type == VRCExpressionParameters.ValueType.Bool)
+				{
+					var param = Bools.FirstOrDefault(x => x.name == definition.name);
+					if (param != null) param.value = (bool)definition.valueGetter(this);
+				}
+				if (definition.type == VRCExpressionParameters.ValueType.Int)
+				{
+					var param = Ints.FirstOrDefault(x => x.name == definition.name);
+					if (param != null) param.value = (int)definition.valueGetter(this);
+				}
+				if (definition.type == VRCExpressionParameters.ValueType.Float)
+				{
+					var param = Floats.FirstOrDefault(x => x.name == definition.name);
+					if (param != null) param.value = (float)definition.valueGetter(this);
+				}
+			}
+			
 			for (int i = 0; i < Floats.Count; i++) {
 				if (Floats[i].expressionValue != Floats[i].lastExpressionValue_) {
 					Floats[i].exportedValue = Floats[i].expressionValue;
