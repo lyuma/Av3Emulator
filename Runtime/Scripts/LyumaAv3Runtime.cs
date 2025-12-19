@@ -1169,14 +1169,14 @@ namespace Lyuma.Av3Emulator.Runtime
 				object Parameter = randomOrderType.GetEnumValues().GetValue(3);
 				object playbackOrder = audioSubType.GetField("PlaybackOrder").GetValue(playAudio);
 				FieldInfo playbackIndex = audioSubType.GetField("playbackIndex");
+
 				if (playbackOrder.ToString() == Random.ToString())
 				{
 					int newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
 					playbackIndex.SetValue(playAudio, newPlayIndex);
 					clip = clips[newPlayIndex];
 				}
-
-				else if (playbackOrder == UniqueRandom)
+				else if (playbackOrder.ToString() == UniqueRandom.ToString()) 
 				{
 					int newPlayIndex = UnityEngine.Random.Range(0, clips.Length);
 					while (newPlayIndex == (int)playbackIndex.GetValue(playAudio) && clips.Length > 1)
@@ -1186,15 +1186,13 @@ namespace Lyuma.Av3Emulator.Runtime
 					playbackIndex.SetValue(playAudio, newPlayIndex);
 					clip = clips[newPlayIndex];
 				}
-
-				else if (playbackOrder == Roundabout)
+				else if (playbackOrder.ToString() == Roundabout.ToString())
 				{
 					int newPlayIndex = ((int)playbackIndex.GetValue(playAudio) + 1) % clips.Length;
 					playbackIndex.SetValue(playAudio, newPlayIndex);
 					clip = clips[newPlayIndex];
 				}
-				
-				else if (playbackOrder == Parameter)
+				else if (playbackOrder.ToString() == Parameter.ToString())
 				{
 					string parameterName = (string)audioSubType.GetField("ParameterName").GetValue(playAudio);
 					int? newPlayIndex = runtime.Ints.FirstOrDefault(x => x.name == parameterName)?.value;
