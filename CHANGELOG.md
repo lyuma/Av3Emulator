@@ -1,5 +1,9 @@
 ### New features in v 3.4.10:
 
+3.4.11:
+
+- Fix VRCPlayAudio component
+
 3.4.10:
 
 - Fix NaN error spam from transform copying with NaNimation toggles (Thanks to bd_ for the report)
