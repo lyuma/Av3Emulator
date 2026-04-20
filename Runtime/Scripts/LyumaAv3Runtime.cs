@@ -140,6 +140,7 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		[NonSerialized] public VRCPhysBone[] AvDynamicsPhysBones = new VRCPhysBone[]{};
 		[NonSerialized] public VRCContactReceiver[] AvDynamicsContactReceivers = new VRCContactReceiver[]{};
+		[NonSerialized] public VRCRaycast[] Raycasts = new VRCRaycast[]{};
 
 		public class Av3EmuParameterAccess : VRC.SDKBase.IAnimParameterAccess {
 			public LyumaAv3Runtime runtime;
@@ -313,7 +314,38 @@ namespace Lyuma.Av3Emulator.Runtime
 						accessInst.floatVal = (float)typeof(VRCPhysBoneBase).GetField("param_SquishValue").GetValue(mb);
 					}
 				}
-				// Debug.Log("Assigned strech access " + physBoneState.param_Stretch.GetValue(mb) + " to param " + parameter + ": was " + old_value);
+			}
+		}
+
+		public void assignRaycastParameters(VRCRaycast[] behaviours)
+		{
+			Raycasts = behaviours;
+			foreach (var mb in Raycasts) {
+				string parameter = mb.Parameter;
+				Av3EmuParameterAccess accessInst = new Av3EmuParameterAccess();
+				accessInst.runtime = this;
+				accessInst.paramName = parameter + VRCRaycast.PARAM_HIT;
+				if (IsLocal || !isBeingSynced(accessInst.paramName))
+				{
+					mb.param_Hit = accessInst;
+					accessInst.boolVal = mb.param_HitValue;
+				}
+				accessInst = new Av3EmuParameterAccess();
+				accessInst.runtime = this;
+				accessInst.paramName = parameter + VRCRaycast.PARAM_RATIO;
+				if (IsLocal || !isBeingSynced(accessInst.paramName))
+				{
+					mb.param_Ratio = accessInst;
+					accessInst.floatVal = mb.param_RatioValue;
+				}
+				accessInst = new Av3EmuParameterAccess();
+				accessInst.runtime = this;
+				accessInst.paramName = parameter + VRCRaycast.PARAM_DISTANCE;
+				if (IsLocal || !isBeingSynced(accessInst.paramName))
+				{
+					mb.param_Distance = accessInst;
+					accessInst.floatVal = mb.param_DistanceValue;
+				}
 			}
 		}
 
@@ -3080,6 +3112,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			{
 				assignContactParameters(avadesc.gameObject.GetComponentsInChildren<VRCContactReceiver>());
 				assignPhysBoneParameters(avadesc.gameObject.GetComponentsInChildren<VRCPhysBone>());
+				assignRaycastParameters(avadesc.gameObject.GetComponentsInChildren<VRCRaycast>());
 			}
 
 			for (int i = 0; i < playableBlendingStates.Count; i++) {
