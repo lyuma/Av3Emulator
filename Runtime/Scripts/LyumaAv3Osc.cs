@@ -265,6 +265,9 @@ namespace Lyuma.Av3Emulator.Runtime
 			Camera camera = Camera.current;
 			Matrix4x4 origMatrix = Gizmos.matrix;
 			Gizmos.matrix = camera.projectionMatrix * camera.transform.localToWorldMatrix;
+			if (GetEditorViewportDelegate == null) {
+				return; // Avoid logspam. Gizmos will not work if we do not know the editor viewport.
+			}
 			Rect viewportSize = GetEditorViewportDelegate();
 			Rect pos = new Rect(5 + viewportSize.x,5 + viewportSize.y,190,190);
 			usedPartners.Clear();
