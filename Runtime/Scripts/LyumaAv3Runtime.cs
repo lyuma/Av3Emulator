@@ -32,7 +32,6 @@ using VRC.SDK3.Avatars.ScriptableObjects;
 using VRC.SDK3.Dynamics.Contact.Components;
 using VRC.SDK3.Dynamics.PhysBone.Components;
 using VRC.SDKBase;
-using static VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
 
 namespace Lyuma.Av3Emulator.Runtime
 {
@@ -140,7 +139,9 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		[NonSerialized] public VRCPhysBone[] AvDynamicsPhysBones = new VRCPhysBone[]{};
 		[NonSerialized] public VRCContactReceiver[] AvDynamicsContactReceivers = new VRCContactReceiver[]{};
-		[NonSerialized] public VRCRaycast[] Raycasts = new VRCRaycast[]{};
+
+		Type raycastType = Type.GetType("VRC.SDK3.Avatars.Components.VRCRaycast, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+		[NonSerialized] public Component[] Raycasts = new MonoBehaviour[]{};
 
 		public class Av3EmuParameterAccess : VRC.SDKBase.IAnimParameterAccess {
 			public LyumaAv3Runtime runtime;
@@ -317,34 +318,34 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 		}
 
-		public void assignRaycastParameters(VRCRaycast[] behaviours)
+		public void assignRaycastParameters(Component[] behaviours)
 		{
 			Raycasts = behaviours;
 			foreach (var mb in Raycasts) {
-				string parameter = mb.Parameter;
+				string parameter = (string)raycastType.GetProperty("Parameter").GetValue(mb);
 				Av3EmuParameterAccess accessInst = new Av3EmuParameterAccess();
 				accessInst.runtime = this;
-				accessInst.paramName = parameter + VRCRaycast.PARAM_HIT;
+				accessInst.paramName = parameter + raycastType.GetField("PARAM_HIT", BindingFlags.Public | BindingFlags.Static).GetValue(null);
 				if (IsLocal || !isBeingSynced(accessInst.paramName))
 				{
-					mb.param_Hit = accessInst;
-					accessInst.boolVal = mb.param_HitValue;
+					raycastType.GetField("param_Hit").SetValue(mb, accessInst);
+					accessInst.boolVal = (bool)raycastType.GetField("param_HitValue").GetValue(mb);
 				}
 				accessInst = new Av3EmuParameterAccess();
 				accessInst.runtime = this;
-				accessInst.paramName = parameter + VRCRaycast.PARAM_RATIO;
+				accessInst.paramName = parameter + raycastType.GetField("PARAM_RATIO", BindingFlags.Public | BindingFlags.Static).GetValue(null);
 				if (IsLocal || !isBeingSynced(accessInst.paramName))
 				{
-					mb.param_Ratio = accessInst;
-					accessInst.floatVal = mb.param_RatioValue;
+					raycastType.GetField("param_Ratio").SetValue(mb, accessInst);
+					accessInst.floatVal = (float)raycastType.GetField("param_RatioValue").GetValue(mb);
 				}
 				accessInst = new Av3EmuParameterAccess();
 				accessInst.runtime = this;
-				accessInst.paramName = parameter + VRCRaycast.PARAM_DISTANCE;
+				accessInst.paramName = parameter + raycastType.GetField("PARAM_DISTANCE", BindingFlags.Public | BindingFlags.Static).GetValue(null);
 				if (IsLocal || !isBeingSynced(accessInst.paramName))
 				{
-					mb.param_Distance = accessInst;
-					accessInst.floatVal = mb.param_DistanceValue;
+					raycastType.GetField("param_Distance").SetValue(mb, accessInst);
+					accessInst.floatVal = (float)raycastType.GetField("param_DistanceValue").GetValue(mb);
 				}
 			}
 		}
@@ -3112,7 +3113,9 @@ namespace Lyuma.Av3Emulator.Runtime
 			{
 				assignContactParameters(avadesc.gameObject.GetComponentsInChildren<VRCContactReceiver>());
 				assignPhysBoneParameters(avadesc.gameObject.GetComponentsInChildren<VRCPhysBone>());
-				assignRaycastParameters(avadesc.gameObject.GetComponentsInChildren<VRCRaycast>());
+				if (raycastType != null) {
+					assignRaycastParameters(avadesc.gameObject.GetComponentsInChildren(raycastType));
+				}
 			}
 
 			for (int i = 0; i < playableBlendingStates.Count; i++) {
