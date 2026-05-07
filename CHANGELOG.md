@@ -1,4 +1,8 @@
-### New features in v 3.4.10:
+### New features in v 3.4.12:
+
+3.4.12:
+
+- Implement VRCRaycast. Thanks, jellejurre
 
 3.4.11:
 
