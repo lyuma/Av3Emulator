@@ -1,4 +1,12 @@
-### New features in v 3.4.12:
+### New features in v 3.4.13:
+
+3.4.13:
+
+- Add `#if VRC_SDK_VRCSDK3` check for GestureManagerAv3MenuEditor.
+  This should fix the random project compile errors when switching to Android or installing from VCC.
+  Thanks to Senky, anatawa12 and jellejurre for the analysis of GestureManager code.
+
+- Attempt to mitigate error spam in LyumaAv3Osc.ActuallyDrawGizmos()
 
 3.4.12:
 
