@@ -161,7 +161,11 @@ namespace Lyuma.Av3Emulator.Editor
 					GameObject.DestroyImmediate(gotmp);
 					var avatarDynamicsSetup = typeof(VRCExpressionsMenuEditor).Assembly.GetType("VRC.SDK3.Avatars.AvatarDynamicsSetup");
 					if (avatarDynamicsSetup != null) {
-						var RuntimeInit = avatarDynamicsSetup.GetMethod("RuntimeInit", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+						var RuntimeInit = avatarDynamicsSetup.GetMethod("RuntimeInit", 
+							System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
+							binder: null,
+							types: Type.EmptyTypes,
+							modifiers: null);
 						if (RuntimeInit != null) {
 							Debug.Log("Caling avatarDynamicsSetup.RuntimeInit(): " + RuntimeInit);
 							RuntimeInit.Invoke(null, new object[0]);
