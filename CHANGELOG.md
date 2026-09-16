@@ -1,4 +1,8 @@
-### New features in v 3.4.13:
+### New features in v 3.4.14:
+
+3.4.14:
+
+- Fix for SDK 3.10.5. Thanks, anatawa12
 
 3.4.13:
 
