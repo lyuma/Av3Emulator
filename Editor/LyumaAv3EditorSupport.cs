@@ -164,7 +164,7 @@ namespace Lyuma.Av3Emulator.Editor
 						var RuntimeInit = avatarDynamicsSetup.GetMethod("RuntimeInit", 
 							System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
 							binder: null,
-							types: Type.EmptyTypes,
+							types: System.Type.EmptyTypes,
 							modifiers: null);
 						if (RuntimeInit != null) {
 							Debug.Log("Caling avatarDynamicsSetup.RuntimeInit(): " + RuntimeInit);
