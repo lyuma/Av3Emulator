@@ -85,7 +85,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 		}
 		public void Update() {
-			LyumaAv3Runtime runtime = avatarDescriptor != null ?avatarDescriptor.GetComponent<LyumaAv3Runtime>() : null;
+			LyumaAv3Runtime runtime = avatarDescriptor != null ? LyumaAv3Runtime.GetRuntimeForAnimator(avatarDescriptor.GetComponent<Animator>()) : null;
 			commandLine = "--osc=" + udpPort + ":" + outgoingUdpIp + ":" + outgoingUdpPort;
 			if (clearGizmos) {
 				clearGizmos = false;

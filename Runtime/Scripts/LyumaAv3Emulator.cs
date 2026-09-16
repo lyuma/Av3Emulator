@@ -157,22 +157,22 @@ namespace Lyuma.Av3Emulator.Runtime
 				foreach (var runtime in runtimes) {
 					if (runtime != null) {
 						runtime.PreCullVisualOffset(cam);
-						if (runtime.MirrorClone != null) {
-							Vector3 oldOffset = runtime.MirrorClone.VisualOffset;
+						if (runtime.MirrorCloneRuntime != null) {
+							Vector3 oldOffset = runtime.MirrorCloneRuntime.VisualOffset;
 							if (ViewBothRealAndMirror) {
-								if (runtime.MirrorClone.VisualOffset == new Vector3()) {
-									runtime.MirrorClone.VisualOffset = new Vector3(0, 0.5f + runtime.IKTrackingOutputData.ViewPosition.y * 1.01f, 0);
+								if (runtime.MirrorCloneRuntime.VisualOffset == new Vector3()) {
+									runtime.MirrorCloneRuntime.VisualOffset = new Vector3(0, 0.5f + runtime.IKTrackingOutputData.ViewPosition.y * 1.01f, 0);
 								}
 							}
-							runtime.MirrorClone.PreCullVisualOffset(cam);
-							runtime.MirrorClone.VisualOffset = oldOffset;
+							runtime.MirrorCloneRuntime.PreCullVisualOffset(cam);
+							runtime.MirrorCloneRuntime.VisualOffset = oldOffset;
 						}
-						if (runtime.ShadowClone != null) {
-							runtime.ShadowClone.PreCullVisualOffset(cam);
+						if (runtime.ShadowCloneRuntime != null) {
+							runtime.ShadowCloneRuntime.PreCullVisualOffset(cam);
 						}
 					}
 					if (runtime != null && runtime.NonLocalClones != null) {
-						foreach (LyumaAv3Runtime nonLocalClone in runtime.NonLocalClones) {
+						foreach (LyumaAv3Runtime nonLocalClone in runtime.NonLocalCloneRuntimes) {
 							if (nonLocalClone != null) {
 								nonLocalClone.PreCullVisualOffset(cam);
 							}
@@ -186,15 +186,15 @@ namespace Lyuma.Av3Emulator.Runtime
 				foreach (var runtime in runtimes) {
 					if (runtime != null) {
 						runtime.PostRenderVisualOffset(cam);
-						if (runtime.MirrorClone != null) {
-							runtime.MirrorClone.PostRenderVisualOffset(cam);
+						if (runtime.MirrorCloneRuntime != null) {
+							runtime.MirrorCloneRuntime.PostRenderVisualOffset(cam);
 						}
-						if (runtime.ShadowClone != null) {
-							runtime.ShadowClone.PostRenderVisualOffset(cam);
+						if (runtime.ShadowCloneRuntime != null) {
+							runtime.ShadowCloneRuntime.PostRenderVisualOffset(cam);
 						}
 					}
 					if (runtime != null && runtime.NonLocalClones != null) {
-						foreach (LyumaAv3Runtime nonLocalClone in runtime.NonLocalClones) {
+						foreach (LyumaAv3Runtime nonLocalClone in runtime.NonLocalCloneRuntimes) {
 							if (nonLocalClone != null) {
 								nonLocalClone.PostRenderVisualOffset(cam);
 							}
@@ -260,7 +260,13 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 				try {
 					// Creates the playable director, and initializes animator.
-					bool alreadyHadComponent = avadesc.gameObject.GetComponent<LyumaAv3Runtime>() != null;
+					bool alreadyHadComponent = (
+						LyumaAv3Runtime.GetRuntimeForAnimator(avadesc.gameObject.GetComponent<Animator>()) != null ||
+						avadesc.gameObject.GetComponent<LyumaAv3Runtime>() != null ||
+						avadesc.gameObject.GetComponent<UnityEngine.AI.OffMeshLink>() != null);
+					if (alreadyHadComponent) {
+						continue;
+					}
 					if (RunPreprocessAvatarHook && !alreadyHadComponent) {
 						GameObject origClone = GameObject.Instantiate(avadesc.gameObject);
 						origClone.name = avadesc.gameObject.name;
@@ -271,9 +277,9 @@ namespace Lyuma.Av3Emulator.Runtime
 						avadesc.gameObject.SetActive(true);
 					}
 
-					var oml = GetOrAddComponent<UnityEngine.AI.OffMeshLink>(avadesc.gameObject);
+					var oml = avadesc.gameObject.AddComponent<UnityEngine.AI.OffMeshLink>();
 					oml.startTransform = this.transform;
-					var runtime = GetOrAddComponent<LyumaAv3Runtime>(avadesc.gameObject);
+					var runtime = avadesc.gameObject.AddComponent<LyumaAv3Runtime>();
 					if (RunPreprocessAvatarHook && !alreadyHadComponent) {
 						forceActiveRuntimes.AddLast(runtime);
 					}

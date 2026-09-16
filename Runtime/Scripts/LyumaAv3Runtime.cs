@@ -95,9 +95,12 @@ namespace Lyuma.Av3Emulator.Runtime
 		//[Header("PlayerLocal and MirrorReflection")]
 		public bool EnableHeadScaling;
 		public bool DisableMirrorAndShadowClones;
-		[HideInInspector] public LyumaAv3Runtime MirrorClone;
-		[HideInInspector] public LyumaAv3Runtime ShadowClone;
-		[HideInInspector] public List<LyumaAv3Runtime> NonLocalClones = new List<LyumaAv3Runtime>();
+		[HideInInspector] public GameObject MirrorClone;
+		[HideInInspector] public LyumaAv3Runtime MirrorCloneRuntime;
+		[HideInInspector] public GameObject ShadowClone;
+		[HideInInspector] public LyumaAv3Runtime ShadowCloneRuntime;
+		[HideInInspector] public List<GameObject> NonLocalClones = new List<GameObject>();
+		[HideInInspector] public List<LyumaAv3Runtime> NonLocalCloneRuntimes = new List<LyumaAv3Runtime>();
 		[Tooltip("To view both copies at once")] public bool DebugOffsetMirrorClone = false;
 		public bool ViewMirrorReflection;
 		private bool LastViewMirrorReflection;
@@ -105,7 +108,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		private bool LastViewBothRealAndMirror;
 		[HideInInspector] public VRCAvatarDescriptor avadesc;
 		Avatar animatorAvatar;
-		Animator animator;
+		public Animator animator;
 		private RuntimeAnimatorController origAnimatorController;
 		public Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController> allControllers = new Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController>();
 
@@ -739,23 +742,16 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (animatorToTopLevelRuntime.TryGetValue(innerAnimator, out runtime)) {
 				return true;
 			}
-			Transform transform = innerAnimator.transform;
-			while (transform != null && runtime == null) {
-				runtime = transform.GetComponent<LyumaAv3Runtime>();
-				transform = transform.parent;
-			}
-			if (runtime != null) {
-				if (runtime.attachedAnimators != null) {
-					Debug.Log("[" + component + "]: " + innerAnimator + " found parent runtime after it was Awoken! Adding to cache. Did you move me?");
-					animatorToTopLevelRuntime.Add(innerAnimator, runtime);
-					runtime.attachedAnimators.Add(innerAnimator);
-				} else {
-					Debug.Log("[" + component + "]: " + innerAnimator + " found parent runtime without being Awoken! Wakey Wakey...", runtime);
-					runtime.Awake();
+			Transform t = innerAnimator.transform;
+			while (t != null) {
+				Animator anim = t.GetComponent<Animator>();
+				if (anim != null) {
+					if (animatorToTopLevelRuntime.TryGetValue(anim, out runtime)) {
+						return true;
+					}
 				}
-				return true;
+				t = t.parent;
 			}
-
 			if (!issuedWarningAnimators.Contains(innerAnimator))
 			{
 				issuedWarningAnimators.Add(innerAnimator);
@@ -763,6 +759,13 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 
 			return false;
+		}
+
+		public static LyumaAv3Runtime GetRuntimeForAnimator(Animator animator) {
+			if (animatorToTopLevelRuntime.TryGetValue(animator, out var runtime)) {
+				return runtime;
+			}
+			return null;
 		}
 
 		float getAdjustedParameterAsFloat(string paramName, bool convertRange=false, float srcMin=0.0f, float srcMax=0.0f, float dstMin=0.0f, float dstMax=0.0f) {
@@ -1308,20 +1311,22 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 				animator.runtimeAnimatorController = origAnimatorController;
 			}
-			if (MirrorClone) {
-				GameObject.Destroy(MirrorClone.gameObject);
+			if (MirrorClone != null) {
+				GameObject.Destroy(MirrorClone);
 				MirrorClone = null;
+				MirrorCloneRuntime = null;
 			}
-			if (ShadowClone) {
-				GameObject.Destroy(ShadowClone.gameObject);
+			if (ShadowClone != null) {
+				GameObject.Destroy(ShadowClone);
 				ShadowClone = null;
+				ShadowCloneRuntime = null;
 			}
-			if (OriginalSourceClone) {
-				GameObject.Destroy(OriginalSourceClone.gameObject);
+			if (OriginalSourceClone != null) {
+				GameObject.Destroy(OriginalSourceClone.avadesc.gameObject);
 				OriginalSourceClone = null;
 			}
-			foreach (LyumaAv3Runtime clone in NonLocalClones) {
-				GameObject.Destroy(clone.gameObject);
+			foreach (GameObject clone in NonLocalClones) {
+				GameObject.Destroy(clone);
 			}
 			NonLocalClones.Clear();
 		}
@@ -1340,26 +1345,37 @@ namespace Lyuma.Av3Emulator.Runtime
 			// Debug.Log("AWOKEN " + gameObject.name, this);
 			attachedAnimators = new HashSet<Animator>();
 			if (AvatarSyncSource == null) {
+				// First time. This is the original avatar object.
 				var oml = GetComponent<UnityEngine.AI.OffMeshLink>();
 				if (oml != null && oml.startTransform != null) {
 					this.emulator = oml.startTransform.GetComponent<LyumaAv3Emulator>();
-					GameObject.DestroyImmediate(oml);
+					UnityEngine.Object.DestroyImmediate(oml);
 				}
-				Transform transform = this.transform;
+				Transform t = this.transform;
 				SourceObjectPath = "";
-				while (transform != null) {
-					SourceObjectPath = "/" + transform.name + SourceObjectPath;
-					transform = transform.parent;
+				while (t != null) {
+					SourceObjectPath = "/" + t.name + SourceObjectPath;
+					t = t.parent;
 				}
 				AvatarSyncSource = this;
-			} else {
+			} else if (AvatarSyncSource == this) {
+				// Duplicated inside the avatar's tree with initial Instantiate.
 				GameObject srcGO = GameObject.Find(SourceObjectPath);
 				if (srcGO == null) {
 					AvatarSyncSource = this;
+					Debug.Log("Destroying self! " + gameObject.name, this);
 					UnityEngine.Object.Destroy(this.gameObject);
 				} else {
 					AvatarSyncSource = srcGO.GetComponent<LyumaAv3Runtime>();
 				}
+			} else {
+				// Outside the avatar's tree: this node was instantiated separately.
+				// Because it was in a separate Instantiate call, the reference to the original copy was not tampered with.
+				Debug.Log("LyumaAv3Runtime " + gameObject.name + " duplicated outside the tree has AvatarSyncSource " + AvatarSyncSource.gameObject.name, this);
+			}
+			if (AvatarSyncSource != this && !IsMirrorClone && !IsShadowClone) {
+				Debug.Log("Non-local clone awoken: " + gameObject.name, this);
+				AvatarSyncSource.NonLocalCloneRuntimes.Add(this);
 			}
 
 			IsLocal = AvatarSyncSource == this;
@@ -1369,32 +1385,34 @@ namespace Lyuma.Av3Emulator.Runtime
 				ViewAnimatorOnlyNoParams = this.emulator.DefaultAnimatorToDebug;
 			}
 
-			animator = GetComponent<Animator>();
+			if (animator == null)
+			{
+				animator = GetComponent<Animator>();
+			}
 			if (animator == null)
 			{
 				animator = gameObject.AddComponent<Animator>();
 			}
-			else if (this.emulator == null || !this.emulator.IsLegacyAwakeUsed())
-			{
+			else if (AvatarSyncSource == this && (this.emulator == null || !this.emulator.IsLegacyAwakeUsed())) {
 				// legacy Awake() mode doesn't recreate the Animator for... legacy reasons.
 				// (the assumption is that Awake() runs before the Animator records defaults)
 
 				// But in the new version which uses Start(), we do recreate the Animator.
 				// Supposedly this is needed to workaround some Animator glitch caused by VRCFury
 				// to prevent the animator from baking defaults from before VRCFury build runs.
-				var controller = animator.runtimeAnimatorController;
 				var avatar = animator.avatar;
 				var applyRootMotion = animator.applyRootMotion;
 				var updateMode = animator.updateMode;
 				var cullingMode = animator.cullingMode;
+				var animatorGameObject = animator.gameObject;
 				DestroyImmediate(animator);
-				animator = gameObject.AddComponent<Animator>();
+				animator = animatorGameObject.AddComponent<Animator>();
 				animator.applyRootMotion = applyRootMotion;
 				animator.updateMode = updateMode;
 				animator.cullingMode = cullingMode;
 				animator.avatar = avatar;
-				animator.runtimeAnimatorController = controller;
 			}
+			animatorToTopLevelRuntime.TryAdd(animator, this);
 
 			if (animatorAvatar != null && animator.avatar == null) {
 				animator.avatar = animatorAvatar;
@@ -1409,7 +1427,11 @@ namespace Lyuma.Av3Emulator.Runtime
 			} else if (!VRMode) {
 				TrackingType = TrackingTypeIndex.HeadHands;
 			}
-			avadesc = this.gameObject.GetComponent<VRCAvatarDescriptor>();
+			avadesc = animator.gameObject.GetComponent<VRCAvatarDescriptor>();
+			if (avadesc == null) {
+				Debug.LogError("VRCAvatarDescriptor not found on " + animator.gameObject.name, this);
+				return;
+			}
 			if (avadesc.customEyeLookSettings.eyelidsSkinnedMesh != null) {
 				if (avadesc.customEyeLookSettings.eyelidsBlendshapes.Length > 0) {
 					blinkBlendShapeIdx = avadesc.customEyeLookSettings.eyelidsBlendshapes[0];
@@ -1432,7 +1454,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 			}
 			if (!IsMirrorClone && !IsShadowClone && AvatarSyncSource == this) {
-				convertDynamicBones(this.gameObject);
+				convertDynamicBones(avadesc.gameObject);
 				if (this.emulator != null) {
 					if (this.emulator.DescriptorColliders != DescriptorCollidersSendersHelper.DescriptorExtractionType.None) {
 						if (this.emulator.ForceUpdateDescriptorColliders) {
@@ -1448,14 +1470,47 @@ namespace Lyuma.Av3Emulator.Runtime
 				shouldClone = true;
 			}
 			if (shouldClone && GetComponents<Component>().All(x => x.GetType().Name != "PipelineSaver")) {
-				GameObject cloned = GameObject.Instantiate(gameObject);
+				GameObject cloned = GameObject.Instantiate(avadesc.gameObject);
 				cloned.hideFlags = HideFlags.HideAndDontSave;
 				cloned.SetActive(false);
-				OriginalSourceClone = cloned.GetComponent<LyumaAv3Runtime>();
+				LyumaAv3Runtime[] allRuntimes = cloned.GetComponentsInChildren<LyumaAv3Runtime>();
+				if (allRuntimes.Length >= 1) {
+					// The LyumaAv3Runtime component is inside the GameObject hierarchy we just cloned.
+					if (allRuntimes.Length >= 2) {
+						Debug.LogWarning("Multiple LyumaAv3Runtimes found. Destroying other instances.");
+						for (int i = 1; i < allRuntimes.Length; i++) {
+							UnityEngine.Object.Destroy(allRuntimes[i]);
+						}
+					}
+					OriginalSourceClone = allRuntimes[0];
+					// The Awake function already has logic to calculate AvatarSyncSource using GameObject.Find
+					// OriginalSourceClone.AvatarSyncSource = this; // By not doing this, we keep the destroy check which could be needed.
+				} else {
+					// The LyumaAv3Runtime component is outside. We have to clone it separately.
+					GameObject av3RuntimeGO = GameObject.Instantiate(gameObject);
+					av3RuntimeGO.transform.SetParent(cloned.transform);
+					LyumaAv3Runtime runtime = av3RuntimeGO.GetComponent<LyumaAv3Runtime>();
+					allRuntimes = av3RuntimeGO.GetComponentsInChildren<LyumaAv3Runtime>();
+					if (allRuntimes.Length >= 2) {
+						// We might in the future want a single object with all of the runtimes inside, so make sure to handle this case too.
+						Debug.LogWarning("Multiple LyumaAv3Runtimes found in separate object. Destroying other instances.");
+						runtime = null;
+						for (int i = 0; i < allRuntimes.Length; i++) {
+							if (runtime == null && allRuntimes[i].avadesc == avadesc) {
+								runtime = allRuntimes[i];
+								runtime.AvatarSyncSource = this;
+							} else {
+								UnityEngine.Object.Destroy(allRuntimes[i]);
+							}
+						}
+					}
+					OriginalSourceClone = runtime;
+					// OriginalSourceClone.AvatarSyncSource will already be set to this because it is a separate Instantiate call.
+				}
 				Debug.Log("Spawned a hidden source clone " + OriginalSourceClone, OriginalSourceClone);
 				OriginalSourceClone.OriginalSourceClone = OriginalSourceClone;
 			}
-			foreach (var smr in gameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true)) {
+			foreach (var smr in avadesc.gameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true)) {
 				smr.updateWhenOffscreen = (AvatarSyncSource == this || IsMirrorClone || IsShadowClone);
 			}
 			int desiredLayer = 9;
@@ -1468,10 +1523,10 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (IsShadowClone) {
 				desiredLayer = 9; // the Shadowclone is always on playerLocal and never on UI Menu
 			}
-			if (gameObject.layer != 12 || desiredLayer == 18) {
-				gameObject.layer = desiredLayer;
+			if (avadesc.gameObject.layer != 12 || desiredLayer == 18) {
+				avadesc.gameObject.layer = desiredLayer;
 			}
-			allTransforms = gameObject.GetComponentsInChildren<Transform>(true);
+			allTransforms = avadesc.gameObject.GetComponentsInChildren<Transform>(true);
 			foreach (Transform t in allTransforms) {
 				if (t.gameObject.layer != 12 || desiredLayer == 18) {
 					t.gameObject.layer = desiredLayer;
@@ -1496,15 +1551,15 @@ namespace Lyuma.Av3Emulator.Runtime
 
 			AvatarHeight = avadesc.ViewPosition.y;
 			DefaultViewPosition = avadesc.ViewPosition;
-			DefaultAvatarScale = gameObject.transform.localScale;
+			DefaultAvatarScale = avadesc.gameObject.transform.localScale;
 
-			ParentConstraints = gameObject.GetComponentsInChildren<ParentConstraint>(true)
+			ParentConstraints = avadesc.gameObject.GetComponentsInChildren<ParentConstraint>(true)
 				.Select(constraint => (constraint, constraint.translationOffsets.Select(offset =>
 				{
 					Vector3 lossyScale = constraint.transform.lossyScale;
 					return new Vector3(offset.x / lossyScale.x, offset.y / lossyScale.y, offset.z / lossyScale.z); // We want offsets to be in world space;
 				}).ToArray())).ToArray();
-			ClothComponents = gameObject.GetComponentsInChildren<Cloth>(true).ToArray();
+			ClothComponents = avadesc.gameObject.GetComponentsInChildren<Cloth>(true).ToArray();
 
 			if (this.IsMirrorClone || this.IsShadowClone)
 			{
@@ -1517,14 +1572,14 @@ namespace Lyuma.Av3Emulator.Runtime
 
 			if (this.emulator.EnablePlayerContactPermissions)
 			{
-				ContactBase[] contacts = gameObject.GetComponentsInChildren<ContactBase>(true).ToArray();
+				ContactBase[] contacts = avadesc.gameObject.GetComponentsInChildren<ContactBase>(true).ToArray();
 				if (!IsLocal)
 				{
 					foreach (ContactBase contact in contacts)
 					{
 						if (contact is ContactReceiver receiver)
 						{
-							if (receiver.localOnly) GameObject.DestroyImmediate(contact);
+							if (receiver.localOnly) UnityEngine.Object.DestroyImmediate(contact);
 						}
 					}
 				}
@@ -1544,14 +1599,14 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (AvatarSyncSource == this && GetComponents<Component>().All(x => x.GetType().Name != "PipelineSaver"))
 			{
 				OriginalSourceClone.IsMirrorClone = true;
-				MirrorClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
-				MirrorClone.gameObject.hideFlags = HideFlags.NotEditable;
+				MirrorClone = GameObject.Instantiate(OriginalSourceClone.avadesc.gameObject);
+				MirrorClone.hideFlags = HideFlags.NotEditable;
 				MirrorClone.GetComponent<Animator>().avatar = null;
 				OriginalSourceClone.IsMirrorClone = false;
-				GameObject o = MirrorClone.gameObject;
-				o.name = gameObject.name + " (MirrorReflection)";
-				o.SetActive(true);
-				allMirrorTransforms = MirrorClone.gameObject.GetComponentsInChildren<Transform>(true);
+				MirrorClone.name = avadesc.gameObject.name + " (MirrorReflection)";
+				MirrorClone.SetActive(true);
+				MirrorCloneRuntime = GetRuntimeForAnimator(MirrorClone.GetComponent<Animator>());
+				allMirrorTransforms = MirrorClone.GetComponentsInChildren<Transform>(true);
 				foreach (Transform t in allMirrorTransforms)
 				{
 					foreach (Component component in t.GetComponents<Component>().Reverse())
@@ -1572,14 +1627,14 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			if (AvatarSyncSource == this && GetComponents<Component>().All(x => x.GetType().Name != "PipelineSaver")) {
 				OriginalSourceClone.IsShadowClone = true;
-				ShadowClone = GameObject.Instantiate(OriginalSourceClone.gameObject).GetComponent<LyumaAv3Runtime>();
-				ShadowClone.gameObject.hideFlags = HideFlags.NotEditable;
+				ShadowClone = GameObject.Instantiate(OriginalSourceClone.avadesc.gameObject);
+				ShadowClone.hideFlags = HideFlags.NotEditable;
 				ShadowClone.GetComponent<Animator>().avatar = null;
 				OriginalSourceClone.IsShadowClone = false;
-				GameObject o = ShadowClone.gameObject;
-				o.name = gameObject.name + " (ShadowClone)";
-				o.SetActive(true);
-				allShadowTransforms = ShadowClone.gameObject.GetComponentsInChildren<Transform>(true);
+				ShadowClone.name = avadesc.gameObject.name + " (ShadowClone)";
+				ShadowClone.SetActive(true);
+				ShadowCloneRuntime = GetRuntimeForAnimator(ShadowClone.GetComponent<Animator>());
+				allShadowTransforms = ShadowClone.GetComponentsInChildren<Transform>(true);
 				foreach (Transform t in allShadowTransforms)
 				{
 					foreach(Component component in t.GetComponents<Component>().Reverse())
@@ -1612,14 +1667,22 @@ namespace Lyuma.Av3Emulator.Runtime
 			PrevAnimatorToDebug = (char)(int)DebugDuplicateAnimator;
 			ViewAnimatorOnlyNoParams = DebugDuplicateAnimator;
 
-			animator = GetOrAddComponent<Animator>(this.gameObject);
+			if (animator == null) 
+			{
+				animator = gameObject.GetComponent<Animator>();
+				if (animator == null)
+				{
+					animator = gameObject.AddComponent<Animator>();
+					animatorToTopLevelRuntime.TryAdd(animator, this);
+				}
+			}
 			animator.avatar = animatorAvatar;
 			animator.applyRootMotion = false;
 			animator.updateMode = AnimatorUpdateMode.Normal;
 			animator.cullingMode = (this == AvatarSyncSource || IsMirrorClone || IsShadowClone) ? AnimatorCullingMode.AlwaysAnimate : AnimatorCullingMode.CullCompletely;
 			animator.runtimeAnimatorController = null;
 
-			avadesc = this.gameObject.GetComponent<VRCAvatarDescriptor>();
+			avadesc = animator.gameObject.GetComponent<VRCAvatarDescriptor>();
 			IKTrackingOutputData.ViewPosition = avadesc.ViewPosition;
 			IKTrackingOutputData.AvatarScaleFactorGuess = IKTrackingOutputData.ViewPosition.magnitude / BASE_HEIGHT; // mostly guessing...
 			IKTrackingOutputData.HeadRelativeViewPosition = IKTrackingOutputData.ViewPosition;
@@ -1733,7 +1796,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			foreach (Animator anim in animators)
 			{
 				attachedAnimators.Add(anim);
-				animatorToTopLevelRuntime.Add(anim, this);
+				animatorToTopLevelRuntime.TryAdd(anim, this);
 			}
 
 			Dictionary<string, float> stageNameToValue = EarlyRefreshExpressionParameters();
@@ -2081,10 +2144,10 @@ namespace Lyuma.Av3Emulator.Runtime
 				return;
 			}
 			if (MirrorClone != null) {
-				allMirrorTransforms = MirrorClone.gameObject.GetComponentsInChildren<Transform>(true);
+				allMirrorTransforms = MirrorClone.GetComponentsInChildren<Transform>(true);
 			}
 			if (ShadowClone != null) {
-				allShadowTransforms = ShadowClone.gameObject.GetComponentsInChildren<Transform>(true);
+				allShadowTransforms = ShadowClone.GetComponentsInChildren<Transform>(true);
 			}
 			List<(MeshRenderer, MeshRenderer, MeshRenderer)> renderers = new List<(MeshRenderer, MeshRenderer, MeshRenderer)>();
 			List<(SkinnedMeshRenderer, SkinnedMeshRenderer, SkinnedMeshRenderer)> skinnedRenderers = new List<(SkinnedMeshRenderer, SkinnedMeshRenderer, SkinnedMeshRenderer)>();
@@ -2165,16 +2228,16 @@ namespace Lyuma.Av3Emulator.Runtime
 			UpdateVisemeBlendShapes();
 			if(animator != null && this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
 				if (MirrorClone != null) {
-					MirrorClone.gameObject.SetActive(true);
-					MirrorClone.transform.localRotation = transform.localRotation;
-					MirrorClone.transform.localScale = transform.localScale;
-					MirrorClone.transform.position = transform.position + (DebugOffsetMirrorClone ? new Vector3(0.0f, 1.3f * avadesc.ViewPosition.y, 0.0f) : Vector3.zero);
+					MirrorClone.SetActive(true);
+					MirrorClone.transform.localRotation = avadesc.transform.localRotation;
+					MirrorClone.transform.localScale = avadesc.transform.localScale;
+					MirrorClone.transform.position = avadesc.transform.position + (DebugOffsetMirrorClone ? new Vector3(0.0f, 1.3f * avadesc.ViewPosition.y, 0.0f) : Vector3.zero);
 				}
 				if (ShadowClone != null) {
-					ShadowClone.gameObject.SetActive(true);
-					ShadowClone.transform.localRotation = transform.localRotation;
-					ShadowClone.transform.localScale = transform.localScale;
-					ShadowClone.transform.position = transform.position;
+					ShadowClone.SetActive(true);
+					ShadowClone.transform.localRotation = avadesc.transform.localRotation;
+					ShadowClone.transform.localScale = avadesc.transform.localScale;
+					ShadowClone.transform.position = avadesc.transform.position;
 				}
 				if (rendererCache == null || rendererCache.Length == 0) {
 					SetupCloneCaches();
@@ -2182,7 +2245,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				foreach (Transform[] allXTransforms in new Transform[][]{allMirrorTransforms, allShadowTransforms}) {
 					if (allXTransforms != null) {
 						for(int i = 0; i < allTransforms.Length && i < allXTransforms.Length; i++) {
-							if (allXTransforms[i] == null || allTransforms[i] == this.transform) {
+							if (allXTransforms[i] == null || allTransforms[i] == avadesc.transform) {
 								continue;
 							}
 							if (allTransforms[i].localPosition == allTransforms[i].localPosition) {
@@ -2259,14 +2322,14 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		public void PreCullVisualOffset(Camera cam) {
 			if (!IsCurrentlyVisuallyOffset) {
-				SavedPosition = transform.position;
-				transform.position += VisualOffset;
+				SavedPosition = avadesc.transform.position;
+				avadesc.transform.position += VisualOffset;
 				IsCurrentlyVisuallyOffset = true;
 			}
 		}
 		public void PostRenderVisualOffset(Camera cam) {
 			if (IsCurrentlyVisuallyOffset) {
-				transform.position = SavedPosition;
+				avadesc.transform.position = SavedPosition;
 				IsCurrentlyVisuallyOffset = false;
 			}
 		}
@@ -2430,7 +2493,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			frameIndex += 1;
 			if (animator == null)
 			{
-				animator = GetOrAddComponent<Animator>(this.gameObject);
+				return;
 			}
 			if (broadcastStartNextFrame) {
 				Debug.Log("BROADCASTING START!");
@@ -2642,10 +2705,12 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (DisableMirrorAndShadowClones && (MirrorClone != null || ShadowClone != null)) {
 				allMirrorTransforms = null;
 				allShadowTransforms = null;
-				GameObject.Destroy(MirrorClone.gameObject);
+				GameObject.Destroy(MirrorClone);
 				MirrorClone = null;
-				GameObject.Destroy(ShadowClone.gameObject);
+				MirrorCloneRuntime = null;
+				GameObject.Destroy(ShadowClone);
 				ShadowClone = null;
+				ShadowCloneRuntime = null;
 			}
 			if (!DisableMirrorAndShadowClones && !IsMirrorClone && !IsShadowClone && MirrorClone == null && ShadowClone == null && AvatarSyncSource == this) {
 				CreateMirrorClone();
@@ -2675,7 +2740,10 @@ namespace Lyuma.Av3Emulator.Runtime
 					OSCController = null;
 				}
 				if (OSCController == null && EnableAvatarOSC) {
-					osc = GetOrAddComponent<LyumaAv3Osc>(emulator.gameObject);
+					osc = emulator.gameObject.GetComponent<LyumaAv3Osc>();
+					if (osc == null) {
+						osc = emulator.gameObject.AddComponent<LyumaAv3Osc>();
+					}
 					osc.openSocket = true;
 					osc.avatarDescriptor = avadesc;
 					osc.enabled = true;
@@ -2692,12 +2760,12 @@ namespace Lyuma.Av3Emulator.Runtime
 					OriginalSourceClone.IsOnFriendsList = emulator.ClonesAreOnFriendsList;
 				}
 				OriginalSourceClone.VisualOffset = AvatarSyncSource.CloneCount * new Vector3(0.4f, 0.0f, 0.4f);
-				GameObject go = GameObject.Instantiate(OriginalSourceClone.gameObject);
+				GameObject go = GameObject.Instantiate(OriginalSourceClone.animator.gameObject);
 				go.hideFlags = 0;
 				go.name = go.name.Substring(0, go.name.Length - 7) + " (Non-Local " + AvatarSyncSource.CloneCount + ")";
 				go.SetActive(true);
 				OriginalSourceClone.VisualOffset = new Vector3(0,0,0);
-				NonLocalClones.Add(go.GetComponent<LyumaAv3Runtime>());
+				NonLocalClones.Add(go);
 			}
 			NonLocalSyncInterval = AvatarSyncSource.NonLocalSyncInterval;
 			if (nextUpdateTime == 0.0f) {
@@ -2917,12 +2985,12 @@ namespace Lyuma.Av3Emulator.Runtime
 				scale = AvatarHeight / DefaultViewPosition.y;
 			}
 
-			Vector3 oldScale = gameObject.transform.localScale;
+			Vector3 oldScale = avadesc.transform.localScale;
 			
-			gameObject.transform.localScale = DefaultAvatarScale * scale;
+			avadesc.transform.localScale = DefaultAvatarScale * scale;
 			avadesc.ViewPosition = DefaultViewPosition * scale;
 
-			bool scaleChanged = oldScale != gameObject.transform.localScale;
+			bool scaleChanged = oldScale != avadesc.transform.localScale;
 			
 			if (emulator.DisableParentConstraintOffsetScaling)
 			{
