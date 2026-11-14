@@ -263,9 +263,91 @@ namespace Lyuma.Av3Emulator.Runtime
 				accessInst.paramName = parameter;
 				mb.paramAccess = accessInst;
 				accessInst.floatVal = mb.paramValue;
-			}
+                assignContactAdvancedParameters(mb);
+            }
 		}
-		public void assignPhysBoneParameters(VRCPhysBone[] behaviours) {
+
+        private void assignContactAdvancedParameters(VRCContactReceiver mb)
+        {
+            string parameter = mb.parameter;
+
+            if (string.IsNullOrWhiteSpace(parameter))
+            {
+                return;
+            }
+
+            Av3EmuParameterAccess Access(string suffix)
+            {
+                string name = parameter + suffix;
+
+                if (!IsLocal && isBeingSynced(name))
+                {
+                    return null;
+                }
+
+                return new Av3EmuParameterAccess { runtime = this, paramName = name };
+            }
+
+            if (mb.HasAdvancedParameter(ContactReceiver.AdvancedParameter.SenderType))
+            {
+                mb.param_SenderType = Access(ContactReceiver.PARAM_SENDER_TYPE);
+            }
+            if (mb.HasAdvancedParameter(ContactReceiver.AdvancedParameter.SenderLocalPosition))
+            {
+                mb.param_SenderLocalPositionX = Access(ContactReceiver.PARAM_SENDER_LOCAL_POSITION_X);
+                mb.param_SenderLocalPositionY = Access(ContactReceiver.PARAM_SENDER_LOCAL_POSITION_Y);
+                mb.param_SenderLocalPositionZ = Access(ContactReceiver.PARAM_SENDER_LOCAL_POSITION_Z);
+            }
+            if (mb.HasAdvancedParameter(ContactReceiver.AdvancedParameter.SenderLossyScale))
+            {
+                mb.param_SenderLossyScaleX = Access(ContactReceiver.PARAM_SENDER_LOSSY_SCALE_X);
+                mb.param_SenderLossyScaleY = Access(ContactReceiver.PARAM_SENDER_LOSSY_SCALE_Y);
+                mb.param_SenderLossyScaleZ = Access(ContactReceiver.PARAM_SENDER_LOSSY_SCALE_Z);
+            }
+            if (mb.HasAdvancedParameter(ContactReceiver.AdvancedParameter.SenderVelocity))
+            {
+                mb.param_SenderVelocityX = Access(ContactReceiver.PARAM_SENDER_VELOCITY_X);
+                mb.param_SenderVelocityY = Access(ContactReceiver.PARAM_SENDER_VELOCITY_Y);
+                mb.param_SenderVelocityZ = Access(ContactReceiver.PARAM_SENDER_VELOCITY_Z);
+                mb.param_SenderVelocityMagnitude = Access(ContactReceiver.PARAM_SENDER_VELOCITY_MAGNITUDE);
+            }
+            if (mb.HasAdvancedParameter(ContactReceiver.AdvancedParameter.PointSeparation))
+            {
+                mb.param_PointSeparation = Access(ContactReceiver.PARAM_POINT_SEPARATION);
+            }
+            if (mb.HasAdvancedParameter(ContactReceiver.AdvancedParameter.ProximitySpeed) &&
+                mb.receiverType == ContactReceiver.ReceiverType.Proximity)
+            {
+                mb.param_ProximitySpeed = Access(ContactReceiver.PARAM_PROXIMITY_SPEED);
+            }
+
+            if (mb.HasAdvancedParameter(ContactReceiver.AdvancedParameter.CollisionTags) && mb.collisionTags != null)
+            {
+                mb.param_CollisionTags = new Dictionary<string, VRC.SDKBase.IAnimParameterAccess>();
+                mb.param_CollisionTagsEnabledSet = new HashSet<string>();
+                foreach (string tag in mb.collisionTags)
+                {
+                    if (string.IsNullOrWhiteSpace(tag))
+                    {
+                        continue;
+                    }
+
+                    var access = Access(ContactReceiver.PARAM_COLLISION_TAG_PREFIX + tag);
+
+                    if (access != null)
+                    {
+                        mb.param_CollisionTags[tag] = access;
+                    }
+                }
+            }
+            else
+            {
+                mb.param_CollisionTags = null;
+                mb.param_CollisionTagsEnabledSet = null;
+            }
+        }
+
+        public void assignPhysBoneParameters(VRCPhysBone[] behaviours) {
 			AvDynamicsPhysBones = behaviours;
 			foreach (var mb in AvDynamicsPhysBones) {
 				string parameter = mb.parameter;
