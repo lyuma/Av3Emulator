@@ -87,8 +87,8 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		//[Header("Network Clones and Sync")]
 		public bool CreateNonLocalClone;
-		[Tooltip("In VRChat, 8-bit float quantization only happens remotely. Check this to test your robustness to quantization locally, too. (example: 0.5 -> 0.503")]
-		public bool locally8bitQuantizedFloats = false;
+        [Tooltip("In VRChat, float quantization only happens remotely. Check this to apply each parameter's bit width and representation locally too.")]
+        public bool locally8bitQuantizedFloats = false;
 		private int CloneCount;
 		[Range(0.0f, 2.0f)] public float NonLocalSyncInterval = 0.2f;
 		[Tooltip("Parameters visible in the radial menu will IK sync")] public bool IKSyncRadialMenu = true;
@@ -250,7 +250,41 @@ namespace Lyuma.Av3Emulator.Runtime
 			return false;
 		}
 
-		public void assignContactParameters(VRCContactReceiver[] behaviours) {
+        static readonly MethodInfo GetBitWidthByTypeMethod = typeof(VRCExpressionParameters.Parameter).GetMethod("GetBitWidthByType");
+        static readonly MethodInfo GetRepresentationByTypeMethod = typeof(VRCExpressionParameters.Parameter).GetMethod("GetRepresentationByType");
+        static readonly MethodInfo GetCustomLerpDurationMethod = typeof(VRCExpressionParameters.Parameter).GetMethod("GetCustomLerpDuration");
+
+        static void ReadSyncSettings(VRCExpressionParameters.Parameter p, out int bitWidth, out bool signed, out float lerpDuration)
+        {
+            bitWidth = 8;
+            signed = p.valueType == VRCExpressionParameters.ValueType.Float;
+            lerpDuration = -1f;
+
+            if (GetBitWidthByTypeMethod != null)
+			{
+                bitWidth = (byte)GetBitWidthByTypeMethod.Invoke(p, null);
+			}
+
+            if (GetRepresentationByTypeMethod != null)
+			{
+                signed = GetRepresentationByTypeMethod.Invoke(p, null).ToString() == "Signed";
+			}
+
+            if (GetCustomLerpDurationMethod != null)
+            {
+                var d = (float?)GetCustomLerpDurationMethod.Invoke(p, null);
+                if (d.HasValue) lerpDuration = d.Value;
+            }
+        }
+
+        bool IsIKSynced(LyumaAv3Menu[] menus, string name)
+        {
+            return IKSyncRadialMenu &&
+                ((menus.Length >= 1 && menus[0].IsControlIKSynced(name)) ||
+                 (menus.Length >= 2 && menus[1].IsControlIKSynced(name)));
+        }
+
+        public void assignContactParameters(VRCContactReceiver[] behaviours) {
 			AvDynamicsContactReceivers = behaviours;
 			foreach (var mb in AvDynamicsContactReceivers) {
 				if (!IsLocal && (mb.localOnly || isBeingSynced(mb.parameter)))
@@ -383,7 +417,28 @@ namespace Lyuma.Av3Emulator.Runtime
 			return val;
 		}
 
-		public enum VisemeIndex {
+        public static int QuantizeInt(int val, int bits, bool signed)
+        {
+            int min = signed ? -(1 << (bits - 1)) : 0;
+            int max = signed ? (1 << (bits - 1)) - 1 : (1 << bits) - 1;
+
+            return Mathf.Clamp(val, min, max);
+        }
+        public static float ClampFloatRange(float val, bool signed)
+        {
+            return Mathf.Clamp(val, signed ? -1f : 0f, 1f);
+        }
+        public static float QuantizeFloat(float val, int bits, bool signed)
+        {
+            val = ClampFloatRange(val, signed);
+
+            // SDK: (2^bits - 2) intervals across the range (2 if signed, 1 if unsigned)
+            int stepsPerUnit = signed ? (1 << (bits - 1)) - 1 : (1 << bits) - 2;
+
+            return ClampFloatRange(Mathf.Round(val * stepsPerUnit) / stepsPerUnit, signed);
+        }
+
+        public enum VisemeIndex {
 			sil, PP, FF, TH, DD, kk, CH, SS, nn, RR, aa, E, I, O, U
 		}
 		public enum GestureIndex {
@@ -625,7 +680,13 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 			}
 			[HideInInspector] public float? lastValue;
-		}
+            [HideInInspector] public int bitWidth = 8;
+            [HideInInspector] public bool signed = true;
+            [HideInInspector] public float lerpDuration = -1f;
+            [HideInInspector] public float lerpTarget;
+            [HideInInspector] public float lerpCurrent;
+            [HideInInspector] public float lerpSpeed;
+        }
 		//[Header("User-generated inputs")]
 		public List<FloatParam> Floats = new List<FloatParam>();
 		public Dictionary<string, int> FloatToIndex = new Dictionary<string, int>();
@@ -638,7 +699,13 @@ namespace Lyuma.Av3Emulator.Runtime
 			[HideInInspector] public bool synced;
 			public int value;
 			[HideInInspector] public int? lastValue;
-		}
+            [HideInInspector] public int bitWidth = 8;
+            [HideInInspector] public bool signed = false;
+            [HideInInspector] public float lerpDuration = -1f;
+            [HideInInspector] public float lerpTarget;
+            [HideInInspector] public float lerpCurrent;
+            [HideInInspector] public float lerpSpeed;
+        }
 		public List<IntParam> Ints = new List<IntParam>();
 		public Dictionary<string, int> IntToIndex = new Dictionary<string, int>();
 
@@ -1997,7 +2064,9 @@ namespace Lyuma.Av3Emulator.Runtime
 						param.value = (int)lastDefault;
 						param.lastValue = null;
 						IntToIndex[param.name] = Ints.Count;
-						Ints.Add(param);
+                        ReadSyncSettings(stageParam, out param.bitWidth, out param.signed, out param.lerpDuration);
+                        param.lerpTarget = param.lerpCurrent = param.value;
+                        Ints.Add(param);
 					}
 					else if ((int)stageParam.valueType == 1)
 					{
@@ -2009,7 +2078,9 @@ namespace Lyuma.Av3Emulator.Runtime
 						param.exportedValue = lastDefault;
 						param.lastValue = null;
 						FloatToIndex[param.name] = Floats.Count;
-						Floats.Add(param);
+                        ReadSyncSettings(stageParam, out param.bitWidth, out param.signed, out param.lerpDuration);
+                        param.lerpTarget = param.lerpCurrent = lastDefault;
+                        Floats.Add(param);
 					}
 					else if ((int)stageParam.valueType == 2)
 					{
@@ -2775,32 +2846,55 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (AvatarSyncSource != this && !IsMirrorClone && !IsShadowClone) {
 				IKSyncRadialMenu = AvatarSyncSource.IKSyncRadialMenu;
 				LyumaAv3Menu[] menus = AvatarSyncSource.GetComponents<LyumaAv3Menu>();
-				for (int i = 0; i < Ints.Count; i++) {
-					if (ParameterNames.Contains(Ints[i].name)) {
-						// Simulate IK sync of open gesture parameter.
-						if (ShouldSyncThisFrame || (IKSyncRadialMenu && menus.Length >= 1 && menus[0].IsControlIKSynced(Ints[i].name))
-								|| (IKSyncRadialMenu && menus.Length >= 2 && menus[1].IsControlIKSynced(Ints[i].name))) {
-							if (AvatarSyncSource.Ints[i].synced)
-							{
-								Ints[i].value = ClampByte(AvatarSyncSource.Ints[i].value);
-							}
-						}
-					}
-				}
-				for (int i = 0; i < Floats.Count; i++) {
-					if (ParameterNames.Contains(Floats[i].name)) {
-						// Simulate IK sync of open gesture parameter.
-						if (ShouldSyncThisFrame || (IKSyncRadialMenu && menus.Length >= 1 && menus[0].IsControlIKSynced(Floats[i].name))
-								|| (IKSyncRadialMenu && menus.Length >= 2 && menus[1].IsControlIKSynced(Floats[i].name))) {
-							if (AvatarSyncSource.Floats[i].synced)
-							{
-								Floats[i].exportedValue = ClampAndQuantizeFloat(AvatarSyncSource.Floats[i].exportedValue);
-								Floats[i].value = Floats[i].exportedValue;
-							}
-						}
-					}
-				}
-				for (int i = 0; i < Bools.Count; i++) {
+                for (int i = 0; i < Ints.Count; i++)
+                {
+                    if (ParameterNames.Contains(Ints[i].name))
+                    {
+                        bool isIK = IsIKSynced(menus, Ints[i].name);
+                        if ((ShouldSyncThisFrame || isIK) && AvatarSyncSource.Ints[i].synced)
+                        {
+                            var p = Ints[i];
+                            int target = QuantizeInt(AvatarSyncSource.Ints[i].value, p.bitWidth, p.signed);
+
+                            if (isIK || p.lerpDuration <= 0f)
+                            {
+                                p.value = target;
+                                p.lerpCurrent = target;
+                                p.lerpSpeed = 0f;
+                            }
+                            else if (target != p.lerpTarget)
+                            {
+                                p.lerpSpeed = Mathf.Abs(target - p.lerpCurrent) / p.lerpDuration;
+                            }
+                            p.lerpTarget = target;
+                        }
+                    }
+                }
+                for (int i = 0; i < Floats.Count; i++)
+                {
+                    if (ParameterNames.Contains(Floats[i].name))
+                    {
+                        bool isIK = IsIKSynced(menus, Floats[i].name);
+                        // Simulate IK sync of open gesture parameter.
+                        if ((ShouldSyncThisFrame || isIK) && AvatarSyncSource.Floats[i].synced)
+                        {
+                            var f = Floats[i];
+                            float target = QuantizeFloat(AvatarSyncSource.Floats[i].exportedValue, f.bitWidth, f.signed);
+                            float duration = f.lerpDuration >= 0f ? f.lerpDuration : NonLocalSyncInterval;
+                            if (isIK || duration <= 0f)
+                            {
+                                f.exportedValue = target;
+                                f.lerpSpeed = 0f;
+                            }
+                            else if (target != f.lerpTarget)
+                            {
+                                f.lerpSpeed = Mathf.Abs(target - f.exportedValue) / duration;
+                            }
+                            f.lerpTarget = target;
+                        }
+                    }
+                }
+                for (int i = 0; i < Bools.Count; i++) {
 					if (ParameterNames.Contains(Bools[i].name)) {
 						if (ShouldSyncThisFrame) {
 							if (AvatarSyncSource.Bools[i].synced)
@@ -2810,7 +2904,22 @@ namespace Lyuma.Av3Emulator.Runtime
 						}
 					}
 				}
-				if (ShouldSyncThisFrame) {
+
+                foreach (var f in Floats)
+                {
+                    if (f.lerpSpeed > 0f && f.exportedValue != f.lerpTarget)
+                        f.exportedValue = Mathf.MoveTowards(f.exportedValue, f.lerpTarget, f.lerpSpeed * Time.deltaTime);
+                }
+                foreach (var p in Ints)
+                {
+                    if (p.lerpSpeed > 0f && p.lerpCurrent != p.lerpTarget)
+                    {
+                        p.lerpCurrent = Mathf.MoveTowards(p.lerpCurrent, p.lerpTarget, p.lerpSpeed * Time.deltaTime);
+                        p.value = Mathf.RoundToInt(p.lerpCurrent);
+                    }
+                }
+
+                if (ShouldSyncThisFrame) {
 					nextUpdateTime = Time.time + NonLocalSyncInterval;
 				}
 			}
@@ -2887,20 +2996,39 @@ namespace Lyuma.Av3Emulator.Runtime
 					Floats[i].lastExpressionValue_ = Floats[i].expressionValue;
 				}
 				if (ParameterNames.Contains(Floats[i].name) && Floats[i].synced) {
-					if (locally8bitQuantizedFloats) {
-						Floats[i].exportedValue = ClampAndQuantizeFloat(Floats[i].exportedValue);
-					} else {
-						Floats[i].exportedValue = ClampFloatOnly(Floats[i].exportedValue);
-					}
-				}
-				if (ParameterNames.Contains(Floats[i].name)) {
-					Floats[i].value = Floats[i].exportedValue;
-				}
-			}
+                    if (locally8bitQuantizedFloats && AvatarSyncSource == this)
+                    {
+                        Floats[i].exportedValue = QuantizeFloat(Floats[i].exportedValue, Floats[i].bitWidth, Floats[i].signed);
+                    }
+                    else
+                    {
+                        Floats[i].exportedValue = ClampFloatRange(Floats[i].exportedValue, Floats[i].signed);
+                    }
+                }
+                if (ParameterNames.Contains(Floats[i].name))
+                {
+                    var f = Floats[i];
+                    if (AvatarSyncSource == this && f.lerpDuration > 0f)
+                    {
+                        if (f.exportedValue != f.lerpTarget)
+                        {
+                            f.lerpSpeed = Mathf.Abs(f.exportedValue - f.lerpCurrent) / f.lerpDuration;
+                            f.lerpTarget = f.exportedValue;
+                        }
+                        f.lerpCurrent = Mathf.MoveTowards(f.lerpCurrent, f.lerpTarget, f.lerpSpeed * Time.deltaTime);
+                        f.value = f.lerpCurrent;
+                    }
+                    else
+                    {
+                        f.value = f.exportedValue;
+                        f.lerpCurrent = f.value;
+                    }
+                }
+            }
 			for (int i = 0; i < Ints.Count; i++) {
 				if (ParameterNames.Contains(Ints[i].name) && Ints[i].synced) {
-					Ints[i].value = ClampByte(Ints[i].value);
-				}
+                    Ints[i].value = QuantizeInt(Ints[i].value, Ints[i].bitWidth, Ints[i].signed);
+                }
 			}
 			if (Seated != PrevSeated && sittingIndex >= 0 && playableBlendingStates[sittingIndex] != null)
 			{
@@ -3037,8 +3165,18 @@ namespace Lyuma.Av3Emulator.Runtime
 						if (param.value != param.lastValue) {
 							AnimatorControllerParameterType outType = parameterTypes[param.name];
 							SetTypeWithMismatch(playable, paramid, param.value, outType);
-							// playable.SetFloat(paramid, param.value);
-						}
+                            // playable.SetFloat(paramid, param.value);
+
+                            if (param.lerpSpeed > 0f && !playable.IsParameterControlledByCurve(paramid))
+                            {
+                                Dictionary<int, float> cache = playableParamterFloats[whichcontroller];
+
+                                if (cache.ContainsKey(paramid))
+								{
+                                    cache[paramid] = (float)GetTypeWithMismatch(playable, paramid, outType, AnimatorControllerParameterType.Float);
+								}
+                            }
+                        }
 					}
 				}
 				foreach (IntParam param in Ints)
