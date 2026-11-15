@@ -263,91 +263,121 @@ namespace Lyuma.Av3Emulator.Runtime
 				accessInst.paramName = parameter;
 				mb.paramAccess = accessInst;
 				accessInst.floatVal = mb.paramValue;
-                assignContactAdvancedParameters(mb);
-            }
+				assignContactAdvancedParameters(mb);
+			}
 		}
 
-        private void assignContactAdvancedParameters(VRCContactReceiver mb)
-        {
-            string parameter = mb.parameter;
+		static readonly MethodInfo HasAdvancedParameterMethod = typeof(ContactReceiver).GetMethod("HasAdvancedParameter");
+		static readonly Type AdvancedParameterType = typeof(ContactReceiver).GetNestedType("AdvancedParameter");
 
-            if (string.IsNullOrWhiteSpace(parameter))
-            {
-                return;
-            }
+		private void assignContactAdvancedParameters(VRCContactReceiver mb)
+		{
+			if (HasAdvancedParameterMethod == null || AdvancedParameterType == null)
+			{
+				return;
+			}
 
-            Av3EmuParameterAccess Access(string suffix)
-            {
-                string name = parameter + suffix;
+			string parameter = mb.parameter;
+			if (string.IsNullOrWhiteSpace(parameter))
+			{
+				return;
+			}
 
-                if (!IsLocal && isBeingSynced(name))
-                {
-                    return null;
-                }
+			bool Has(string flag)
+			{
+				if (!Enum.IsDefined(AdvancedParameterType, flag))
+				{
+					return false;
+				}
 
-                return new Av3EmuParameterAccess { runtime = this, paramName = name };
-            }
+				return (bool)HasAdvancedParameterMethod.Invoke(mb, new object[] { Enum.Parse(AdvancedParameterType, flag) });
+			}
+			string Suffix(string constName)
+			{
+				var c = typeof(ContactReceiver).GetField(constName, BindingFlags.Public | BindingFlags.Static);
+				return c == null ? null : (string)c.GetValue(null);
+			}
 
-            if (mb.HasAdvancedParameter(ContactReceiver.AdvancedParameter.SenderType))
-            {
-                mb.param_SenderType = Access(ContactReceiver.PARAM_SENDER_TYPE);
-            }
-            if (mb.HasAdvancedParameter(ContactReceiver.AdvancedParameter.SenderLocalPosition))
-            {
-                mb.param_SenderLocalPositionX = Access(ContactReceiver.PARAM_SENDER_LOCAL_POSITION_X);
-                mb.param_SenderLocalPositionY = Access(ContactReceiver.PARAM_SENDER_LOCAL_POSITION_Y);
-                mb.param_SenderLocalPositionZ = Access(ContactReceiver.PARAM_SENDER_LOCAL_POSITION_Z);
-            }
-            if (mb.HasAdvancedParameter(ContactReceiver.AdvancedParameter.SenderLossyScale))
-            {
-                mb.param_SenderLossyScaleX = Access(ContactReceiver.PARAM_SENDER_LOSSY_SCALE_X);
-                mb.param_SenderLossyScaleY = Access(ContactReceiver.PARAM_SENDER_LOSSY_SCALE_Y);
-                mb.param_SenderLossyScaleZ = Access(ContactReceiver.PARAM_SENDER_LOSSY_SCALE_Z);
-            }
-            if (mb.HasAdvancedParameter(ContactReceiver.AdvancedParameter.SenderVelocity))
-            {
-                mb.param_SenderVelocityX = Access(ContactReceiver.PARAM_SENDER_VELOCITY_X);
-                mb.param_SenderVelocityY = Access(ContactReceiver.PARAM_SENDER_VELOCITY_Y);
-                mb.param_SenderVelocityZ = Access(ContactReceiver.PARAM_SENDER_VELOCITY_Z);
-                mb.param_SenderVelocityMagnitude = Access(ContactReceiver.PARAM_SENDER_VELOCITY_MAGNITUDE);
-            }
-            if (mb.HasAdvancedParameter(ContactReceiver.AdvancedParameter.PointSeparation))
-            {
-                mb.param_PointSeparation = Access(ContactReceiver.PARAM_POINT_SEPARATION);
-            }
-            if (mb.HasAdvancedParameter(ContactReceiver.AdvancedParameter.ProximitySpeed) &&
-                mb.receiverType == ContactReceiver.ReceiverType.Proximity)
-            {
-                mb.param_ProximitySpeed = Access(ContactReceiver.PARAM_PROXIMITY_SPEED);
-            }
+			Av3EmuParameterAccess Access(string name)
+			{
+				if (!IsLocal && isBeingSynced(name)) return null;
+				return new Av3EmuParameterAccess { runtime = this, paramName = name };
+			}
 
-            if (mb.HasAdvancedParameter(ContactReceiver.AdvancedParameter.CollisionTags) && mb.collisionTags != null)
-            {
-                mb.param_CollisionTags = new Dictionary<string, VRC.SDKBase.IAnimParameterAccess>();
-                mb.param_CollisionTagsEnabledSet = new HashSet<string>();
-                foreach (string tag in mb.collisionTags)
-                {
-                    if (string.IsNullOrWhiteSpace(tag))
-                    {
-                        continue;
-                    }
+			void Bind(string slotName, string constName)
+			{
+				var slot = typeof(ContactReceiver).GetField(slotName);
+				string suffix = Suffix(constName);
+				if (slot != null && suffix != null) slot.SetValue(mb, Access(parameter + suffix));
+			}
 
-                    var access = Access(ContactReceiver.PARAM_COLLISION_TAG_PREFIX + tag);
+			if (Has("SenderType"))
+			{
+				Bind("param_SenderType", "PARAM_SENDER_TYPE");
+			}
 
-                    if (access != null)
-                    {
-                        mb.param_CollisionTags[tag] = access;
-                    }
-                }
-            }
-            else
-            {
-                mb.param_CollisionTags = null;
-                mb.param_CollisionTagsEnabledSet = null;
-            }
-        }
+			if (Has("SenderLocalPosition"))
+			{
+				Bind("param_SenderLocalPositionX", "PARAM_SENDER_LOCAL_POSITION_X");
+				Bind("param_SenderLocalPositionY", "PARAM_SENDER_LOCAL_POSITION_Y");
+				Bind("param_SenderLocalPositionZ", "PARAM_SENDER_LOCAL_POSITION_Z");
+			}
 
-        public void assignPhysBoneParameters(VRCPhysBone[] behaviours) {
+			if (Has("SenderLossyScale"))
+			{
+				Bind("param_SenderLossyScaleX", "PARAM_SENDER_LOSSY_SCALE_X");
+				Bind("param_SenderLossyScaleY", "PARAM_SENDER_LOSSY_SCALE_Y");
+				Bind("param_SenderLossyScaleZ", "PARAM_SENDER_LOSSY_SCALE_Z");
+			}
+
+			if (Has("SenderVelocity"))
+			{
+				Bind("param_SenderVelocityX", "PARAM_SENDER_VELOCITY_X");
+				Bind("param_SenderVelocityY", "PARAM_SENDER_VELOCITY_Y");
+				Bind("param_SenderVelocityZ", "PARAM_SENDER_VELOCITY_Z");
+				Bind("param_SenderVelocityMagnitude", "PARAM_SENDER_VELOCITY_MAGNITUDE");
+			}
+
+			if (Has("PointSeparation"))
+			{
+				Bind("param_PointSeparation", "PARAM_POINT_SEPARATION");
+			}
+
+			if (Has("ProximitySpeed") && mb.receiverType == ContactReceiver.ReceiverType.Proximity)
+			{
+				Bind("param_ProximitySpeed", "PARAM_PROXIMITY_SPEED");
+			}
+
+			var tagsSlot = typeof(ContactReceiver).GetField("param_CollisionTags");
+			var tagsSetSlot = typeof(ContactReceiver).GetField("param_CollisionTagsEnabledSet");
+			string tagPrefix = Suffix("PARAM_COLLISION_TAG_PREFIX");
+
+			if (tagsSlot == null || tagsSetSlot == null || tagPrefix == null)
+			{
+				return;
+			}
+
+			if (Has("CollisionTags") && mb.collisionTags != null)
+			{
+				var tags = new Dictionary<string, VRC.SDKBase.IAnimParameterAccess>();
+				foreach (string tag in mb.collisionTags)
+				{
+					if (string.IsNullOrWhiteSpace(tag)) continue;
+					var access = Access(parameter + tagPrefix + tag);
+					if (access != null) tags[tag] = access;
+				}
+
+				tagsSlot.SetValue(mb, tags);
+				tagsSetSlot.SetValue(mb, new HashSet<string>());
+			}
+			else
+			{
+				tagsSlot.SetValue(mb, null);
+				tagsSetSlot.SetValue(mb, null);
+			}
+		}
+
+		public void assignPhysBoneParameters(VRCPhysBone[] behaviours) {
 			AvDynamicsPhysBones = behaviours;
 			foreach (var mb in AvDynamicsPhysBones) {
 				string parameter = mb.parameter;
