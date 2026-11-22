@@ -282,27 +282,41 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 		private const int AntiAliasing = 4;
 
 
-		StubAv3Module av3Module;
-		RadialMenu cachedMenu;
-		public RadialMenu GetOrCreateRadial(UnityEditor.Editor editor)
+		StubAv3Module av3Module
+		{
+			get => (StubAv3Module)((GestureManagerAv3Menu)TargetMenu)._av3Module;
+			set => ((GestureManagerAv3Menu)TargetMenu)._av3Module = value;
+		}
+		RadialMenu cachedMenu
+		{
+			get => (RadialMenu)((GestureManagerAv3Menu)TargetMenu)._cachedMenu;
+			set => ((GestureManagerAv3Menu)TargetMenu)._cachedMenu = value;
+		}
+		public RadialMenu GetOrCreateRadial(ScriptableObject editorKey)
 		{
 			if (av3Module.Params.Count == 0) {
 				av3Module.InitForAvatar();
 			}
-			cachedMenu = (RadialMenu)(typeof(BlackStartX.GestureManager.Editor.Modules.Vrc3.ModuleVrc3).GetMethod("GetOrCreateRadial",
-				System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance).Invoke(
-				av3Module, new object[]{editor, false}));
+			if (cachedMenu == null)
+			{
+				cachedMenu = (RadialMenu)(typeof(BlackStartX.GestureManager.Editor.Modules.Vrc3.ModuleVrc3).GetMethod("GetOrCreateRadial",
+					System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance).Invoke(
+					av3Module, new object[]{editorKey, false}));
+			}
 			return cachedMenu;
 		}
 		public override VisualElement CreateInspectorGUI()
 		{
 
 			// UnityEngine.Debug.Log("Create Inspector GUI");
-			var menu = (LyumaAv3Menu)target;
+			var menu = TargetMenu;
 			LyumaAv3Runtime runtime = menu.Runtime;
 
 			VRCAvatarDescriptor avadesc = runtime.avadesc;
-			av3Module = new StubAv3Module(runtime, avadesc);
+			if (av3Module == null)
+			{
+				av3Module = new StubAv3Module(runtime, avadesc);
+			}
 			_root = new VisualElement();
 			_root.Add(new IMGUIContainer(ManagerGui));
 			foreach (var inspectorWindow in Resources.FindObjectsOfTypeAll<EditorWindow>().Where(window => window.titleContent.text == "Inspector")) {
@@ -325,7 +339,7 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 		});
 
 		private void ManagerGui () {
-			var gmenu = (GestureManagerAv3Menu)target;
+			var gmenu = (GestureManagerAv3Menu)TargetMenu;
 			if (GameObject.Find("/GestureManager")) {
 				EditorGUIUtility.PingObject(GameObject.Find("/GestureManager"));
 				EditorGUILayout.HelpBox("WARNING! GestureManager was found in the scene. Use of the Gesture Manager editor may cause incorrect emulation in some cases. When finished with GestureManager, please remove them and Reset Avatar.", MessageType.Error);
@@ -371,7 +385,7 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 			}
 			EditorGUILayout.Space(10);
 
-			var menu = GetOrCreateRadial(this as UnityEditor.Editor);
+			var menu = GetOrCreateRadial(gmenu._cacheKey);
 			if (!gmenu.IsMenuOpen) {
 				GUILayout.Label(
 					"Expressions" +
@@ -400,14 +414,6 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 			}
 			GUILayout.FlexibleSpace();
 			GUILayout.EndVertical();
-		}
-
-		private static void OpenMenuForTwoHandedSupport(GestureManagerAv3Menu menu)
-		{
-			var mainMenu = menu.Runtime.gameObject.AddComponent<GestureManagerAv3Menu>();
-			mainMenu.useLegacyMenu = menu.useLegacyMenu;
-			mainMenu.Runtime = menu.Runtime;
-			mainMenu.RootMenu = menu.RootMenu;
 		}
 
 	}

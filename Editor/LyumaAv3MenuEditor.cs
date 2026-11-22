@@ -38,10 +38,24 @@ namespace Lyuma.Av3Emulator.Editor
 				{ richText = true };
 		}
 
+		protected LyumaAv3Menu TargetMenu {
+			get {
+				var menu = (LyumaAv3Menu)target;
+				if (menu.ControllingMenu != null)
+				{
+					menu = menu.ControllingMenu;
+				}
+				return menu;
+			}
+		}
 
 		public override void OnInspectorGUI()
 		{
-			var menu = (LyumaAv3Menu)target;
+			var menu = TargetMenu;
+			if (menu.ControllingMenu != null)
+			{
+				menu = menu.ControllingMenu;
+			}
 			GUILayout.BeginHorizontal();
 			if (GUILayout.Button(menu.IsMenuOpen ? "Close menu" : "Open menu"))
 			{
@@ -56,7 +70,11 @@ namespace Lyuma.Av3Emulator.Editor
 
 		protected void RenderButtonMenu() {
 
-			var menu = (LyumaAv3Menu)target;
+			var menu = TargetMenu;
+			if (menu.ControllingMenu != null)
+			{
+				menu = menu.ControllingMenu;
+			}
 			if (menu.Runtime == null) return;
 			if (menu.RootMenu == null)
 			{
@@ -144,17 +162,9 @@ namespace Lyuma.Av3Emulator.Editor
 			}
 		}
 
-		private static void OpenMenuForTwoHandedSupport(LyumaAv3Menu menu)
-		{
-			var mainMenu = menu.Runtime.gameObject.AddComponent<LyumaAv3Menu>();
-			mainMenu.useLegacyMenu = menu.useLegacyMenu;
-			mainMenu.Runtime = menu.Runtime;
-			mainMenu.RootMenu = menu.RootMenu;
-		}
-
 		private string LabelizeMenu()
 		{
-			var menu = (LyumaAv3Menu)target;
+			var menu = TargetMenu;
 
 			var lastMenu = menu.MenuStack.Last();
 			if (lastMenu.MandatedParam == null)
@@ -170,7 +180,7 @@ namespace Lyuma.Av3Emulator.Editor
 
 		private void FromToggle(VRCExpressionsMenu.Control control, string labelType)
 		{
-			var menu = (LyumaAv3Menu)target;
+			var menu = TargetMenu;
 
 			var parameterName = control.parameter.name;
 			var controlValue = control.value;
@@ -190,7 +200,7 @@ namespace Lyuma.Av3Emulator.Editor
 
 		private void FromSubMenu(VRCExpressionsMenu.Control control)
 		{
-			var menu = (LyumaAv3Menu)target;
+			var menu = TargetMenu;
 
 			var parameterName = control.parameter.name;
 			var wantedValue = control.value;
@@ -215,7 +225,7 @@ namespace Lyuma.Av3Emulator.Editor
 
 		private void FromRadial(VRCExpressionsMenu.Control control, int controlIndex)
 		{
-			var menu = (LyumaAv3Menu)target;
+			var menu = TargetMenu;
 
 			SubControl(control, controlIndex, menu, "Radial");
 
@@ -230,7 +240,7 @@ namespace Lyuma.Av3Emulator.Editor
 
 		private void FromTwoAxis(VRCExpressionsMenu.Control control, int controlIndex)
 		{
-			var menu = (LyumaAv3Menu)target;
+			var menu = TargetMenu;
 
 			SubControl(control, controlIndex, menu, "TwoAxis");
 
@@ -256,7 +266,7 @@ namespace Lyuma.Av3Emulator.Editor
 
 		private void FromFourAxis(VRCExpressionsMenu.Control control, int controlIndex)
 		{
-			var menu = (LyumaAv3Menu)target;
+			var menu = TargetMenu;
 
 			SubControl(control, controlIndex, menu, "FourAxis");
 

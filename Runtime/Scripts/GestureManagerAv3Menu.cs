@@ -35,8 +35,21 @@ namespace Lyuma.Av3Emulator.Runtime
 		// private string _activeControlParameterName;
 		public bool compact = true;
 
+		public object _av3Module;
+		public object _cachedMenu;
+		public ScriptableObject _cacheKey;
+
+		class StubObject : ScriptableObject {}
+
+		private void OnDestroy()
+		{
+			Destroy(_cacheKey);
+		}
+
 		private void Awake()
 		{
+			_cacheKey = new StubObject();
+
 			IsMenuOpen = true;
 
 		if (LyumaAv3Runtime.addRuntimeDelegate != null) {

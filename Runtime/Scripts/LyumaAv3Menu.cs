@@ -56,6 +56,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		public LyumaAv3Runtime Runtime;
+		public LyumaAv3Menu ControllingMenu;
 		public VRCExpressionsMenu RootMenu;
 		public List<MenuConditional> MenuStack { get; } = new List<MenuConditional>();
 		public bool IsMenuOpen { get; set; }

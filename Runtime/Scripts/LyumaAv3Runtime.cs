@@ -2170,21 +2170,17 @@ namespace Lyuma.Av3Emulator.Runtime
 				UnityEngine.Object.Destroy(comp);
 			}
 			for (int i = 0; i < 2; i++) {
-				LyumaAv3Menu mainMenu;
-				mainMenu = gameObject.AddComponent<GestureManagerAv3Menu>();
+				LyumaAv3Menu mainMenu = gameObject.AddComponent<GestureManagerAv3Menu>();
 				if (emulator != null) {
 					mainMenu.useLegacyMenu = emulator.disableRadialMenu;
 				}
-				mainMenu.IsMenuOpen = (i == 0);
+				mainMenu.IsMenuOpen = (i == 1);
 				mainMenu.Runtime = this;
 				mainMenu.RootMenu = avadesc.expressionsMenu;
 
-				mainMenu = avadesc.gameObject.AddComponent<GestureManagerAv3Menu>();
-				if (emulator != null) {
-					mainMenu.useLegacyMenu = emulator.disableRadialMenu;
-				}
-				mainMenu.Runtime = this;
-				mainMenu.RootMenu = avadesc.expressionsMenu;
+				LyumaAv3Menu mainMenu2 = avadesc.gameObject.AddComponent<GestureManagerAv3Menu>();
+				mainMenu2.ControllingMenu = mainMenu;
+				mainMenu2.Runtime = this;
 			}
 		}
 
