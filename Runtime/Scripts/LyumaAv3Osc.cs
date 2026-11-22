@@ -353,7 +353,7 @@ namespace Lyuma.Av3Emulator.Runtime
 							if (i != 0) {
 								DrawDebugRectDelegate(subPos, GizmoFilledColor, GizmoFilledColor);
 							}
-							RenderBoxType(subPos, i, new Vector2Int(0,255)); // Hardcode bounds. new Vector2Int((int)minmaxVert.x, (int)minmaxVert.y));
+                            RenderBoxType(subPos, i, new Vector2Int(Mathf.Min(0, (int)minmaxVert.x), Mathf.Max(255, (int)minmaxVert.y)));
 							break;
 						case bool b:
 							if (b) {
