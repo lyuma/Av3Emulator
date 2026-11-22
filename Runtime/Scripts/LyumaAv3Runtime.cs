@@ -59,6 +59,48 @@ namespace Lyuma.Av3Emulator.Runtime
 		// This is injected by Editor-scope scripts to give us access to VRCBuildPipelineCallbacks.
 		public static Action<GameObject> InvokeOnPreProcessAvatar = (_) => { };
 
+		// VRCPhysBoneBase fields
+		private static readonly FieldInfo posedParam = typeof(VRCPhysBoneBase).GetField("PARAM_ISPOSED", BindingFlags.Public | BindingFlags.Static);
+		private static readonly FieldInfo squishParam = typeof(VRCPhysBoneBase).GetField("PARAM_SQUISH", BindingFlags.Public | BindingFlags.Static);
+		private static readonly FieldInfo field_param_IsPosed = typeof(VRCPhysBoneBase).GetField("param_IsPosed");
+		private static readonly FieldInfo field_param_Squish = typeof(VRCPhysBoneBase).GetField("param_Squish");
+		private static readonly FieldInfo field_param_SquishValue = typeof(VRCPhysBoneBase).GetField("param_SquishValue");
+		private static readonly FieldInfo field_param_IsPosedValue = typeof(VRCPhysBoneBase).GetField("param_IsPosedValue");
+
+		// ContactReceiver fields
+		private static readonly FieldInfo field_param_CollisionTags = typeof(ContactReceiver).GetField("param_CollisionTags");
+		private static readonly FieldInfo field_param_CollisionTagsEnabledSet = typeof(ContactReceiver).GetField("param_CollisionTagsEnabledSet");
+		private static readonly FieldInfo field_collision_tag_prefix = typeof(ContactReceiver).GetField("PARAM_COLLISION_TAG_PREFIX", BindingFlags.Public | BindingFlags.Static);
+
+		// Raycast fields
+		private static readonly Type raycastType = Type.GetType("VRC.SDK3.Avatars.Components.VRCRaycast, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+		private static readonly PropertyInfo property_raycast_parameter = raycastType?.GetProperty("Parameter");
+		private static readonly FieldInfo field_param_hit_const = raycastType?.GetField("PARAM_HIT", BindingFlags.Public | BindingFlags.Static);
+		private static readonly FieldInfo field_param_Hit = raycastType?.GetField("param_Hit");
+		private static readonly FieldInfo field_param_HitValue = raycastType?.GetField("param_HitValue");
+		private static readonly FieldInfo field_param_ratio_const = raycastType?.GetField("PARAM_RATIO", BindingFlags.Public | BindingFlags.Static);
+		private static readonly FieldInfo field_param_Ratio = raycastType?.GetField("param_Ratio");
+		private static readonly FieldInfo field_param_RatioValue = raycastType?.GetField("param_RatioValue");
+		private static readonly FieldInfo field_param_distance_const = raycastType?.GetField("PARAM_DISTANCE", BindingFlags.Public | BindingFlags.Static);
+		private static readonly FieldInfo field_param_Distance = raycastType?.GetField("param_Distance");
+		private static readonly FieldInfo field_param_DistanceValue = raycastType?.GetField("param_DistanceValue");
+
+		// VRCHeadChop fields
+		private static readonly Type headChopType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+		private static readonly Type headChopBoneType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop+HeadChopBone, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+		private static readonly FieldInfo field_headChop_targetBones = headChopType?.GetField("targetBones");
+		private static readonly FieldInfo field_headChopBone_transform = headChopBoneType?.GetField("transform");
+		private static readonly MethodInfo method_headChopBone_CanApply = headChopBoneType?.GetMethod("CanApply");
+		private static readonly FieldInfo field_headChopBone_scaleFactor = headChopBoneType?.GetField("scaleFactor");
+		private static readonly FieldInfo field_headChop_globalScaleFactor = headChopType?.GetField("globalScaleFactor");
+
+		// Expression Parameter fields
+		private static readonly MethodInfo GetBitWidthByTypeMethod = typeof(VRCExpressionParameters.Parameter).GetMethod("GetBitWidthByType");
+		private static readonly MethodInfo GetRepresentationByTypeMethod = typeof(VRCExpressionParameters.Parameter).GetMethod("GetRepresentationByType");
+		private static readonly MethodInfo GetCustomLerpDurationMethod = typeof(VRCExpressionParameters.Parameter).GetMethod("GetCustomLerpDuration");
+		private static readonly FieldInfo field_networkSynced = typeof(VRCExpressionParameters.Parameter).GetField("networkSynced");
+
+
 		public LyumaAv3Runtime OriginalSourceClone = null;
 
 		[Tooltip("Resets avatar state machine instantly")]
@@ -143,7 +185,6 @@ namespace Lyuma.Av3Emulator.Runtime
 		[NonSerialized] public VRCPhysBone[] AvDynamicsPhysBones = new VRCPhysBone[]{};
 		[NonSerialized] public VRCContactReceiver[] AvDynamicsContactReceivers = new VRCContactReceiver[]{};
 
-		Type raycastType = Type.GetType("VRC.SDK3.Avatars.Components.VRCRaycast, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 		[NonSerialized] public Component[] Raycasts = new MonoBehaviour[]{};
 
 		public class Av3EmuParameterAccess : VRC.SDKBase.IAnimParameterAccess {
@@ -249,10 +290,6 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			return false;
 		}
-
-        static readonly MethodInfo GetBitWidthByTypeMethod = typeof(VRCExpressionParameters.Parameter).GetMethod("GetBitWidthByType");
-        static readonly MethodInfo GetRepresentationByTypeMethod = typeof(VRCExpressionParameters.Parameter).GetMethod("GetRepresentationByType");
-        static readonly MethodInfo GetCustomLerpDurationMethod = typeof(VRCExpressionParameters.Parameter).GetMethod("GetCustomLerpDuration");
 
         static void ReadSyncSettings(VRCExpressionParameters.Parameter p, out int bitWidth, out bool signed, out float lerpDuration)
         {
@@ -382,11 +419,8 @@ namespace Lyuma.Av3Emulator.Runtime
 				Bind("param_ProximitySpeed", "PARAM_PROXIMITY_SPEED");
 			}
 
-			var tagsSlot = typeof(ContactReceiver).GetField("param_CollisionTags");
-			var tagsSetSlot = typeof(ContactReceiver).GetField("param_CollisionTagsEnabledSet");
-			string tagPrefix = Suffix("PARAM_COLLISION_TAG_PREFIX");
 
-			if (tagsSlot == null || tagsSetSlot == null || tagPrefix == null)
+			if (field_param_CollisionTags == null || field_param_CollisionTagsEnabledSet == null || field_collision_tag_prefix == null)
 			{
 				return;
 			}
@@ -397,17 +431,17 @@ namespace Lyuma.Av3Emulator.Runtime
 				foreach (string tag in mb.collisionTags)
 				{
 					if (string.IsNullOrWhiteSpace(tag)) continue;
-					var access = Access(parameter + tagPrefix + tag);
+					var access = Access(parameter + (string)field_collision_tag_prefix.GetValue(null) + tag);
 					if (access != null) tags[tag] = access;
 				}
 
-				tagsSlot.SetValue(mb, tags);
-				tagsSetSlot.SetValue(mb, new HashSet<string>());
+				field_param_CollisionTags.SetValue(mb, tags);
+				field_param_CollisionTagsEnabledSet.SetValue(mb, new HashSet<string>());
 			}
 			else
 			{
-				tagsSlot.SetValue(mb, null);
-				tagsSetSlot.SetValue(mb, null);
+				field_param_CollisionTags.SetValue(mb, null);
+				field_param_CollisionTagsEnabledSet.SetValue(mb, null);
 			}
 		}
 
@@ -439,7 +473,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					mb.param_Stretch = accessInst;
 					accessInst.floatVal = mb.param_StretchValue;
 				}
-				FieldInfo posedParam = typeof(VRCPhysBoneBase).GetField("PARAM_ISPOSED", BindingFlags.Public | BindingFlags.Static);
+
 				if (posedParam != null)
 				{
 					accessInst = new Av3EmuParameterAccess();
@@ -447,12 +481,11 @@ namespace Lyuma.Av3Emulator.Runtime
 					accessInst.paramName = parameter + posedParam.GetValue(null);
 					if (IsLocal || !isBeingSynced(accessInst.paramName))
 					{
-						typeof(VRCPhysBoneBase).GetField("param_IsPosed").SetValue(mb, accessInst);
-						accessInst.boolVal = (bool)typeof(VRCPhysBoneBase).GetField("param_IsPosedValue").GetValue(mb);
+						field_param_IsPosed.SetValue(mb, accessInst);
+						accessInst.boolVal = (bool)field_param_IsPosedValue.GetValue(mb);
 					}
 				}
 				
-				FieldInfo squishParam = typeof(VRCPhysBoneBase).GetField("PARAM_SQUISH", BindingFlags.Public | BindingFlags.Static);
 				if (squishParam != null)
 				{
 					accessInst = new Av3EmuParameterAccess();
@@ -460,8 +493,8 @@ namespace Lyuma.Av3Emulator.Runtime
 					accessInst.paramName = parameter + squishParam.GetValue(null);
 					if (IsLocal || !isBeingSynced(accessInst.paramName))
 					{
-						typeof(VRCPhysBoneBase).GetField("param_Squish").SetValue(mb, accessInst);
-						accessInst.floatVal = (float)typeof(VRCPhysBoneBase).GetField("param_SquishValue").GetValue(mb);
+						field_param_Squish.SetValue(mb, accessInst);
+						accessInst.floatVal = (float)field_param_SquishValue.GetValue(mb);
 					}
 				}
 			}
@@ -471,30 +504,30 @@ namespace Lyuma.Av3Emulator.Runtime
 		{
 			Raycasts = behaviours;
 			foreach (var mb in Raycasts) {
-				string parameter = (string)raycastType.GetProperty("Parameter").GetValue(mb);
+				string parameter = (string)property_raycast_parameter.GetValue(mb);
 				Av3EmuParameterAccess accessInst = new Av3EmuParameterAccess();
 				accessInst.runtime = this;
-				accessInst.paramName = parameter + raycastType.GetField("PARAM_HIT", BindingFlags.Public | BindingFlags.Static).GetValue(null);
+				accessInst.paramName = parameter + field_param_hit_const.GetValue(null);
 				if (IsLocal || !isBeingSynced(accessInst.paramName))
 				{
-					raycastType.GetField("param_Hit").SetValue(mb, accessInst);
-					accessInst.boolVal = (bool)raycastType.GetField("param_HitValue").GetValue(mb);
+					field_param_Hit.SetValue(mb, accessInst);
+					accessInst.boolVal = (bool)field_param_HitValue.GetValue(mb);
 				}
 				accessInst = new Av3EmuParameterAccess();
 				accessInst.runtime = this;
-				accessInst.paramName = parameter + raycastType.GetField("PARAM_RATIO", BindingFlags.Public | BindingFlags.Static).GetValue(null);
+				accessInst.paramName = parameter + field_param_ratio_const.GetValue(null);
 				if (IsLocal || !isBeingSynced(accessInst.paramName))
 				{
-					raycastType.GetField("param_Ratio").SetValue(mb, accessInst);
-					accessInst.floatVal = (float)raycastType.GetField("param_RatioValue").GetValue(mb);
+					field_param_Ratio.SetValue(mb, accessInst);
+					accessInst.floatVal = (float)field_param_RatioValue.GetValue(mb);
 				}
 				accessInst = new Av3EmuParameterAccess();
 				accessInst.runtime = this;
-				accessInst.paramName = parameter + raycastType.GetField("PARAM_DISTANCE", BindingFlags.Public | BindingFlags.Static).GetValue(null);
+				accessInst.paramName = parameter + field_param_distance_const.GetValue(null);
 				if (IsLocal || !isBeingSynced(accessInst.paramName))
 				{
-					raycastType.GetField("param_Distance").SetValue(mb, accessInst);
-					accessInst.floatVal = (float)raycastType.GetField("param_DistanceValue").GetValue(mb);
+					field_param_Distance.SetValue(mb, accessInst);
+					accessInst.floatVal = (float)field_param_DistanceValue.GetValue(mb);
 				}
 			}
 		}
@@ -2181,10 +2214,9 @@ namespace Lyuma.Av3Emulator.Runtime
 				{
 					stageId++; // one-indexed
 					bool networkSynced = true;
-					FieldInfo field = stageParam.GetType().GetField("networkSynced");
-					if (field != null)
+					if (field_networkSynced != null)
 					{
-						networkSynced = (bool) field.GetValue(stageParam);
+						networkSynced = (bool) field_networkSynced.GetValue(stageParam);
 					}
 					if (stageParam.name == null || stageParam.name.Length == 0) {
 						continue;
@@ -2865,8 +2897,6 @@ namespace Lyuma.Av3Emulator.Runtime
 					}
 					head.localScale = EnableHeadScaling ? new Vector3(0.0001f, 0.0001f, 0.0001f) : defaultHeadScale; // head bone is set to 0.0001 locally (not multiplied
 
-					Type headChopType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
-					Type headChopBoneType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop+HeadChopBone, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 					if (headChopType != null)
 					{
 						Vector3 div(Vector3 x, Vector3 y) => new Vector3(x.x / y.x, x.y / y.y, x.z / y.z);
@@ -2878,11 +2908,11 @@ namespace Lyuma.Av3Emulator.Runtime
 							headChopData = new Dictionary<Transform, HeadChopDataStorage>();
 							for (var i = 0; i < headChops.Length; i++)
 							{
-								object[] bones = (object[]) headChopType.GetField("targetBones").GetValue(headChops[i]);
+								object[] bones = (object[]) field_headChop_targetBones.GetValue(headChops[i]);
 								for (var j = 0; j < bones.Length; j++)
 								{
 									object bone = bones[j];
-									Transform t = (Transform)headChopBoneType.GetField("transform").GetValue(bone);
+									Transform t = (Transform)field_headChopBone_transform.GetValue(bone);
 									if (t == null) continue;
 									headChopData[t] = new HeadChopDataStorage()
 									{
@@ -2897,15 +2927,15 @@ namespace Lyuma.Av3Emulator.Runtime
 						for (var i = 0; i < headChops.Length; i++)
 						{
 							object headChop = headChops[i];
-							object[] bones = (object[]) headChopType.GetField("targetBones").GetValue(headChops[i]);
+							object[] bones = (object[]) field_headChop_targetBones.GetValue(headChops[i]);
 							for (var j = 0; j < bones.Length; j++)
 							{
 								object bone = bones[j];
-								Transform t = (Transform)headChopBoneType.GetField("transform").GetValue(bone);
+								Transform t = (Transform)field_headChopBone_transform.GetValue(bone);
 								if (t == null) continue;
-								bool canApply = (bool)headChopBoneType.GetMethod("CanApply").Invoke(bone, new object[] { VRMode });
-								float scaleFactor = (float)headChopBoneType.GetField("scaleFactor").GetValue(bone);
-								float globalScaleFactor = (float)headChopType.GetField("globalScaleFactor").GetValue(headChops[i]);
+								bool canApply = (bool)method_headChopBone_CanApply.Invoke(bone, new object[] { VRMode });
+								float scaleFactor = (float)field_headChopBone_scaleFactor.GetValue(bone);
+								float globalScaleFactor = (float)field_headChop_globalScaleFactor.GetValue(headChops[i]);
 								
 								float desiredScaleFactor = scaleFactor * globalScaleFactor;
 
