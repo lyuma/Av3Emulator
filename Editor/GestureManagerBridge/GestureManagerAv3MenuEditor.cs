@@ -298,8 +298,11 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 		{
 
 			// UnityEngine.Debug.Log("Create Inspector GUI");
-			VRCAvatarDescriptor avadesc = ((Component)target).GetComponent<VRCAvatarDescriptor>();
-			av3Module = new StubAv3Module(((Component)target).GetComponent<LyumaAv3Runtime>(), avadesc);
+			var menu = (LyumaAv3Menu)target;
+			LyumaAv3Runtime runtime = menu.Runtime;
+
+			VRCAvatarDescriptor avadesc = runtime.avadesc;
+			av3Module = new StubAv3Module(runtime, avadesc);
 			_root = new VisualElement();
 			_root.Add(new IMGUIContainer(ManagerGui));
 			foreach (var inspectorWindow in Resources.FindObjectsOfTypeAll<EditorWindow>().Where(window => window.titleContent.text == "Inspector")) {
@@ -341,13 +344,6 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 				gmenu.ToggleMenu();
 			}
 
-			if (gmenu.gameObject.GetComponents<GestureManagerAv3Menu>().Length == 1)
-			{
-				if (GUILayout.Button("+", GUILayout.Width(20)))
-				{
-					OpenMenuForTwoHandedSupport(gmenu);
-				}
-			}
 			var rect = EditorGUILayout.GetControlRect(false, 1, GUILayout.Width(120));
 			GUILayout.EndHorizontal();
 			if (gmenu.IsMenuOpen) {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Lyuma.Av3Emulator.Runtime;
 using UnityEditor;
 using UnityEditorInternal;
@@ -7,9 +8,10 @@ using VRC.SDK3.Avatars.Components;
 
 namespace Lyuma.Av3Emulator.Editor
 {
-	[CustomEditor(typeof(LyumaAv3Runtime))]
-	public class LyumaAv3RuntimeEditor : UnityEditor.Editor
+	public class LyumaAv3RuntimeEditorBase : UnityEditor.Editor
 	{
+		private new SerializedObject serializedObject;
+
 		#region SerializedProperties
 		public SerializedProperty OriginalSourceClone;
 		public SerializedProperty AvatarSyncSource;
@@ -191,8 +193,45 @@ namespace Lyuma.Av3Emulator.Editor
 		private static bool outputStateFoldout;
 		private static bool creditsAndLinksFoldout = true;
 		#endregion
+
+		private void LookupSerializedObject()
+		{
+			SerializedProperty prop = ((UnityEditor.Editor)this).serializedObject.FindProperty("doubleClickToOpen");
+			if (prop != null)
+			{
+				UnityEngine.Object[] selectorObjects = ((UnityEditor.Editor)this).serializedObject.targetObjects;
+				string path = prop.propertyPath;
+				List<UnityEngine.Object> nestedTargets = new (selectorObjects.Length);
+				foreach (UnityEngine.Object selectorObject in selectorObjects)
+				{
+					if (selectorObject == null)
+					{
+						continue;
+					}
+					using (SerializedObject singleSelector = new SerializedObject(selectorObject))
+					{
+						SerializedProperty singleProp = singleSelector.FindProperty(path);
+						if (singleProp != null && singleProp.objectReferenceValue != null)
+						{
+							nestedTargets.Add(singleProp.objectReferenceValue);
+						}
+					}
+				}
+			    if (nestedTargets.Count == 0)
+				{
+					return;
+				}
+				serializedObject = new SerializedObject(nestedTargets.ToArray());
+			}
+			else
+			{
+				serializedObject = ((UnityEditor.Editor)this).serializedObject;
+			}
+		}
+
 		public override void OnInspectorGUI()
 		{
+			LookupSerializedObject();
 			serializedObject.Update();
 			RefreshSerializedProperties();
 			if (AvatarSyncSource.objectReferenceValue != target)
@@ -468,6 +507,7 @@ namespace Lyuma.Av3Emulator.Editor
 
 		private void OnEnable()
 		{
+			LookupSerializedObject();
 			RefreshSerializedProperties();
 			floatsRL = new ReorderableList(serializedObject, Floats, false, false, false, false);
 			intsRL = new ReorderableList(serializedObject, Ints, false, false, false, false);
@@ -664,5 +704,15 @@ namespace Lyuma.Av3Emulator.Editor
 
 			}
 		}
+	}
+
+	[CustomEditor(typeof(LyumaAv3Runtime))]
+	public class LyumaAv3RuntimeEditor : LyumaAv3RuntimeEditorBase
+	{
+	}
+
+	[CustomEditor(typeof(LyumaAv3EmulatorAvatarSelect))]
+	public class LyumaAv3EmulatorAvatarSelectEditor : LyumaAv3RuntimeEditorBase
+	{
 	}
 }

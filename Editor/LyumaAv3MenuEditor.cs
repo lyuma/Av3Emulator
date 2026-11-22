@@ -48,14 +48,6 @@ namespace Lyuma.Av3Emulator.Editor
 				menu.ToggleMenu();
 			}
 
-			if (menu.gameObject.GetComponents<LyumaAv3Menu>().Length == 1)
-			{
-				if (GUILayout.Button("+", GUILayout.Width(20)))
-				{
-					OpenMenuForTwoHandedSupport(menu);
-				}
-			}
-
 			GUILayout.EndHorizontal();
 
 			RenderButtonMenu();

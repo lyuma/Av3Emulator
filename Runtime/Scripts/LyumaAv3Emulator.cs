@@ -76,6 +76,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		[Header("Unity Integrations")]
 		[Tooltip("Runs the same function as the Avatar Descriptor Editor Inspector. May disrupt custom usages of colliders in Debug mode.")]
 		public bool ForceUpdateDescriptorColliders = false;
+		public bool RuntimeOnChildObject = true;
 		public bool RunPreprocessAvatarHook = true;
 		public bool DisableAvatarDynamicsIntegration;
 		public bool WorkaroundPlayModeScriptCompile = true;
@@ -277,9 +278,17 @@ namespace Lyuma.Av3Emulator.Runtime
 						avadesc.gameObject.SetActive(true);
 					}
 
-					var oml = avadesc.gameObject.AddComponent<UnityEngine.AI.OffMeshLink>();
+					GameObject runtimeGameObject = avadesc.gameObject;
+					if (RuntimeOnChildObject)
+					{
+						runtimeGameObject = new GameObject(avadesc.gameObject.name + " - AVATAR EMULATOR CONTROL");
+						runtimeGameObject.transform.SetParent(avadesc.transform, true);
+						runtimeGameObject.transform.SetAsFirstSibling();
+					}
+					var oml = runtimeGameObject.AddComponent<UnityEngine.AI.OffMeshLink>();
 					oml.startTransform = this.transform;
-					var runtime = avadesc.gameObject.AddComponent<LyumaAv3Runtime>();
+					oml.endTransform = avadesc.transform;
+					var runtime = runtimeGameObject.AddComponent<LyumaAv3Runtime>();
 					if (RunPreprocessAvatarHook && !alreadyHadComponent) {
 						forceActiveRuntimes.AddLast(runtime);
 					}
@@ -401,14 +410,5 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 			}
 		}
-		
-		public static T GetOrAddComponent<T>(GameObject go) where T : Component
-		{
-			T component = go.GetComponent<T>();
-			if (component == null)
-				component = go.AddComponent<T>();
-			return component;
-		}
-		
 	}
 }

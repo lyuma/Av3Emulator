@@ -693,6 +693,14 @@ namespace Lyuma.Av3Emulator.Runtime
 		
 		const float BASE_HEIGHT = 1.4f;
 
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+		private static void ResetStatics()
+		{
+			animatorToTopLevelRuntime.Clear();
+			animLayerToDefaultController.Clear();
+			issuedWarningAnimators.Clear();
+		}
+
 		public IEnumerator DelayedEnterPoseSpace(bool setView, float time) {
 			yield return new WaitForSeconds(time);
 			if (setView) {
@@ -1333,6 +1341,7 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		void Awake()
 		{
+			Debug.Log("AWAKE", this);
 			if (AvatarSyncSource != null && OriginalSourceClone == null) {
 				Debug.Log("Awake returning early for " + gameObject.name, this);
 				return;
@@ -1347,8 +1356,13 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (AvatarSyncSource == null) {
 				// First time. This is the original avatar object.
 				var oml = GetComponent<UnityEngine.AI.OffMeshLink>();
-				if (oml != null && oml.startTransform != null) {
-					this.emulator = oml.startTransform.GetComponent<LyumaAv3Emulator>();
+				if (oml != null) {
+					if (oml.startTransform != null) {
+						this.emulator = oml.startTransform.GetComponent<LyumaAv3Emulator>();
+					}
+					if (oml.endTransform != null) {
+						this.animator = oml.endTransform.GetComponent<Animator>();
+					}
 					UnityEngine.Object.DestroyImmediate(oml);
 				}
 				Transform t = this.transform;
@@ -1385,13 +1399,26 @@ namespace Lyuma.Av3Emulator.Runtime
 				ViewAnimatorOnlyNoParams = this.emulator.DefaultAnimatorToDebug;
 			}
 
+			Debug.Log("Animator for " + gameObject.name + " is " + animator, this);
+			if (animator == null && avadesc != null)
+			{
+				animator = avadesc.gameObject.GetComponent<Animator>();
+				Debug.Log("Found Animator " + animator, animator);
+			}
+			if (animator == null && avadesc != null)
+			{
+				animator = avadesc.gameObject.AddComponent<Animator>();
+				Debug.Log("Create new Animator " + animator, animator);
+			}
 			if (animator == null)
 			{
 				animator = GetComponent<Animator>();
 			}
 			if (animator == null)
 			{
-				animator = gameObject.AddComponent<Animator>();
+				Debug.LogError("LyumaAv3Runtime " + gameObject.name + " failed to find Animator in Awake. Disabling component", this);
+				enabled = false;
+				return;
 			}
 			else if (AvatarSyncSource == this && (this.emulator == null || !this.emulator.IsLegacyAwakeUsed())) {
 				// legacy Awake() mode doesn't recreate the Animator for... legacy reasons.
@@ -1663,16 +1690,21 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		private void InitializeAnimator()
 		{
+			Debug.Log("INITIALIZE ANIMATOR", this);
 			ResetAvatar = false;
 			PrevAnimatorToDebug = (char)(int)DebugDuplicateAnimator;
 			ViewAnimatorOnlyNoParams = DebugDuplicateAnimator;
 
+			if (avadesc == null)
+			{
+				return;
+			}
 			if (animator == null) 
 			{
-				animator = gameObject.GetComponent<Animator>();
+				animator = avadesc.gameObject.GetComponent<Animator>();
 				if (animator == null)
 				{
-					animator = gameObject.AddComponent<Animator>();
+					animator = avadesc.gameObject.AddComponent<Animator>();
 					animatorToTopLevelRuntime.TryAdd(animator, this);
 				}
 			}
@@ -2118,19 +2150,42 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		void CreateAv3MenuComponent() {
+			if (avadesc.gameObject.GetComponent<LyumaAv3EmulatorAvatarSelect>() == null) {
+				LyumaAv3EmulatorAvatarSelect sel = avadesc.gameObject.AddComponent<LyumaAv3EmulatorAvatarSelect>();
+				sel.doubleClickToOpen = this;
+				if (addRuntimeDelegate != null) {
+					addRuntimeDelegate(sel);
+				}
+			}
 			foreach (var comp in avadesc.gameObject.GetComponents<GestureManagerAv3Menu>()) {
 				UnityEngine.Object.Destroy(comp);
 			}
 			foreach (var comp in avadesc.gameObject.GetComponents<LyumaAv3Menu>()) {
 				UnityEngine.Object.Destroy(comp);
 			}
-			LyumaAv3Menu mainMenu;
-			mainMenu = avadesc.gameObject.AddComponent<GestureManagerAv3Menu>();
-			if (emulator != null) {
-				mainMenu.useLegacyMenu = emulator.disableRadialMenu;
+			foreach (var comp in gameObject.GetComponents<GestureManagerAv3Menu>()) {
+				UnityEngine.Object.Destroy(comp);
 			}
-			mainMenu.Runtime = this;
-			mainMenu.RootMenu = avadesc.expressionsMenu;
+			foreach (var comp in gameObject.GetComponents<LyumaAv3Menu>()) {
+				UnityEngine.Object.Destroy(comp);
+			}
+			for (int i = 0; i < 2; i++) {
+				LyumaAv3Menu mainMenu;
+				mainMenu = gameObject.AddComponent<GestureManagerAv3Menu>();
+				if (emulator != null) {
+					mainMenu.useLegacyMenu = emulator.disableRadialMenu;
+				}
+				mainMenu.IsMenuOpen = (i == 0);
+				mainMenu.Runtime = this;
+				mainMenu.RootMenu = avadesc.expressionsMenu;
+
+				mainMenu = avadesc.gameObject.AddComponent<GestureManagerAv3Menu>();
+				if (emulator != null) {
+					mainMenu.useLegacyMenu = emulator.disableRadialMenu;
+				}
+				mainMenu.Runtime = this;
+				mainMenu.RootMenu = avadesc.expressionsMenu;
+			}
 		}
 
 
@@ -2491,10 +2546,6 @@ namespace Lyuma.Av3Emulator.Runtime
 				playableGraph.Play();
 			}
 			frameIndex += 1;
-			if (animator == null)
-			{
-				return;
-			}
 			if (broadcastStartNextFrame) {
 				Debug.Log("BROADCASTING START!");
 				broadcastStartNextFrame = false;
@@ -2565,6 +2616,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				isResettingHold = true;
 			}
 			if (isResetting && !ResetAndHold) {
+				Debug.Log("Resetting!!!", this);
 				if (attachedAnimators == null) {
 					if (AvatarSyncSource == this) {
 						AvatarSyncSource = null;
@@ -2579,6 +2631,10 @@ namespace Lyuma.Av3Emulator.Runtime
 				isResetting = false;
 				isResettingHold = false;
 				frameIndex = 0;
+			}
+			if (animator == null)
+			{
+				return;
 			}
 			if (PrevAnimatorToDebug != (char)(int)DebugDuplicateAnimator || ResetAvatar || attachedAnimators == null) {
 				actionIndex = fxIndex = gestureIndex = additiveIndex = sittingIndex = ikposeIndex = tposeIndex = -1;

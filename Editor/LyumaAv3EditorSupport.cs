@@ -366,9 +366,18 @@ namespace Lyuma.Av3Emulator.Editor
 			}
 			Selection.SetActiveObjectWithContext(go, go);
 			GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
-			var emulator = GetOrAddComponent<LyumaAv3Emulator>(go);
+			var emulator = go.GetComponent<LyumaAv3Emulator>();
+			if (emulator == null)
+			{
+				emulator = go.AddComponent<LyumaAv3Emulator>();
+			}
 			LyumaAv3Settings.ApplySettings(emulator);
-			LyumaAv3OSCSettings.ApplySettings(GetOrAddComponent<LyumaAv3Osc>(go));
+			var osc = go.GetComponent<LyumaAv3Osc>();
+			if (osc == null)
+			{
+				osc = go.AddComponent<LyumaAv3Osc>();
+			}
+			LyumaAv3OSCSettings.ApplySettings(osc);
 			EditorGUIUtility.PingObject(go);
 			return emulator;
 		}

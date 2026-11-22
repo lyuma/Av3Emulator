@@ -73,8 +73,14 @@ namespace Lyuma.Av3Emulator.Editor
 			if (go != null)
 			{
 				GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
-				GetOrAddComponent<LyumaAv3Emulator>(go);
-				GetOrAddComponent<LyumaAv3Osc>(go);
+				if (null == go.GetComponent<LyumaAv3Emulator>())
+				{
+					go.AddComponent<LyumaAv3Emulator>();
+				}
+				if (null == go.GetComponent<LyumaAv3Osc>())
+				{
+					go.AddComponent<LyumaAv3Osc>();
+				}
 			}
 		}
 	}
