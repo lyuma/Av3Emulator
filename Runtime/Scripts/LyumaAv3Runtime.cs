@@ -771,9 +771,11 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool InStation;
 		[HideInInspector] public int AvatarVersion = 3;
 		public bool EnableAvatarScaling = false;
+		[Tooltip("Quadratic scaling (4cm -> 25m range), to replicate Udon forced scaling")]
+		public bool TestExtremeAvatarScaling = false;
 		private Vector3 defaultHeadScale;
 		[Range(0.2f, 5f)] public float AvatarHeight = 1;
-		private Vector3 DefaultViewPosition;
+		[HideInInspector] public Vector3 DefaultViewPosition;
 		private Vector3 DefaultAvatarScale;
 		public Vector3 VisualOffset;
 		private Vector3 SavedPosition;
@@ -3162,6 +3164,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				PreviewMode = AvatarSyncSource.PreviewMode;
 				InStation = AvatarSyncSource.InStation;
 				EnableAvatarScaling = AvatarSyncSource.EnableAvatarScaling;
+				TestExtremeAvatarScaling = AvatarSyncSource.TestExtremeAvatarScaling;
 				AvatarHeight = AvatarSyncSource.AvatarHeight;
 			}
 			
@@ -3304,7 +3307,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			IsLocal = AvatarSyncSource == this;
 			float scale = 1.0f;
 			if (EnableAvatarScaling) {
-				scale = AvatarHeight / DefaultViewPosition.y;
+				scale = (TestExtremeAvatarScaling ? AvatarHeight * AvatarHeight : AvatarHeight) / DefaultViewPosition.y;
 			}
 
 			Vector3 oldScale = avadesc.transform.localScale;
@@ -3747,7 +3750,7 @@ namespace Lyuma.Av3Emulator.Runtime
 						} else {
 							float scale = 1.0f;
 							if (EnableAvatarScaling) {
-								scale = AvatarHeight / DefaultViewPosition.y;
+								scale = (TestExtremeAvatarScaling ? AvatarHeight * AvatarHeight : AvatarHeight) / DefaultViewPosition.y;
 							}
 
 							BuiltinParameterDefinition oscParam =

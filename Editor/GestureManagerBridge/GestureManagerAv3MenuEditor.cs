@@ -22,13 +22,17 @@ SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using BlackStartX.GestureManager.Editor.Modules.Vrc3;
+using BlackStartX.GestureManager.Editor.Modules.Vrc3.Params;
+using BlackStartX.GestureManager.Editor.Modules.Vrc3.RadialSlices;
 using Lyuma.Av3Emulator.Runtime;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 using VRC.SDK3.Avatars.Components;
+using VRC.SDK3.Avatars.ScriptableObjects;
 
 namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 {
@@ -37,8 +41,8 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 	{
 		private readonly Dictionary<Texture2D, Texture2D> _resizedIcons = new Dictionary<Texture2D, Texture2D>();
 
-		class StubAv3Module : BlackStartX.GestureManager.Editor.Modules.Vrc3.ModuleVrc3 {
-			class VelocityParam : BlackStartX.GestureManager.Editor.Modules.Vrc3.Params.Vrc3Param {
+		class StubAv3Module : ModuleVrc3 {
+			class VelocityParam : Vrc3Param {
 				public LyumaAv3Runtime runtime;
 				public int axis;
 				public VelocityParam(string name, LyumaAv3Runtime runtime, int axis) : base(name, AnimatorControllerParameterType.Float) {
@@ -67,8 +71,69 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 					runtime.Velocity = vel;
 				}
 			}
-			class ReflectedVrcParam : BlackStartX.GestureManager.Editor.Modules.Vrc3.Params.Vrc3Param {
-				public System.Reflection.FieldInfo property;
+			class EyeHeightMetersParam : Vrc3Param {
+				public LyumaAv3Runtime runtime;
+				public StubAv3Module module;
+				public EyeHeightMetersParam(string name, LyumaAv3Runtime runtime, StubAv3Module module) : base(name, AnimatorControllerParameterType.Float) {
+					this.runtime = runtime;
+					this.module = module;
+				}
+#if GESTURE_MANAGER_3_8_9
+				public override float FloatValue() {
+#else
+				public override float Get() {
+#endif
+					return runtime.AvatarHeight;
+				}
+#if GESTURE_MANAGER_3_9_3
+				protected override void InternalSet(float value, object ignored) {
+#else
+				protected override void InternalSet(float value) {
+#endif
+					if (value == 0.0f)
+					{
+						runtime.AvatarHeight = runtime.DefaultViewPosition.y;
+						runtime.ResetAvatar = true;
+						module._doReset = true;
+						throw new Exception("Resetting avatar. Please ignore.");
+					}
+					runtime.AvatarHeight = (float)value;
+				}
+			}
+
+
+			class BuiltinVrcParam : Vrc3Param {
+				public LyumaAv3Runtime.BuiltinParameterDefinition parameter;
+				public LyumaAv3Runtime runtime;
+				public BuiltinVrcParam(string name, LyumaAv3Runtime runtime, LyumaAv3Runtime.BuiltinParameterDefinition parameter) : base(name,
+					parameter.type == VRCExpressionParameters.ValueType.Bool ? AnimatorControllerParameterType.Bool :
+						(parameter.type == VRCExpressionParameters.ValueType.Float ? AnimatorControllerParameterType.Float : AnimatorControllerParameterType.Int)) {
+					this.parameter = parameter;
+					this.runtime = runtime;
+				}
+#if GESTURE_MANAGER_3_8_9
+				public override float FloatValue() {
+#else
+				public override float Get() {
+#endif
+					return Convert.ToSingle(this.parameter.valueGetter(runtime));
+				}
+#if GESTURE_MANAGER_3_9_3
+				protected override void InternalSet(float value, object ignored) {
+#else
+				protected override void InternalSet(float value) {
+#endif
+					if (parameter.type == VRCExpressionParameters.ValueType.Bool) {
+						this.parameter.valueSetter(runtime, value > 0.5f);
+					} else if (parameter.type == VRCExpressionParameters.ValueType.Float) {
+						this.parameter.valueSetter(runtime, value);
+					} else if (parameter.type == VRCExpressionParameters.ValueType.Int) {
+						this.parameter.valueSetter(runtime, (int)value);
+					}
+				}
+			}
+			class ReflectedVrcParam : Vrc3Param {
+				public FieldInfo property;
 				public LyumaAv3Runtime runtime;
 				public ReflectedVrcParam(string name, LyumaAv3Runtime runtime, System.Reflection.FieldInfo property) : base(name,
 					property.FieldType == typeof(bool) ? AnimatorControllerParameterType.Bool : (property.FieldType == typeof(float) ? AnimatorControllerParameterType.Float : AnimatorControllerParameterType.Int)) {
@@ -107,7 +172,7 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 					}
 				}
 			}
-			class StubVrcBoolParam : BlackStartX.GestureManager.Editor.Modules.Vrc3.Params.Vrc3Param {
+			class StubVrcBoolParam : Vrc3Param {
 				public LyumaAv3Runtime.BoolParam param;
 				public StubVrcBoolParam(string name, LyumaAv3Runtime.BoolParam param) : base(name, AnimatorControllerParameterType.Bool) { this.param = param; }
 #if GESTURE_MANAGER_3_8_9
@@ -126,7 +191,7 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 					param.value = value > 0.5f ? true: false;
 				}
 			}
-			class StubVrcIntParam : BlackStartX.GestureManager.Editor.Modules.Vrc3.Params.Vrc3Param {
+			class StubVrcIntParam : Vrc3Param {
 				public LyumaAv3Runtime.IntParam param;
 				public StubVrcIntParam(string name, LyumaAv3Runtime.IntParam param) : base(name, AnimatorControllerParameterType.Int) { this.param = param; }
 #if GESTURE_MANAGER_3_8_9
@@ -146,7 +211,7 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 					param.value = (int)value;
 				}
 			}
-			class StubVrcFloatParam : BlackStartX.GestureManager.Editor.Modules.Vrc3.Params.Vrc3Param {
+			class StubVrcFloatParam : Vrc3Param {
 				public LyumaAv3Runtime.FloatParam param;
 				public StubVrcFloatParam(string name, LyumaAv3Runtime.FloatParam param) : base(name, AnimatorControllerParameterType.Float) { this.param = param; }
 #if GESTURE_MANAGER_3_8_9
@@ -166,6 +231,7 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 				}
 			}
 			private LyumaAv3Runtime _runtime;
+			public bool _doReset;
 			public StubAv3Module(LyumaAv3Runtime runtime, VRCAvatarDescriptor avatarDescriptor) : base(avatarDescriptor)
 			{
 				_runtime = runtime;
@@ -198,8 +264,8 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 				}
 			}
 
-			public void addParam(string builtinprop, string gestureProp) {
-				var property = _runtime.GetType().GetField(builtinprop, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Default);
+			public void addReflectedParam(string builtinprop, string gestureProp) {
+				var property = _runtime.GetType().GetField(builtinprop, BindingFlags.Instance | BindingFlags.Public | BindingFlags.Default);
 				if (property == null) {
 					UnityEngine.Debug.Log("Failed to find property " + builtinprop + " for " + _runtime);
 				} else {
@@ -222,13 +288,15 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 						Params.Add(builtinprop.name, new VelocityParam(builtinprop.name, _runtime, 2));
 					} else if (builtinprop.name == "VelocityMagnitude") {
 						Params.Add(builtinprop.name, new VelocityParam(builtinprop.name, _runtime, 3));
+					} else if (builtinprop.name == "EyeHeightAsMeters") {
+						Params.Add(builtinprop.name, new EyeHeightMetersParam(builtinprop.name, _runtime, this));
 					} else {
-						addParam(builtinprop.name, builtinprop.name);
+						Params.Add(builtinprop.name, new BuiltinVrcParam(builtinprop.name, _runtime, builtinprop));
 					}
 				}
-				addParam("IKPoseCalibration", "PoseIK");
-				addParam("TPoseCalibration", "PoseT");
-				addParam("Jump", "Av3 Emu Jump");
+				addReflectedParam("IKPoseCalibration", "PoseIK");
+				addReflectedParam("TPoseCalibration", "PoseT");
+				addReflectedParam("Jump", "Av3 Emu Jump");
 				foreach (var xbool in _runtime.Bools) {
 					if (LyumaAv3Runtime.BUILTIN_PARAMETERS.Any(x => x.name == xbool.name)) continue;
 					if (Params.ContainsKey(xbool.name)) {
@@ -253,31 +321,17 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 						Params.Add(xfloat.name, new StubVrcFloatParam(xfloat.name, xfloat));
 					}
 				}
-				// UnityEngine.Debug.Log("Initing params " + Params.Keys);
+				FieldInfo HeightSettings = typeof(ModuleVrc3).GetField("HeightSettings", BindingFlags.NonPublic | BindingFlags.Instance);
+				if (HeightSettings != null)
+				{
+					HeightSettings.SetValue(this, RadialSliceControl.RadialSettings.Height(_runtime.DefaultViewPosition.y));
+				}
 			}
-
-			// public override AnimationClip GetFinalGestureByIndex(GestureHand hand, int gestureIndex)
-			// {
-			// later
-			// return ModuleVrc3Styles.Data.GestureClips[gestureIndex];
-			// }
-
-			// public void NoExpressionRefresh()
-			// {
-			//	 if (Dummy.State) return;
-			//	 if (Menu) ResetAvatar();
-			// }
-
-			// public void ResetAvatar()
-			// {
-			//	 _runtime.ResetAvatar = true;
-			//	 // InitForAvatar();
-			// }
-
 		}
 		public override bool RequiresConstantRepaint() => false; //Manager.Module?.RequiresConstantRepaint ?? false;
 
 		private VisualElement _root;
+		private RadialMenu menu;
 
 		private const int AntiAliasing = 4;
 
@@ -299,9 +353,9 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 			}
 			if (cachedMenu == null)
 			{
-				cachedMenu = (RadialMenu)(typeof(BlackStartX.GestureManager.Editor.Modules.Vrc3.ModuleVrc3).GetMethod("GetOrCreateRadial",
-					System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance).Invoke(
-					av3Module, new object[]{editorKey, false}));
+				cachedMenu = (RadialMenu)typeof(ModuleVrc3).GetMethod("GetOrCreateRadial",
+					BindingFlags.NonPublic|BindingFlags.Instance).Invoke(
+					av3Module, new object[]{editorKey, false});
 			}
 			return cachedMenu;
 		}
@@ -329,6 +383,15 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 			return _root;
 		}
 
+		private void ResetMenu()
+		{
+			var gmenu = (GestureManagerAv3Menu)TargetMenu;
+			gmenu.RecreateCache();
+			LyumaAv3Runtime runtime = gmenu.Runtime;
+			VRCAvatarDescriptor avadesc = runtime.avadesc;
+			av3Module = new StubAv3Module(runtime, avadesc);
+		}
+
 		private static GUIStyle _guiHandTitle = null;
 		internal static GUIStyle GuiHandTitle => _guiHandTitle ?? (_guiHandTitle = new GUIStyle(GUI.skin.label)
 		{
@@ -340,6 +403,23 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 
 		private void ManagerGui () {
 			var gmenu = (GestureManagerAv3Menu)TargetMenu;
+			if (gmenu.Runtime.ResetAvatar || gmenu.Runtime.ResetAndHold)
+			{
+				if (menu != null)
+				{
+					menu.style.display = DisplayStyle.None;
+				}
+				// No GUI update until reset is finished.
+				return;
+			}
+			if (av3Module != null && av3Module._doReset)
+			{
+				if (menu != null)
+				{
+					menu.style.display = DisplayStyle.None;
+				}
+				ResetMenu();
+			}
 			if (GameObject.Find("/GestureManager")) {
 				EditorGUIUtility.PingObject(GameObject.Find("/GestureManager"));
 				EditorGUILayout.HelpBox("WARNING! GestureManager was found in the scene. Use of the Gesture Manager editor may cause incorrect emulation in some cases. When finished with GestureManager, please remove them and Reset Avatar.", MessageType.Error);
@@ -362,7 +442,14 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 			GUILayout.EndHorizontal();
 			if (gmenu.IsMenuOpen) {
 				rect.height = 48;
-				gmenu.useLegacyMenu = !GUI.Toggle(rect, !gmenu.useLegacyMenu, "GestureManager\nRadial Menu", "Button");
+				bool useLegacyMenu = !GUI.Toggle(rect, !gmenu.useLegacyMenu, "GestureManager\nRadial Menu", "Button");
+				if (!useLegacyMenu && gmenu.useLegacyMenu)
+				{
+					// When switching back to GestureManager, recreate the menu.
+					ResetMenu();
+				}
+				gmenu.useLegacyMenu = useLegacyMenu;
+
 				GUILayout.BeginVertical(GUILayout.Height(gmenu.compact && gmenu.useLegacyMenu ? 10 : RadialMenu.Size + 100));
 			}
 			if (gmenu.useLegacyMenu) {
@@ -385,7 +472,7 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 			}
 			EditorGUILayout.Space(10);
 
-			var menu = GetOrCreateRadial(gmenu._cacheKey);
+			menu = GetOrCreateRadial(gmenu._cacheKey);
 			if (!gmenu.IsMenuOpen) {
 				GUILayout.Label(
 					"Expressions" +

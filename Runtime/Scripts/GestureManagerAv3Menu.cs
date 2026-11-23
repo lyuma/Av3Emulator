@@ -41,6 +41,14 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		class StubObject : ScriptableObject {}
 
+		public void RecreateCache()
+		{
+			_av3Module = null;
+			_cachedMenu = null;
+			Destroy(_cacheKey);
+			_cacheKey = ScriptableObject.CreateInstance<StubObject>();
+		}
+
 		private void OnDestroy()
 		{
 			Destroy(_cacheKey);
@@ -48,11 +56,11 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		private void Awake()
 		{
-			_cacheKey = new StubObject();
+			_cacheKey = ScriptableObject.CreateInstance<StubObject>();
 
 			IsMenuOpen = true;
 
-		if (LyumaAv3Runtime.addRuntimeDelegate != null) {
+			if (LyumaAv3Runtime.addRuntimeDelegate != null) {
 				LyumaAv3Runtime.addRuntimeDelegate(this);
 			}
 		}

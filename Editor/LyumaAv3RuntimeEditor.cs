@@ -77,6 +77,7 @@ namespace Lyuma.Av3Emulator.Editor
 		public SerializedProperty AvatarVersion;
 		public SerializedProperty EnableAvatarScaling;
 		public SerializedProperty AvatarHeight;
+		public SerializedProperty TestExtremeAvatarScaling;
 		public SerializedProperty VisualOffset;
 		public SerializedProperty IsOnFriendsList;
 		public SerializedProperty IsLocal;
@@ -162,6 +163,7 @@ namespace Lyuma.Av3Emulator.Editor
 			AvatarVersion = serializedObject.FindProperty("AvatarVersion");
 			EnableAvatarScaling = serializedObject.FindProperty("EnableAvatarScaling");
 			AvatarHeight = serializedObject.FindProperty("AvatarHeight");
+			TestExtremeAvatarScaling = serializedObject.FindProperty("TestExtremeAvatarScaling");
 			VisualOffset = serializedObject.FindProperty("VisualOffset");
 			IsOnFriendsList = serializedObject.FindProperty("IsOnFriendsList");
 			IsLocal = serializedObject.FindProperty("IsLocal");
@@ -188,7 +190,7 @@ namespace Lyuma.Av3Emulator.Editor
 		private static bool visemeFoldout;
 		private static bool handGestureFoldout = true;
 		private static bool locomotionFoldout = true;
-		private static bool trackingSetupAndOtherFoldout;
+		private static bool trackingSetupAndOtherFoldout = true;
 		private static bool userInputsFoldout;
 		private static bool outputStateFoldout;
 		private static bool creditsAndLinksFoldout = true;
@@ -433,7 +435,11 @@ namespace Lyuma.Av3Emulator.Editor
 				DrawAsClickableToggle(InStation);
 
 			}
-			DrawAsClickableToggle(IsOnFriendsList);
+			using (new GUILayout.HorizontalScope())
+			{
+				DrawAsClickableToggle(IsOnFriendsList);
+				DrawAsClickableToggle(TestExtremeAvatarScaling);
+			}
 		}
 
 		private void DrawOutputStateGUI()
