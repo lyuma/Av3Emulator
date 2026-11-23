@@ -90,6 +90,7 @@ namespace Lyuma.Av3Emulator.Runtime
 
 						var collider = target.gameObject.AddComponent<VRCPhysBoneCollider>();
 						var sender = target.gameObject.AddComponent<VRCContactSender>();
+						sender.hideFlags |= HideFlags.DontSaveInBuild;
 
 						collider.radius = sender.radius = config.radius;
 						collider.height = sender.height = config.height;
