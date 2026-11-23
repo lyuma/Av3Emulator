@@ -1,4 +1,14 @@
-### New features in v 3.4.14:
+### New features in v 3.5.0:
+
+3.5.0:
+
+- Massive performance fix: Physbone and contact gizmos no longer render by default (due to using a child object).
+- Performace: Avoid C# reflection every frame for most features.
+- Refactor to allow LyumaAv3Runtime on a child object. This setting can be disabled if needed.
+- Use a proxy to allow accessing the Av3 controls on the root object as well.
+- Quick Actions (Reset avatar and Height scaling) now work in GestureManager menu.
+- Quantization and custom range support for Advanced Parameter options. Thanks, Tohru the Dragon.
+- Advanced Paramter support on contacts, (SenderLocalPositionX and more) ! Thanks, Tohru the Dragon.
 
 3.4.14:
 
