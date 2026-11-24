@@ -132,7 +132,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		[Tooltip("In VRChat, float quantization only happens remotely. Check this to apply each parameter's bit width and representation locally too.")]
 		public bool locally8bitQuantizedFloats = false;
 		private int CloneCount;
-		[Range(0.0f, 2.0f)] public float NonLocalSyncInterval = 0.2f;
+		[Range(0.0f, 2.0f)] public float NonLocalSyncInterval = 0.1f;
 		[Tooltip("Parameters visible in the radial menu will IK sync")] public bool IKSyncRadialMenu = true;
 		//[Header("PlayerLocal and MirrorReflection")]
 		public bool EnableHeadScaling;
