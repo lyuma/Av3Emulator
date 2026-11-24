@@ -532,23 +532,6 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 		}
 
-		public static float ClampFloatOnly(float val) {
-			if (val < -1.0f) {
-				val = -1.0f;
-			}
-			if (val > 1.0f) {
-				val = 1.0f;
-			}
-			return val;
-		}
-		public static float ClampAndQuantizeFloat(float val) {
-			val = ClampFloatOnly(val);
-			val *= 127.00f;
-			val = Mathf.Round(val);
-			val = (((sbyte)val) / 127.0f);
-			val = ClampFloatOnly(val);
-			return val;
-		}
 		public static int ClampByte(int val) {
 			if (val < 0) {
 				val = 0;
@@ -572,12 +555,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 		public static float QuantizeFloat(float val, int bits, bool signed)
 		{
-			val = ClampFloatRange(val, signed);
-
-			// SDK: (2^bits - 2) intervals across the range (2 if signed, 1 if unsigned)
-			int stepsPerUnit = signed ? (1 << (bits - 1)) - 1 : (1 << bits) - 2;
-
-			return ClampFloatRange(Mathf.Round(val * stepsPerUnit) / stepsPerUnit, signed);
+			int stepsPerUnit = ((1 << (bits - 1)) - 1) * (signed ? 1 : 2);
+			return Mathf.Round(ClampFloatRange(val, signed) * stepsPerUnit) / stepsPerUnit;
 		}
 
 		public enum VisemeIndex {
@@ -1061,21 +1040,33 @@ namespace Lyuma.Av3Emulator.Runtime
 							}
 						}
 						if (runtime.FloatToIndex.TryGetValue(actualName, out idx)) {
+							var param = runtime.Floats[idx];
+							float value = param.exportedValue;
 							switch (parameter.type) {
 								case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Set:
-									runtime.Floats[idx].exportedValue = parameter.value;
+									value = parameter.value;
 									break;
 								case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add:
-									runtime.Floats[idx].exportedValue += parameter.value;
+									value += parameter.value;
 									break;
 								case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random:
-									runtime.Floats[idx].exportedValue = UnityEngine.Random.Range(parameter.valueMin, parameter.valueMax);
+									value = UnityEngine.Random.Range(parameter.valueMin, parameter.valueMax);
 									break;
 								case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Copy:
-									runtime.Floats[idx].exportedValue = runtime.getAdjustedParameterAsFloat(parameter.source, parameter.convertRange, parameter.sourceMin, parameter.sourceMax, parameter.destMin, parameter.destMax);
+									value = runtime.getAdjustedParameterAsFloat(
+										parameter.source,
+										parameter.convertRange,
+										parameter.sourceMin,
+										parameter.sourceMax,
+										parameter.destMin,
+										parameter.destMax
+									);
 									break;
 							}
-							runtime.Floats[idx].value = runtime.Floats[idx].exportedValue;
+							// VRChat suppresses approximately equal float writes from parameter drivers.
+							if (!Mathf.Approximately(param.exportedValue, value)) {
+								param.exportedValue = value;
+							}
 						}
 						if (runtime.BoolToIndex.TryGetValue(actualName, out idx)) {
 							bool newValue;
