@@ -952,8 +952,13 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			if (!issuedWarningAnimators.Contains(innerAnimator))
 			{
-				issuedWarningAnimators.Add(innerAnimator);
-				Debug.LogWarning("[" + component + "]: outermost Animator is not known: " + innerAnimator + ". If you changed something, consider resetting avatar", innerAnimator);
+				// SDK callbacks also fire for avatars that Av3Emulator does not manage.
+				var descriptor = innerAnimator.GetComponentInParent<VRCAvatarDescriptor>();
+				if (descriptor != null && descriptor.GetComponentInChildren<LyumaAv3Runtime>(true) != null)
+				{
+					issuedWarningAnimators.Add(innerAnimator);
+					Debug.LogWarning("[" + component + "]: outermost Animator is not known: " + innerAnimator + ". If you changed something, consider resetting avatar", innerAnimator);
+				}
 			}
 
 			return false;
