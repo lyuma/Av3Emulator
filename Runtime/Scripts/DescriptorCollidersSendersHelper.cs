@@ -77,26 +77,48 @@ namespace Lyuma.Av3Emulator.Runtime
 
 					if (target)
 					{
-						//For some reason the visuals followed the parent of finger bones but has the local position of the finger as offset
-						//Haven't yet confirmed if this is translated in-game but it should be
+						bool customFingerContact = false;
 						Vector3 localOffset = Vector3.zero;
-						if (IsFingerBone(matchedBone))
+						if (IsFingerBone(matchedBone) && target.parent)
 						{
-							//Sometimes users switch the transform to be something that isn't a finger
-							//Would have to go through the animator's hierarchy and double check whether this is still a non proximal finger bone
-							localOffset = target.transform.localPosition;
+#if AV3_SDK_NATIVE_FINGER_CONTACTS
+							customFingerContact = extractionType.HasFlag(DescriptorExtractionType.SendersOnly) &&
+								config.state == VRCAvatarDescriptor.ColliderConfig.State.Custom &&
+								config.height > 2f * config.radius && target.localPosition.sqrMagnitude > 0f &&
+								animator.isHuman && target != SmartGetBone(animator, matchedBone);
+#endif
+							localOffset = target.localPosition;
 							target = target.parent;
 						}
 
 						var collider = target.gameObject.AddComponent<VRCPhysBoneCollider>();
-						var sender = target.gameObject.AddComponent<VRCContactSender>();
+						var senderTarget = customFingerContact ? config.transform : target;
+						var senderObject = senderTarget.gameObject;
+#if AV3_SDK_NATIVE_FINGER_CONTACTS
+						VRCContactSender sender;
+						if (customFingerContact)
+						{
+							// EditorOnly keeps the sender out of avatar builds.
+							// Start it inactive so the SDK reads the configured target.
+							senderObject = new GameObject("AV3 " + collisionName + " Contact Sender") {tag = "EditorOnly"};
+							senderObject.SetActive(false);
+							senderObject.transform.SetParent(senderTarget, false);
+							sender = senderObject.AddComponent<DescriptorFingerContactSender>();
+						}
+						else
+							sender = senderObject.AddComponent<VRCContactSender>();
+#else
+						var sender = senderObject.AddComponent<VRCContactSender>();
+#endif
 						sender.hideFlags |= HideFlags.DontSaveInBuild;
 
 						collider.radius = sender.radius = config.radius;
 						collider.height = sender.height = config.height;
-						collider.position = sender.position = config.position + localOffset;
+						collider.position = config.position + localOffset;
+						sender.position = config.position + (customFingerContact ? Vector3.zero : localOffset);
 						collider.rotation = sender.rotation = config.rotation;
-						collider.rootTransform = sender.rootTransform = target;
+						collider.rootTransform = target;
+						sender.rootTransform = senderTarget;
 
 						collider.shapeType = VRCPhysBoneColliderBase.ShapeType.Capsule;
 						sender.shapeType = ContactBase.ShapeType.Capsule;
@@ -104,6 +126,9 @@ namespace Lyuma.Av3Emulator.Runtime
 						sender.collisionTags.Add(collisionName);
 						if (HasMirrorBone(matchedBone))
 							sender.collisionTags.Add(collisionName + (IsLeftBone(matchedBone) ? "L" : "R"));
+
+						if (customFingerContact)
+							senderObject.SetActive(true);
 
 						if (isSenderOnly || !extractionType.HasFlag(DescriptorExtractionType.CollidersOnly)) Object.DestroyImmediate(collider);
 						else createdColliders.Add(collider);
