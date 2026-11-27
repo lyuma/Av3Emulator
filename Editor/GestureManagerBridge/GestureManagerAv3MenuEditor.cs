@@ -334,6 +334,8 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 		private RadialMenu menu;
 
 		private const int AntiAliasing = 4;
+		private static readonly MethodInfo UpdateRadialBadges = typeof(RadialMenu).GetMethod("UpdateRunning",
+			BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
 
 		StubAv3Module av3Module
@@ -380,7 +382,28 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 				// Dumb workaround method to trigger the internal MakeParentsSettingsMatchMe() method on the EditorWindow.
 				inspectorWindow.minSize = inspectorWindow.minSize;
 			}
+			EditorApplication.update -= RefreshRadialBadges;
+			EditorApplication.update += RefreshRadialBadges;
 			return _root;
+		}
+
+		private void OnDisable()
+		{
+			EditorApplication.update -= RefreshRadialBadges;
+		}
+
+		private void RefreshRadialBadges()
+		{
+			if (!EditorApplication.isPlaying || !target || !(TargetMenu is GestureManagerAv3Menu gmenu) ||
+				!gmenu.IsMenuOpen || gmenu.useLegacyMenu || !gmenu.Runtime ||
+				gmenu.Runtime.ResetAvatar || gmenu.Runtime.ResetAndHold ||
+				!(gmenu._cachedMenu is RadialMenu radial))
+			{
+				return;
+			}
+
+			// Driver writes can change AV3's values before Gesture Manager detects a change through its setters.
+			UpdateRadialBadges?.Invoke(radial, null);
 		}
 
 		private void ResetMenu()
