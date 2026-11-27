@@ -72,19 +72,6 @@ namespace Lyuma.Av3Emulator.Runtime
 		private static readonly FieldInfo field_param_CollisionTagsEnabledSet = typeof(ContactReceiver).GetField("param_CollisionTagsEnabledSet");
 		private static readonly FieldInfo field_collision_tag_prefix = typeof(ContactReceiver).GetField("PARAM_COLLISION_TAG_PREFIX", BindingFlags.Public | BindingFlags.Static);
 
-		// Raycast fields
-		private static readonly Type raycastType = Type.GetType("VRC.SDK3.Avatars.Components.VRCRaycast, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
-		private static readonly PropertyInfo property_raycast_parameter = raycastType?.GetProperty("Parameter");
-		private static readonly FieldInfo field_param_hit_const = raycastType?.GetField("PARAM_HIT", BindingFlags.Public | BindingFlags.Static);
-		private static readonly FieldInfo field_param_Hit = raycastType?.GetField("param_Hit");
-		private static readonly FieldInfo field_param_HitValue = raycastType?.GetField("param_HitValue");
-		private static readonly FieldInfo field_param_ratio_const = raycastType?.GetField("PARAM_RATIO", BindingFlags.Public | BindingFlags.Static);
-		private static readonly FieldInfo field_param_Ratio = raycastType?.GetField("param_Ratio");
-		private static readonly FieldInfo field_param_RatioValue = raycastType?.GetField("param_RatioValue");
-		private static readonly FieldInfo field_param_distance_const = raycastType?.GetField("PARAM_DISTANCE", BindingFlags.Public | BindingFlags.Static);
-		private static readonly FieldInfo field_param_Distance = raycastType?.GetField("param_Distance");
-		private static readonly FieldInfo field_param_DistanceValue = raycastType?.GetField("param_DistanceValue");
-
 		// VRCHeadChop fields
 		private static readonly Type headChopType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 		private static readonly Type headChopBoneType = Type.GetType("VRC.SDK3.Avatars.Components.VRCHeadChop+HeadChopBone, VRCSDK3A, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
@@ -502,34 +489,39 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		public void assignRaycastParameters(Component[] behaviours)
 		{
-			Raycasts = behaviours;
-			foreach (var mb in Raycasts) {
-				string parameter = (string)property_raycast_parameter.GetValue(mb);
-				Av3EmuParameterAccess accessInst = new Av3EmuParameterAccess();
-				accessInst.runtime = this;
-				accessInst.paramName = parameter + field_param_hit_const.GetValue(null);
-				if (IsLocal || !isBeingSynced(accessInst.paramName))
+			Raycasts = behaviours ?? Array.Empty<Component>();
+#if AV3_RAYCAST_PARAMETERS
+			foreach (var component in Raycasts)
+			{
+				if (!(component is VRCRaycast raycast) || !raycast)
+					continue;
+
+				string parameter = raycast.Parameter;
+				string hit = parameter + VRCRaycast.PARAM_HIT;
+				if (IsLocal || !isBeingSynced(hit))
 				{
-					field_param_Hit.SetValue(mb, accessInst);
-					accessInst.boolVal = (bool)field_param_HitValue.GetValue(mb);
+					var access = new Av3EmuParameterAccess { runtime = this, paramName = hit };
+					raycast.param_Hit = access;
+					access.boolVal = raycast.param_HitValue;
 				}
-				accessInst = new Av3EmuParameterAccess();
-				accessInst.runtime = this;
-				accessInst.paramName = parameter + field_param_ratio_const.GetValue(null);
-				if (IsLocal || !isBeingSynced(accessInst.paramName))
+
+				string ratio = parameter + VRCRaycast.PARAM_RATIO;
+				if (IsLocal || !isBeingSynced(ratio))
 				{
-					field_param_Ratio.SetValue(mb, accessInst);
-					accessInst.floatVal = (float)field_param_RatioValue.GetValue(mb);
+					var access = new Av3EmuParameterAccess { runtime = this, paramName = ratio };
+					raycast.param_Ratio = access;
+					access.floatVal = raycast.param_RatioValue;
 				}
-				accessInst = new Av3EmuParameterAccess();
-				accessInst.runtime = this;
-				accessInst.paramName = parameter + field_param_distance_const.GetValue(null);
-				if (IsLocal || !isBeingSynced(accessInst.paramName))
+
+				string distance = parameter + VRCRaycast.PARAM_DISTANCE;
+				if (IsLocal || !isBeingSynced(distance))
 				{
-					field_param_Distance.SetValue(mb, accessInst);
-					accessInst.floatVal = (float)field_param_DistanceValue.GetValue(mb);
+					var access = new Av3EmuParameterAccess { runtime = this, paramName = distance };
+					raycast.param_Distance = access;
+					access.floatVal = raycast.param_DistanceValue;
 				}
 			}
+#endif
 		}
 
 		public static int ClampByte(int val) {
@@ -3504,9 +3496,9 @@ namespace Lyuma.Av3Emulator.Runtime
 			{
 				assignContactParameters(avadesc.gameObject.GetComponentsInChildren<VRCContactReceiver>());
 				assignPhysBoneParameters(avadesc.gameObject.GetComponentsInChildren<VRCPhysBone>());
-				if (raycastType != null) {
-					assignRaycastParameters(avadesc.gameObject.GetComponentsInChildren(raycastType));
-				}
+#if AV3_RAYCAST_PARAMETERS
+				assignRaycastParameters(avadesc.gameObject.GetComponentsInChildren<VRCRaycast>());
+#endif
 			}
 
 			for (int i = 0; i < playableBlendingStates.Count; i++) {
