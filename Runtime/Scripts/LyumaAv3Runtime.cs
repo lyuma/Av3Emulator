@@ -38,7 +38,7 @@ namespace Lyuma.Av3Emulator.Runtime
 	// [RequireComponent(typeof(Animator))]
 	[DefaultExecutionOrder(-10)]
 	[HelpURL("https://github.com/lyuma/Av3Emulator")]
-	public class LyumaAv3Runtime : MonoBehaviour
+	public partial class LyumaAv3Runtime : MonoBehaviour
 	{
 		static public Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController> animLayerToDefaultController = new Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController>();
 		public delegate void UpdateSelectionFunc(UnityEngine.Object obj, int mode);
@@ -1501,10 +1501,12 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 		}
 		
+		void OnDisable() {
+			StopManualAvatarPose();
+		}
+
 		void OnDestroy () {
-			if (this.playableGraph.IsValid()) {
-				this.playableGraph.Destroy();
-			}
+			DestroyAvatarPlayableGraph();
 			if (attachedAnimators != null) {
 				foreach (var anim in attachedAnimators) {
 					LyumaAv3Runtime runtime;
@@ -2004,9 +2006,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 			}
 
-			if (playableGraph.IsValid()) {
-				playableGraph.Destroy();
-			}
+			DestroyAvatarPlayableGraph();
 			playables.Clear();
 			playableBlendingStates.Clear();
 
@@ -2481,6 +2481,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				// Experimental. Attempt to reproduce the 1-frame desync in some cases between normal and mirror copy.
 				NormalUpdate();
 			}
+			ApplyManualAvatarPose();
 			UpdateVisemeBlendShapes();
 			if(animator != null && this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
 				if (MirrorClone != null) {
@@ -2841,9 +2842,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				actionIndex = fxIndex = gestureIndex = additiveIndex = sittingIndex = ikposeIndex = tposeIndex = -1;
 				altActionIndex = altFXIndex = altGestureIndex = altAdditiveIndex = -1;
 				// animator.runtimeAnimatorController = null;
-				if (playableGraph.IsValid()) {
-					playableGraph.Destroy();
-				}
+				DestroyAvatarPlayableGraph();
 				if (animator.playableGraph.IsValid()) {
 					animator.playableGraph.Destroy();
 				}

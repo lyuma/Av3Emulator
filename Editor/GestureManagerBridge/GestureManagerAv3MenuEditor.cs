@@ -26,6 +26,7 @@ using System.Reflection;
 using BlackStartX.GestureManager.Editor.Modules.Vrc3;
 using BlackStartX.GestureManager.Editor.Modules.Vrc3.Params;
 using BlackStartX.GestureManager.Editor.Modules.Vrc3.RadialSlices;
+using BlackStartX.GestureManager.Editor.Modules.Vrc3.Tools;
 using Lyuma.Av3Emulator.Runtime;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -42,6 +43,36 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 		private readonly Dictionary<Texture2D, Texture2D> _resizedIcons = new Dictionary<Texture2D, Texture2D>();
 
 		class StubAv3Module : ModuleVrc3 {
+			private static readonly FieldInfo ModuleAvatarTools = typeof(ModuleVrc3).GetField("AvatarTools",
+				BindingFlags.Instance | BindingFlags.NonPublic);
+			private static readonly FieldInfo PoseTool = typeof(AvatarTools).GetField("_avatarPose",
+				BindingFlags.Instance | BindingFlags.NonPublic);
+
+			private sealed class Av3AvatarPose : AvatarTools.AvatarPose
+			{
+				private readonly LyumaAv3Runtime runtime;
+
+				internal Av3AvatarPose(LyumaAv3Runtime runtime) => this.runtime = runtime;
+
+				protected override bool Active => runtime && runtime.IsManualPoseActive;
+
+				protected override void Toggle(ModuleVrc3 module)
+				{
+					if (!runtime)
+						return;
+					if (Active)
+						runtime.StopManualAvatarPose();
+					else
+						runtime.StartManualAvatarPose();
+				}
+
+				protected override void Gui(ModuleVrc3 module)
+				{
+					if (GUILayout.Button(Active ? "Stop Posing" : "Start Posing"))
+						Toggle(module);
+				}
+			}
+
 			class VelocityParam : Vrc3Param {
 				public LyumaAv3Runtime runtime;
 				public int axis;
@@ -235,6 +266,9 @@ namespace Lyuma.Av3Emulator.Editor.GestureManagerBridge
 			public StubAv3Module(LyumaAv3Runtime runtime, VRCAvatarDescriptor avatarDescriptor) : base(avatarDescriptor)
 			{
 				_runtime = runtime;
+				// Gesture Manager uses this tool for both the radial action and its active indicator.
+				if (ModuleAvatarTools?.GetValue(this) is AvatarTools tools)
+					PoseTool?.SetValue(tools, new Av3AvatarPose(runtime));
 			}
 
 			public override void Update()
