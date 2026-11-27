@@ -14,6 +14,12 @@
   "defineConstraints": [
     "UNITY_EDITOR"
   ],
-  "versionDefines": [],
+  "versionDefines": [
+    {
+      "name": "com.vrchat.avatars",
+      "expression": "[3.10.3-beta.2,4.0.0)",
+      "define": "AV3_RAYCAST_PARAMETERS"
+    }
+  ],
   "noEngineReferences": false
 }
