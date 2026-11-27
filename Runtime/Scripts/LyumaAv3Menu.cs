@@ -226,9 +226,10 @@ namespace Lyuma.Av3Emulator.Runtime
 			int idx = _activeControlIndex.Value;
 			var lastStack = MenuStack.Count == 0 ? RootMenu : MenuStack[MenuStack.Count - 1].ExpressionsMenu;
 			if (lastStack != null && lastStack.controls != null && idx < lastStack.controls.Count) {
-				var control = lastStack.controls[idx];
-				foreach (var subp in control.subParameters) {
-					if (subp.name == ParamName) {
+				var axes = lastStack.controls[idx]?.subParameters;
+				if (axes == null) return false;
+				foreach (var subp in axes) {
+					if (subp != null && subp.name == ParamName) {
 						return true;
 					}
 				}
