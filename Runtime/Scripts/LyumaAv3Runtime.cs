@@ -175,6 +175,7 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		private int mouthOpenBlendShapeIdx;
 		private int[] visemeBlendShapeIdxs;
+		private bool legacyEyelidGraphStarted;
 		private int blinkBlendShapeIdx = -1;
 		private int lookDownBlendShapeIdx = -1;
 		private int lookUpBlendShapeIdx = -1;
@@ -1892,6 +1893,7 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		private void InitializeAnimator()
 		{
+			legacyEyelidGraphStarted = false;
 			Debug.Log("INITIALIZE ANIMATOR", this);
 			ResetAvatar = false;
 			PrevAnimatorToDebug = (char)(int)DebugDuplicateAnimator;
@@ -2481,6 +2483,11 @@ namespace Lyuma.Av3Emulator.Runtime
 				// Experimental. Attempt to reproduce the 1-frame desync in some cases between normal and mirror copy.
 				NormalUpdate();
 			}
+			// Update can write tracking values before the Animator samples a new graph.
+			// Wait for the first playing LateUpdate so it starts with the authored eyelid weights.
+			if (!legacyEyelidGraphStarted && playableGraph.IsValid() && playableGraph.IsPlaying()) {
+				legacyEyelidGraphStarted = true;
+			}
 			UpdateVisemeBlendShapes();
 			if(animator != null && this == AvatarSyncSource && !IsMirrorClone && !IsShadowClone) {
 				if (MirrorClone != null) {
@@ -2633,7 +2640,9 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (BlinkRate > 0.99999f) {
 				blink = true;
 			}
-			if (avadesc.customEyeLookSettings.eyelidType == VRCAvatarDescriptor.EyelidType.Blendshapes && avadesc.customEyeLookSettings.eyelidsSkinnedMesh != null) {
+			if (avadesc.customEyeLookSettings.eyelidType == VRCAvatarDescriptor.EyelidType.Blendshapes &&
+				avadesc.customEyeLookSettings.eyelidsSkinnedMesh != null &&
+				(IsMirrorClone || IsShadowClone || (legacyEyelidGraphStarted && playableGraph.IsValid()))) {
 				if (blinkBlendShapeIdx != -1) {
 					avadesc.customEyeLookSettings.eyelidsSkinnedMesh.SetBlendShapeWeight(blinkBlendShapeIdx, blink ? 100.0f : 0.0f);
 				}
