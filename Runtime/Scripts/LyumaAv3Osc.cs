@@ -122,6 +122,8 @@ namespace Lyuma.Av3Emulator.Runtime
 				receiver.StopClient();
 				receiver = null;
 			}
+			if (receiver != null && runtime != null)
+				runtime.PrepareOscProfile();
 			if (resendAllParameters) {
 				resendAllParameters = false;
 				lastSent.Clear();
@@ -153,6 +155,7 @@ namespace Lyuma.Av3Emulator.Runtime
 				if (forwardToAllAvatarsInScene) {
 					if (emulator != null && emulator.runtimes != null) {
 						foreach (var instRuntime in emulator.runtimes) {
+							instRuntime.PrepareOscProfile();
 							instRuntime.HandleOSCMessages(messages);
 						}
 					}

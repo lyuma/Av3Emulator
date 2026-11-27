@@ -126,6 +126,8 @@ namespace Lyuma.Av3Emulator.Runtime
 		public bool LogOSCWarnings = false;
 		public LyumaAv3Osc OSCController = null;
 		public A3EOSCConfiguration OSCConfigurationFile = new A3EOSCConfiguration();
+		private bool hasPreparedOscProfile;
+		private bool preparedRealOscProfile;
 
 		//[Header("Network Clones and Sync")]
 		public bool CreateNonLocalClone;
@@ -1772,11 +1774,8 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (this.AvatarSyncSource != this || IsMirrorClone || IsShadowClone) {
 				PrevAnimatorToViewLiteParamsShow0 = (char)(int)ViewAnimatorOnlyNoParams;
 			}
-			if (!IsMirrorClone && !IsShadowClone && AvatarSyncSource == this) {
-				var pipelineManager = avadesc.GetComponent<VRC.Core.PipelineManager>();
-				string avatarid = pipelineManager != null ? pipelineManager.blueprintId : null;
-			   OSCConfigurationFile.EnsureOSCJSONConfig(avadesc.expressionParameters, avatarid, this.gameObject.name);
-			}
+			if (!IsMirrorClone && !IsShadowClone && AvatarSyncSource == this)
+				InitializeOscProfile();
 
 			AvatarHeight = avadesc.ViewPosition.y;
 			DefaultViewPosition = avadesc.ViewPosition;
@@ -2768,26 +2767,46 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 		}
 
+		private void InitializeOscProfile()
+		{
+			hasPreparedOscProfile = false;
+			if (string.IsNullOrEmpty(OSCConfigurationFile.OSCAvatarID))
+				OSCConfigurationFile.OSCAvatarID = A3EOSCConfiguration.AVTR_EMULATOR_PREFIX + "Default";
+			if (OSCConfigurationFile.OSCJsonConfig == null)
+				OSCConfigurationFile.OSCJsonConfig = A3EOSCConfiguration.GenerateOuterJSON(
+					avadesc.expressionParameters, OSCConfigurationFile.OSCAvatarID, gameObject.name);
+		}
+
+		internal void PrepareOscProfile()
+		{
+			bool useReal = OSCConfigurationFile.UseRealPipelineIdJSONFile;
+			if (AvatarSyncSource != this || IsMirrorClone || IsShadowClone || !avadesc ||
+				(hasPreparedOscProfile && preparedRealOscProfile == useReal))
+				return;
+
+			var pipelineManager = avadesc.GetComponent<VRC.Core.PipelineManager>();
+			OSCConfigurationFile.EnsureOSCJSONConfig(avadesc.expressionParameters,
+				pipelineManager ? pipelineManager.blueprintId : null, gameObject.name);
+			hasPreparedOscProfile = true;
+			preparedRealOscProfile = useReal;
+		}
+
 		// Update is called once per frame
 		void NormalUpdate()
 		{
 			if (AvatarSyncSource == this) {
-				if (OSCConfigurationFile.OSCAvatarID == null) {
-					OSCConfigurationFile.OSCAvatarID = A3EOSCConfiguration.AVTR_EMULATOR_PREFIX + "Default";
-				}
-				if ((OSCConfigurationFile.UseRealPipelineIdJSONFile && OSCConfigurationFile.OSCAvatarID.StartsWith(A3EOSCConfiguration.AVTR_EMULATOR_PREFIX)) ||
-						(!OSCConfigurationFile.UseRealPipelineIdJSONFile && !OSCConfigurationFile.OSCAvatarID.StartsWith(A3EOSCConfiguration.AVTR_EMULATOR_PREFIX))) {
-					var pipelineManager = avadesc.GetComponent<VRC.Core.PipelineManager>();
-					string avatarid = pipelineManager != null ? pipelineManager.blueprintId : null;
-					OSCConfigurationFile.EnsureOSCJSONConfig(avadesc.expressionParameters, avatarid, this.gameObject.name);
-				}
+				bool accessedProfile = false;
 				if (OSCConfigurationFile.SaveOSCConfig) {
 					OSCConfigurationFile.SaveOSCConfig = false;
-					A3EOSCConfiguration.WriteJSON(OSCConfigurationFile.OSCFilePath, OSCConfigurationFile.OSCJsonConfig);
+					accessedProfile = OSCConfigurationFile.AccessSelectedProfile(save: true);
 				}
 				if (OSCConfigurationFile.LoadOSCConfig) {
 					OSCConfigurationFile.LoadOSCConfig = false;
-					OSCConfigurationFile.OSCJsonConfig = A3EOSCConfiguration.ReadJSON(OSCConfigurationFile.OSCFilePath);
+					accessedProfile |= OSCConfigurationFile.AccessSelectedProfile(save: false);
+				}
+				if (accessedProfile) {
+					hasPreparedOscProfile = true;
+					preparedRealOscProfile = OSCConfigurationFile.UseRealPipelineIdJSONFile;
 				}
 				if (OSCConfigurationFile.GenerateOSCConfig) {
 					OSCConfigurationFile.GenerateOSCConfig = false;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
@@ -121,87 +122,172 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 
 		public const string AVTR_EMULATOR_PREFIX = "avtr_LyumaAv3Emulator_";
-		public void EnsureOSCJSONConfig(VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters expparams, string avatarid, string name) {
-			try {
-				string localLowPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-				if (localLowPath.EndsWith("Local")) {
-					localLowPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(localLowPath), "LocalLow");
-				}
-				string userid = null;
-				string vrcOSCPath = System.IO.Path.Combine(localLowPath, "VRChat", "vrchat", "OSC");
+		public void EnsureOSCJSONConfig(VRCExpressionParameters expparams, string avatarid, string name)
+		{
+			try
+			{
+				bool useRealId = UseRealPipelineIdJSONFile && !string.IsNullOrEmpty(avatarid);
+				if (useRealId && !IsProfileIdentifier(avatarid))
+					throw new ArgumentException("The avatar ID is not a valid OSC profile identifier.");
 
-				System.Type apiusertype = System.Type.GetType("VRC.Core.APIUser, VRCCore-Editor");
-				if (apiusertype != null) {
-					var idprop = apiusertype.GetProperty("id", System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public);
-					var prop = apiusertype.GetProperty("CurrentUser", System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public);
-					// Debug.Log("idprop " + idprop);
-					if (idprop != null && prop != null) {
-						var apiuserinst = prop.GetValue(null);
-						if (apiuserinst != null) {
-							// Debug.Log("apiuser " + apiuserinst);
-							userid = (string)idprop.GetValue(apiuserinst);
-						}
-					}
-				}
-				try {
-					System.IO.Directory.CreateDirectory(vrcOSCPath);
-				} catch (System.IO.IOException) {
-				}
-				if (userid == null || userid.Length == 0) {
-					// do not have a known user account.
-					// find the most recent user folder.
-					DateTime dt = DateTime.MinValue;
-					// Debug.Log("lets-a look at " + vrcOSCPath);
-					foreach (string file in System.IO.Directory.GetDirectories(vrcOSCPath, "*", System.IO.SearchOption.TopDirectoryOnly)) {
-						// Debug.Log("enumerate a file " + file);
-						DateTime thisdt = System.IO.File.GetLastWriteTime(file);
-						if (thisdt > dt) {
-							userid = System.IO.Path.GetFileName(file);
-							dt = thisdt;
-						}
-					}
-				}
-				if (userid == null || userid.Length == 0) {
-					OSCAvatarID = "not_logged_in";
-					OSCFilePath = "No User folder was found. Please play VRC or login.";
-					OSCJsonConfig = GenerateOuterJSON(expparams, "not_logged_in", name);
+				string avatarDirectory = ResolveAvatarDirectory();
+				if (avatarDirectory == null)
+				{
+					SetInMemoryProfile(expparams, name, "not_logged_in",
+						"No User folder was found. Please play VRC or login.");
 					return;
 				}
-				string avatarDirectory = System.IO.Path.Combine(vrcOSCPath, userid, "Avatars");
-				try {
-					System.IO.Directory.CreateDirectory(avatarDirectory);
-				} catch (System.IO.IOException) {
-				}
-				if (avatarid != null && UseRealPipelineIdJSONFile) {
-					OSCAvatarID = avatarid; // json file already exists: let's use it.
-					OSCFilePath = System.IO.Path.Combine(avatarDirectory, avatarid + ".json");
-				} else {
-					avatarid = AVTR_EMULATOR_PREFIX + (whichtest ? "A" : "B");
-					OSCFilePath = System.IO.Path.Combine(avatarDirectory, avatarid + ".json");
-					whichtest = !whichtest;
-					OSCAvatarID = avatarid;
-					WriteJSON(OSCFilePath, GenerateOuterJSON(expparams, avatarid, name));
-				}
-				if (System.IO.File.Exists(OSCFilePath)) {
-					try {
-						OSCJsonConfig = ReadJSON(OSCFilePath);
-					} catch (Exception e) {
-						Debug.LogException(e);
-						Debug.Log("File failed to load. Generating new JSON for " + OSCAvatarID);
-						OSCJsonConfig = GenerateOuterJSON(expparams, OSCAvatarID, name);
-					}
-				} else {
-					Debug.Log("File does not exist. Generating new JSON for " + OSCAvatarID);
-					OSCJsonConfig = GenerateOuterJSON(expparams, OSCAvatarID, name);
-				}
-			} catch (Exception e) {
-				Debug.LogException(e);
-				OSCAvatarID = "exception_generating_json";
-				OSCFilePath = e.Message;
-				Debug.Log("Unable to determine Avatar ID or JSON file path. Generating config.");
-				OSCJsonConfig = GenerateOuterJSON(expparams, "exception_generating_json", name);
+
+				LoadOrCreateProfile(avatarDirectory, expparams, avatarid, name, useRealId);
+			}
+			catch (Exception e)
+			{
+				Debug.LogWarning("Could not prepare the OSC profile. " + e.Message);
+				SetInMemoryProfile(expparams, name, "exception_generating_json", e.Message);
 			}
 		}
 
+		private void SetInMemoryProfile(VRCExpressionParameters expparams, string name, string fallbackId, string message)
+		{
+			OSCAvatarID = UseRealPipelineIdJSONFile ? fallbackId : AVTR_EMULATOR_PREFIX + "Default";
+			OSCFilePath = message;
+			OSCJsonConfig = GenerateOuterJSON(expparams, OSCAvatarID, name);
+		}
+
+		private void LoadOrCreateProfile(string avatarDirectory, VRCExpressionParameters expparams,
+			string avatarid, string name, bool useRealId)
+		{
+			if (!useRealId)
+			{
+				avatarid = AVTR_EMULATOR_PREFIX + (whichtest ? "A" : "B");
+				whichtest = !whichtest;
+			}
+
+			OSCAvatarID = avatarid;
+			OSCFilePath = ResolveConfigPath(avatarDirectory, Path.Combine(avatarDirectory, avatarid + ".json"));
+			Directory.CreateDirectory(avatarDirectory);
+			if (!useRealId)
+				WriteJSON(OSCFilePath, GenerateOuterJSON(expparams, avatarid, name));
+
+			OSCJsonConfig = null;
+			if (File.Exists(OSCFilePath))
+			{
+				try
+				{
+					OSCJsonConfig = ReadJSON(OSCFilePath);
+				}
+				catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+				{
+					Debug.LogWarning("Could not read the saved OSC profile. " + e.Message);
+				}
+			}
+			if (OSCJsonConfig == null)
+				OSCJsonConfig = GenerateOuterJSON(expparams, OSCAvatarID, name);
+		}
+
+		internal bool AccessSelectedProfile(bool save)
+		{
+			try
+			{
+				AccessProfile(ResolveAvatarDirectory(), save);
+				return true;
+			}
+			catch (Exception e) when (e is ArgumentException || e is IOException ||
+				e is UnauthorizedAccessException || e is NotSupportedException)
+			{
+				Debug.LogWarning("Could not " + (save ? "save" : "load") + " the selected OSC profile. " + e.Message);
+				return false;
+			}
+		}
+
+		private void AccessProfile(string avatarDirectory, bool save)
+		{
+			string path = ResolveConfigPath(avatarDirectory, OSCFilePath);
+			if (save)
+			{
+				WriteJSON(path, OSCJsonConfig);
+			}
+			else
+			{
+				OSCJsonConfig = ReadJSON(path) ?? throw new ArgumentException("The selected file does not contain an OSC profile.");
+			}
+		}
+
+		private static bool IsProfileIdentifier(string value)
+		{
+			return !string.IsNullOrEmpty(value) && value.All(c => char.IsLetterOrDigit(c) || c == '_' || c == '-');
+		}
+
+		private static string ResolveConfigPath(string avatarDirectory, string selectedPath)
+		{
+			if (avatarDirectory == null || string.IsNullOrEmpty(selectedPath) || !Path.IsPathRooted(selectedPath))
+				throw new ArgumentException("Select a JSON file inside the active OSC avatar directory.");
+
+			string path = Path.GetFullPath(selectedPath);
+			var comparison = Path.DirectorySeparatorChar == '\\' ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+			if (!path.StartsWith(avatarDirectory + Path.DirectorySeparatorChar, comparison) ||
+				!string.Equals(Path.GetExtension(path), ".json", StringComparison.OrdinalIgnoreCase))
+				throw new ArgumentException("Select a JSON file inside the active OSC avatar directory.");
+
+			RequireOrdinaryPath(avatarDirectory);
+			for (string current = path; !string.Equals(current, avatarDirectory, comparison); current = Path.GetDirectoryName(current))
+			{
+				if (Path.GetFileName(current).IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+					throw new ArgumentException("The selected OSC profile has an invalid file or directory name.");
+				RequireOrdinaryPath(current);
+			}
+			return path;
+		}
+
+		private static void RequireOrdinaryPath(string path)
+		{
+			try
+			{
+				if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+					throw new ArgumentException("OSC profiles require ordinary files and directories.");
+			}
+			catch (FileNotFoundException) { }
+			catch (DirectoryNotFoundException) { }
+		}
+
+		private static string ResolveAvatarDirectory()
+		{
+			string localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+			if (string.IsNullOrEmpty(localData))
+				return null;
+			if (string.Equals(Path.GetFileName(localData), "Local", StringComparison.OrdinalIgnoreCase))
+				localData = Path.Combine(Path.GetDirectoryName(localData), "LocalLow");
+
+			string oscRoot = Path.GetFullPath(localData);
+			foreach (string segment in new[] { "VRChat", "vrchat", "OSC" })
+			{
+				oscRoot = Path.Combine(oscRoot, segment);
+				RequireOrdinaryPath(oscRoot);
+			}
+
+			var accountType = Type.GetType("VRC.Core.APIUser, VRCCore-Editor");
+			object account = accountType?.GetProperty("CurrentUser",
+				System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public)?.GetValue(null);
+			string user = account == null ? null : accountType.GetProperty("id")?.GetValue(account) as string;
+			if (string.IsNullOrEmpty(user))
+			{
+				if (!Directory.Exists(oscRoot))
+					return null;
+				user = new DirectoryInfo(oscRoot).EnumerateDirectories()
+					.Where(directory => IsProfileIdentifier(directory.Name) &&
+						(directory.Attributes & FileAttributes.ReparsePoint) == 0)
+					.OrderByDescending(directory => directory.LastWriteTimeUtc)
+					.Select(directory => directory.Name)
+					.FirstOrDefault();
+			}
+
+			if (user == null)
+				return null;
+			if (!IsProfileIdentifier(user))
+				throw new ArgumentException("The account ID is not a valid OSC profile identifier.");
+			string accountDirectory = Path.Combine(oscRoot, user);
+			RequireOrdinaryPath(accountDirectory);
+			return Path.Combine(accountDirectory, "Avatars");
+		}
 	}
 }
