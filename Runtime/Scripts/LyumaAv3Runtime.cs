@@ -38,7 +38,7 @@ namespace Lyuma.Av3Emulator.Runtime
 	// [RequireComponent(typeof(Animator))]
 	[DefaultExecutionOrder(-10)]
 	[HelpURL("https://github.com/lyuma/Av3Emulator")]
-	public class LyumaAv3Runtime : MonoBehaviour
+	public partial class LyumaAv3Runtime : MonoBehaviour
 	{
 		static public Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController> animLayerToDefaultController = new Dictionary<VRCAvatarDescriptor.AnimLayerType, RuntimeAnimatorController>();
 		public delegate void UpdateSelectionFunc(UnityEngine.Object obj, int mode);
@@ -1502,6 +1502,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		}
 		
 		void OnDestroy () {
+			ReleaseObserverCameraResources();
 			if (this.playableGraph.IsValid()) {
 				this.playableGraph.Destroy();
 			}
@@ -1762,6 +1763,8 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 			}
 
+			if (!IsLocal && !IsMirrorClone && !IsShadowClone)
+				InitializeObserverCameras();
 			InitializeAnimator();
 			if (addRuntimeDelegate != null) {
 				addRuntimeDelegate(this);
@@ -2455,6 +2458,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		private bool isResettingHold;
 		private bool isResettingSel;
 		void LateUpdate() {
+			RebindObserverCameraMaterials();
 			if (VisitOurGithub != LyumaAv3Emulator.GIT_REPO) {
 				VisitOurGithub = LyumaAv3Emulator.GIT_REPO;
 			}
