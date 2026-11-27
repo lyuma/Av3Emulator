@@ -112,12 +112,18 @@ namespace Lyuma.Av3Emulator.Editor
 			for (var controlIndex = 0; controlIndex < _currentMenu.controls.Count; controlIndex++)
 			{
 				var control = _currentMenu.controls[controlIndex];
+				if (HasNullPuppetAxes(control))
+				{
+					EditorGUILayout.HelpBox("Missing puppet axis definitions for: " + control.name, MessageType.Warning);
+					continue;
+				}
 
 				bool IsParametersCorrect()
 				{
 					if (menu.Runtime.ParameterNames == null) return true;
 
-					return ParameterCorrect(control.parameter) && control.subParameters.All(ParameterCorrect);
+					return ParameterCorrect(control.parameter) &&
+						(control.subParameters == null || control.subParameters.All(ParameterCorrect));
 
 					bool ParameterCorrect(VRCExpressionsMenu.Control.Parameter parameter) =>
 						parameter == null || string.IsNullOrEmpty(parameter.name) || // it's not specified parameter
@@ -160,6 +166,28 @@ namespace Lyuma.Av3Emulator.Editor
 			{
 				EditorGUILayout.LabelField("(This menu has no controls)");
 			}
+		}
+
+		private static bool HasNullPuppetAxes(VRCExpressionsMenu.Control control)
+		{
+			int axisCount;
+			switch (control.type)
+			{
+				case VRCExpressionsMenu.Control.ControlType.RadialPuppet:
+					axisCount = 1;
+					break;
+				case VRCExpressionsMenu.Control.ControlType.TwoAxisPuppet:
+					axisCount = 2;
+					break;
+				case VRCExpressionsMenu.Control.ControlType.FourAxisPuppet:
+					axisCount = 4;
+					break;
+				default:
+					return false;
+			}
+
+			var axes = control.subParameters;
+			return axes == null || axes.Take(axisCount).Any(axis => axis == null);
 		}
 
 		private string LabelizeMenu()
