@@ -862,7 +862,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		static public Dictionary<Animator, LyumaAv3Runtime> animatorToTopLevelRuntime = new Dictionary<Animator, LyumaAv3Runtime>();
 		private HashSet<Animator> attachedAnimators;
 		private HashSet<string> duplicateParameterAdds = new HashSet<string>();
-		private List<object> vrcPlayAudios = new List<object>();
+		[ThreadStatic] private static bool creatingAnimatorPreviewCopy;
 
 		private (ParentConstraint, Vector3[])[] ParentConstraints;
 		private Cloth[] ClothComponents;
@@ -1326,6 +1326,9 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 		}
 		public static void SetupPlayAudio(object x) {
+			if (creatingAnimatorPreviewCopy)
+				return;
+
 			Type audioSubType = Type.GetType("VRC.SDKBase.VRC_AnimatorPlayAudio, VRCSDKBase, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
 			
 			FieldInfo enterState = audioSubType.GetField("EnterState");
@@ -1352,17 +1355,6 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			if (runtime.IsMirrorClone && runtime.IsShadowClone) {
 				return;
-			}
-
-			int index = runtime.vrcPlayAudios.IndexOf(playAudio);
-			if (index == -1)
-			{
-				index = runtime.vrcPlayAudios.Count;
-				runtime.vrcPlayAudios.Add(playAudio);
-			}
-			if (runtime.DebugDuplicateAnimator != VRCAvatarDescriptor.AnimLayerType.Base && index % 2 == 0)
-			{
-				return; // We add a copy of every state behaviour, which is fine when operations are idempotent, but since these are not, we need to ignore every second SetupEnterState, since those get called on both behaviours in succession.
 			}
 
 			AudioSource audioSource = animator.transform.Find((string)audioSubType.GetField("SourcePath").GetValue(playAudio))?.GetComponent<AudioSource>();
@@ -1473,17 +1465,6 @@ namespace Lyuma.Av3Emulator.Runtime
 				return;
 			}
 				
-			int index = runtime.vrcPlayAudios.IndexOf(playAudio);
-			if (index == -1)
-			{
-				runtime.vrcPlayAudios.Add(playAudio);
-				index = runtime.vrcPlayAudios.IndexOf(playAudio);
-				if (index % 2 == 0)
-				{
-					return;
-				}
-			}
-
 			AudioSource audioSource = animator.transform.Find((string)audioSubType.GetField("SourcePath").GetValue(playAudio))?.GetComponent<AudioSource>();
 			if (audioSource == null)
 			{
@@ -1890,6 +1871,21 @@ namespace Lyuma.Av3Emulator.Runtime
 			return typeBlacklist.Any(bt => type.IsSubclassOf(bt) || type == bt) || CloneStringComponentBlacklist.Any(bt => type.ToString().Contains(bt));
 		}
 
+		private AnimatorControllerPlayable CreateAvatarLayerPlayable(RuntimeAnimatorController controller, bool previewCopy)
+		{
+			// The SDK initializes Play Audio behaviours during playable creation.
+			bool previous = creatingAnimatorPreviewCopy;
+			creatingAnimatorPreviewCopy = previewCopy;
+			try
+			{
+				return AnimatorControllerPlayable.Create(playableGraph, controller);
+			}
+			finally
+			{
+				creatingAnimatorPreviewCopy = previous;
+			}
+		}
+
 		private void InitializeAnimator()
 		{
 			Debug.Log("INITIALIZE ANIMATOR", this);
@@ -2076,7 +2072,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					continue;
 				}
 				allControllers[vrcAnimLayer.type] = ac;
-				AnimatorControllerPlayable humanAnimatorPlayable = AnimatorControllerPlayable.Create(playableGraph, ac);
+				AnimatorControllerPlayable humanAnimatorPlayable = CreateAvatarLayerPlayable(ac, i <= dupeOffset);
 				PlayableBlendingState pbs = new PlayableBlendingState();
 				for (int j = 0; j < humanAnimatorPlayable.GetLayerCount(); j++)
 				{
