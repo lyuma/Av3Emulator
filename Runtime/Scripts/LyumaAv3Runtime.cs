@@ -1029,7 +1029,9 @@ namespace Lyuma.Av3Emulator.Runtime
 									runtime.Ints[idx].value = (int)parameter.value;
 									break;
 								case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Add:
-									runtime.Ints[idx].value += (int)parameter.value;
+									float sum = (float)runtime.Ints[idx].value + parameter.value;
+									// Force Float precision before truncating to Int.
+									runtime.Ints[idx].value = (int)(float)sum;
 									break;
 								case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random:
 									runtime.Ints[idx].value = UnityEngine.Random.Range((int)parameter.valueMin, (int)parameter.valueMax + 1);
