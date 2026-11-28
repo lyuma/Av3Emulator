@@ -32,6 +32,7 @@ using VRC.SDK3.Avatars.ScriptableObjects;
 using VRC.SDK3.Dynamics.Contact.Components;
 using VRC.SDK3.Dynamics.PhysBone.Components;
 using VRC.SDKBase;
+using AnimLayerType = VRC.SDK3.Avatars.Components.VRCAvatarDescriptor.AnimLayerType;
 
 namespace Lyuma.Av3Emulator.Runtime
 {
@@ -887,7 +888,6 @@ namespace Lyuma.Av3Emulator.Runtime
 		private static void ResetStatics()
 		{
 			animatorToTopLevelRuntime.Clear();
-			animLayerToDefaultController.Clear();
 			issuedWarningAnimators.Clear();
 		}
 
@@ -1884,6 +1884,18 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 		}
 
+		private static bool NeedsDefaultLayers(VRCAvatarDescriptor.CustomAnimLayer[] layers,
+			VRCAvatarDescriptor.CustomAnimLayer[] sourceLayers)
+		{
+			// Unity copies null arrays as empty arrays when cloning the avatar.
+			return layers == null || (layers.Length == 0 && sourceLayers == null);
+		}
+
+		private static VRCAvatarDescriptor.CustomAnimLayer[] CreateDefaultLayers(params AnimLayerType[] types)
+		{
+			return types.Select(type => new VRCAvatarDescriptor.CustomAnimLayer { type = type, isDefault = true }).ToArray();
+		}
+
 		public bool CloneComponentIsBlacklisted(Component component, Type[] typeBlacklist)
 		{
 			var type = component.GetType();
@@ -1933,8 +1945,19 @@ namespace Lyuma.Av3Emulator.Runtime
 				origAnimatorController = animator.runtimeAnimatorController;
 			}
 
-			VRCAvatarDescriptor.CustomAnimLayer[] baselayers = avadesc.baseAnimationLayers;
-			VRCAvatarDescriptor.CustomAnimLayer[] speciallayers = avadesc.specialAnimationLayers;
+			var sourceDescriptor = AvatarSyncSource != null && AvatarSyncSource.avadesc != null
+				? AvatarSyncSource.avadesc : avadesc;
+			var baselayers = avadesc.baseAnimationLayers;
+			if (NeedsDefaultLayers(baselayers, sourceDescriptor.baseAnimationLayers)) {
+				baselayers = animator.isHuman
+					? CreateDefaultLayers(AnimLayerType.Base, AnimLayerType.Additive, AnimLayerType.Gesture,
+						AnimLayerType.Action, AnimLayerType.FX)
+					: CreateDefaultLayers(AnimLayerType.Base, AnimLayerType.Action, AnimLayerType.FX);
+			}
+			var speciallayers = avadesc.specialAnimationLayers;
+			if (NeedsDefaultLayers(speciallayers, sourceDescriptor.specialAnimationLayers)) {
+				speciallayers = CreateDefaultLayers(AnimLayerType.Sitting, AnimLayerType.TPose, AnimLayerType.IKPose);
+			}
 			List<VRCAvatarDescriptor.CustomAnimLayer> allLayers = new List<VRCAvatarDescriptor.CustomAnimLayer>();
 			// foreach (VRCAvatarDescriptor.CustomAnimLayer cal in baselayers) {
 			//	 if (AnimatorToDebug == cal.type) {
