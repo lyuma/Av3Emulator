@@ -539,7 +539,7 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		public class UDPThread {
 			UdpClient udpServer;
-			public bool shutdown;
+			public volatile bool shutdown;
 			public int udp_port;
 			public uint bundleCounter; // just so callers know if it came from a bundle.
 			public ConcurrentQueue<OSCMessage> receivedMessageQueue = new ConcurrentQueue<OSCMessage>();
@@ -549,7 +549,14 @@ namespace Lyuma.Av3Emulator.Runtime
 				return (IPEndPoint)udpServer.Client.LocalEndPoint;
 			}
 			public IPEndPoint Open(IPEndPoint local_udp_endpoint) {
-				udpServer = new UdpClient(local_udp_endpoint);
+				var socket = new UdpClient(local_udp_endpoint.AddressFamily);
+				try {
+					socket.Client.Bind(local_udp_endpoint);
+				} catch {
+					socket.Dispose();
+					throw;
+				}
+				udpServer = socket;
 				return (IPEndPoint)udpServer.Client.LocalEndPoint;
 			}
 			public void Connect(IPEndPoint endPoint) {
@@ -570,6 +577,8 @@ namespace Lyuma.Av3Emulator.Runtime
 						} catch (Exception e) {
 							CryWolf(e.ToString());
 						}
+					} catch (ObjectDisposedException) when (shutdown) {
+						return;
 					} catch (SocketException) {
 						if (!shutdown) {
 							continue; //throw;
@@ -622,6 +631,15 @@ namespace Lyuma.Av3Emulator.Runtime
 		public IPEndPoint OpenClient(int udp_port=0) {
 			return OpenClient(new IPEndPoint(IPAddress.Any, udp_port));
 		}
+		internal IPEndPoint OpenClientWithFallback(int preferredPort) {
+			try {
+				return OpenClient(preferredPort);
+			} catch (SocketException error) when (
+				error.SocketErrorCode == SocketError.AddressAlreadyInUse || error.SocketErrorCode == SocketError.AccessDenied) {
+				return OpenClient(0);
+			}
+		}
+
 		public IPEndPoint OpenClient(IPEndPoint local_udp_endpoint) {
 			if (udpThreadState != null) {
 				StopClient();

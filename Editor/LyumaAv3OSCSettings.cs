@@ -53,19 +53,7 @@ namespace Lyuma.Av3Emulator.Editor
 				}
 				_data = emulators[0];
 			}
-			if (_editor == null || _editor.target != _data) 
-				_editor = UnityEditor.Editor.CreateEditor(_data);
-			ClearPreviousEditors();
-		}
-
-		private static void ClearPreviousEditors()
-		{
-			var t = _editor.GetType();
-			var edits = Resources.FindObjectsOfTypeAll(t);
-			foreach (var e in edits)
-				if (e != _editor)
-					DestroyImmediate(e);
-
+			UnityEditor.Editor.CreateCachedEditor(_data, null, ref _editor);
 		}
 
 		public void OnGUI()
@@ -129,6 +117,12 @@ namespace Lyuma.Av3Emulator.Editor
 
 		}
 
+		private void OnInspectorUpdate()
+		{
+			if (EditorApplication.isPlaying)
+				Repaint();
+		}
+
 		public static void ApplySettings(LyumaAv3Osc target)
 		{
 			var json = EditorPrefs.GetString(EDITOR_PREF_KEY, string.Empty);
@@ -153,5 +147,52 @@ namespace Lyuma.Av3Emulator.Editor
 		}
 
 		private void OnDisable() => AskSaveSettings();
+	}
+
+	[CustomEditor(typeof(LyumaAv3Osc))]
+	internal sealed class LyumaAv3OscInspector : UnityEditor.Editor
+	{
+		public override void OnInspectorGUI()
+		{
+			serializedObject.Update();
+			if (EditorApplication.isPlaying)
+				DrawStatus();
+
+			EditorGUILayout.LabelField("OSC Connection", EditorStyles.boldLabel);
+			var openSocket = serializedObject.FindProperty(nameof(LyumaAv3Osc.openSocket));
+			var disableOSC = serializedObject.FindProperty(nameof(LyumaAv3Osc.disableOSC));
+			bool enabled = openSocket.boolValue && !disableOSC.boolValue;
+			bool nextEnabled = EditorGUILayout.Toggle("OSC Enabled", enabled);
+			if (nextEnabled != enabled)
+			{
+				openSocket.boolValue = nextEnabled;
+				disableOSC.boolValue = false;
+			}
+
+			DrawPropertiesExcluding(serializedObject, "m_Script");
+			serializedObject.ApplyModifiedProperties();
+		}
+
+		public override bool RequiresConstantRepaint() => EditorApplication.isPlaying;
+
+		private void DrawStatus()
+		{
+			int udpPort = serializedObject.FindProperty("localPort").intValue;
+			int queryPort = serializedObject.FindProperty("localQueryPort").intValue;
+			string ip = serializedObject.FindProperty("localIp").stringValue;
+			int received = serializedObject.FindProperty("numberOfOSCMessages").intValue;
+
+			EditorGUILayout.LabelField("OSC Status", EditorStyles.boldLabel);
+			DrawStatusField("OSC (UDP)", udpPort > 0 ? $"{ip}:{udpPort}" : "Stopped");
+			DrawStatusField("OSCQuery (HTTP)", queryPort > 0 ? $"http://127.0.0.1:{queryPort}" : "Stopped");
+			DrawStatusField("Received OSC Messages", received.ToString());
+			EditorGUILayout.Space();
+		}
+
+		private static void DrawStatusField(string label, string value)
+		{
+			Rect field = EditorGUI.PrefixLabel(EditorGUILayout.GetControlRect(), new GUIContent(label));
+			EditorGUI.SelectableLabel(field, value, EditorStyles.textField);
+		}
 	}
 }
