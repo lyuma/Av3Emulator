@@ -99,6 +99,7 @@ namespace Lyuma.Av3Emulator.Runtime
 		private static readonly MethodInfo GetRepresentationByTypeMethod = typeof(VRCExpressionParameters.Parameter).GetMethod("GetRepresentationByType");
 		private static readonly MethodInfo GetCustomLerpDurationMethod = typeof(VRCExpressionParameters.Parameter).GetMethod("GetCustomLerpDuration");
 		private static readonly FieldInfo field_networkSynced = typeof(VRCExpressionParameters.Parameter).GetField("networkSynced");
+		private static readonly FieldInfo field_preventRepeats = typeof(VRC_AvatarParameterDriver.Parameter).GetField("preventRepeats");
 
 
 		public LyumaAv3Runtime OriginalSourceClone = null;
@@ -1032,8 +1033,16 @@ namespace Lyuma.Av3Emulator.Runtime
 									runtime.Ints[idx].value += (int)parameter.value;
 									break;
 								case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random:
-									runtime.Ints[idx].value = UnityEngine.Random.Range((int)parameter.valueMin, (int)parameter.valueMax + 1);
+								{
+									int minimum = (int)parameter.valueMin;
+									int maximum = (int)parameter.valueMax;
+									int previous = runtime.Ints[idx].value;
+									bool preventRepeats = minimum <= maximum && field_preventRepeats?.GetValue(parameter) is true;
+									int selected = UnityEngine.Random.Range(minimum, preventRepeats ? maximum : maximum + 1);
+									// VRChat also shifts the roll when the current value is outside the range.
+									runtime.Ints[idx].value = preventRepeats && selected >= previous ? selected + 1 : selected;
 									break;
+								}
 								case VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Copy:
 									runtime.Ints[idx].value = (int)runtime.getAdjustedParameterAsFloat(parameter.source, parameter.convertRange, parameter.sourceMin, parameter.sourceMax, parameter.destMin, parameter.destMax);
 									break;
