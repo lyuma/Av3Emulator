@@ -20,6 +20,8 @@ SOFTWARE. */
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 
 namespace Lyuma.Av3Emulator.Runtime
 {
@@ -34,25 +36,34 @@ namespace Lyuma.Av3Emulator.Runtime
 
 		private LyumaAv3Emulator emulator;
 		A3ESimpleOSC receiver;
-		[Header("OSC Connection")]
-		public bool openSocket = false;
-		public bool disableOSC = false;
-		public bool resendAllParameters = false;
+		[HideInInspector] public bool openSocket = false;
+		[HideInInspector] public bool disableOSC = false;
 		byte[] oscBuffer = new byte[65535];  // 65535 being the max length of a UDP package
-		public int udpPort = 9000;
+		private const int PreferredOscPort = 9000;
+		public int udpPort = 0;
 		public string outgoingUdpIp = "127.0.0.1";
 		public int outgoingUdpPort = 9001;
-		[SerializeField] private string commandLine = "";
-		private int oldPort = 9000;
-		[Header("OSC Status")]
-		[SerializeField] private int localPort;
-		[SerializeField] private string localIp;
-		[SerializeField] private int numberOfOSCMessages;
+		[SerializeField, HideInInspector] private string commandLine = "";
+		private int oldPort;
+		private float retryOscQueryAt;
+		private Av3OscQueryServer oscQuery;
+		private Av3OscQueryDiscovery oscQueryDiscovery;
+		private Av3OscQueryReceivers oscQueryReceivers;
+		[SerializeField, HideInInspector] private int localQueryPort;
+		[SerializeField, HideInInspector] private int localPort;
+		[SerializeField, HideInInspector] private string localIp;
+		[SerializeField, HideInInspector] private int numberOfOSCMessages;
 		[Header("Target Avatar")]
 		public VRC.SDK3.Avatars.Components.VRCAvatarDescriptor avatarDescriptor;
 		public bool forwardToAllAvatarsInScene;
+		private LyumaAv3Runtime lastOscTarget;
 		
-		[Header("Gizmo settings")]
+		[Header("Debug Options")]
+		public bool resendAllParameters = false;
+		public bool sendLoopbackOSCReplies;
+		public bool debugPrintReceivedMessages;
+
+		[Header("Gizmo Options")]
 		public bool alwaysShowOSCGizmos = true;
 		public bool clearGizmos = false;
 		public Color GizmoFilledColor = new Color(1.0f,0.0f,1.0f,0.1f);
@@ -61,9 +72,6 @@ namespace Lyuma.Av3Emulator.Runtime
 		public Color GizmoTextColor = new Color(1.0f,0.8f,1.0f,0.9f); //new Color(0.2f,1.0f,0.5f,1.0f);
 		protected Color GizmoBoundsColor = new Color(0.0f,0.0f,0.0f,0.6f); //new Color(0.2f,1.0f,0.5f,1.0f);
 		public bool GizmoShowSenderIP;
-		[Header("Debug options")]
-		public bool sendLoopbackOSCReplies;
-		public bool debugPrintReceivedMessages;
 
 		
 
@@ -72,20 +80,25 @@ namespace Lyuma.Av3Emulator.Runtime
 		private List<A3ESimpleOSC.OSCMessage> messages = new List<A3ESimpleOSC.OSCMessage>();
 		Dictionary<string, A3ESimpleOSC.OSCMessage> lastSent = new Dictionary<string, A3ESimpleOSC.OSCMessage>();
 
+		private IPEndPoint lastManualEndpoint;
+
 		public void Start() {
 			LyumaAv3Emulator[] emulators = FindObjectsOfType<LyumaAv3Emulator>();
 			if (emulators == null || emulators.Length == 0) {
 				return;
 			}
 			emulator = emulators[0];
-			if (emulator != null && emulator.runtimes != null) {
-				if (emulator.runtimes.Count > 0) {
-					avatarDescriptor = emulator.runtimes[0].GetComponent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>();
-				}
+			if (avatarDescriptor == null && emulator.runtimes != null && emulator.runtimes.Count > 0) {
+				avatarDescriptor = emulator.runtimes[0].avadesc;
 			}
 		}
 		public void Update() {
-			LyumaAv3Runtime runtime = avatarDescriptor != null ? LyumaAv3Runtime.GetRuntimeForAnimator(avatarDescriptor.GetComponent<Animator>()) : null;
+			var animator = avatarDescriptor != null ? avatarDescriptor.GetComponent<Animator>() : null;
+			var runtime = animator != null ? LyumaAv3Runtime.GetRuntimeForAnimator(animator) : null;
+			if (!ReferenceEquals(lastOscTarget, runtime)) {
+				lastOscTarget = runtime;
+				ClearSentValues();
+			}
 			commandLine = "--osc=" + udpPort + ":" + outgoingUdpIp + ":" + outgoingUdpPort;
 			if (clearGizmos) {
 				clearGizmos = false;
@@ -93,17 +106,19 @@ namespace Lyuma.Av3Emulator.Runtime
 				minMaxByPath.Clear();
 			}
 			if (openSocket && receiver != null && oldPort != udpPort) {
-				receiver.StopClient();
-				receiver = null;
+				CloseReceiver();
 			}
 			if ((!disableOSC && openSocket) && receiver == null) {
 				localIp = "";
 				localPort = -1;
 				oldPort = udpPort;
-				receiver = new A3ESimpleOSC();
+				var socket = new A3ESimpleOSC();
 				bool success = false;
 				try {
-					var localEndpoint = receiver.OpenClient(udpPort);
+					var localEndpoint = udpPort == 0
+						? socket.OpenClientWithFallback(PreferredOscPort)
+						: socket.OpenClient(udpPort);
+					receiver = socket;
 					localIp = localEndpoint.Address.ToString();
 					localPort = localEndpoint.Port;
 					success = localEndpoint.Port == udpPort || (udpPort == 0 && localEndpoint.Port > 0);
@@ -114,17 +129,18 @@ namespace Lyuma.Av3Emulator.Runtime
 				if (!success) {
 					Debug.LogError("Failed to bind socket to OSC");
 					openSocket = false;
+					CloseReceiver();
 				} else {
 					resendAllParameters = true;
 				}
 			}
 			if ((disableOSC||!openSocket) && receiver != null) {
-				receiver.StopClient();
-				receiver = null;
+				CloseReceiver();
 			}
+			UpdateOscQuery();
 			if (resendAllParameters) {
 				resendAllParameters = false;
-				lastSent.Clear();
+				ClearSentValues();
 			}
 			messages.Clear();
 			if (receiver != null) {
@@ -163,31 +179,100 @@ namespace Lyuma.Av3Emulator.Runtime
 			if (runtime != null && receiver != null) {
 				messages.Clear();
 				runtime.GetOSCDataInto(messages);
+				oscQuery?.Publish(runtime, messages);
 				if (messages.Count > 0) {
-					receiver.SetUnconnectedEndpoint(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(outgoingUdpIp), outgoingUdpPort));
-					// receiver.SendOSCBundle(messages, new A3ESimpleOSC.TimeTag { secs=-1, nsecs=-1 }, oscBuffer);
-					foreach (var message in messages) {
-						if (lastSent.ContainsKey(message.path) && Enumerable.SequenceEqual(message.arguments, lastSent[message.path].arguments)) {
-							continue;
-						}
-						lastSent[message.path] = message;
-						if (debugPrintReceivedMessages) {
-							Debug.Log("Sending " + message + " to " + outgoingUdpIp + ":" + outgoingUdpPort);
-						}
-						receiver.SendOSCPacket(message, oscBuffer);
+					var manualEndpoint = IPAddress.TryParse(outgoingUdpIp, out var ip) && outgoingUdpPort > 0 && outgoingUdpPort <= 65535
+						? new IPEndPoint(ip, outgoingUdpPort) : null;
+					if (!Equals(manualEndpoint, lastManualEndpoint)) {
+						lastManualEndpoint = manualEndpoint;
+						ClearSentValues();
 					}
+					if (manualEndpoint != null)
+						SendOscChanges(manualEndpoint, lastSent);
+					if (oscQueryReceivers != null)
+						foreach (var route in oscQueryReceivers.Routes)
+							if (!route.Endpoint.Equals(manualEndpoint))
+								SendOscChanges(route.Endpoint, route.Sent, route);
 				}
-			}
-			if (!enabled && receiver != null) {
-				receiver = null;
-			}
-		}
-		public void OnDestroy() {
-			if (receiver != null) {
-				receiver.StopClient();
+			} else {
+				oscQuery?.Publish(null, messages);
 			}
 		}
-		
+
+		private void SendOscChanges(IPEndPoint endpoint, Dictionary<string, A3ESimpleOSC.OSCMessage> sent,
+			Av3OscQueryReceivers.Route route = null)
+		{
+			receiver.SetUnconnectedEndpoint(endpoint);
+			foreach (var message in messages)
+			{
+				if (route != null && !route.Accepts(message.path))
+					continue;
+				if (sent.TryGetValue(message.path, out var previous) && Enumerable.SequenceEqual(message.arguments, previous.arguments))
+					continue;
+				sent[message.path] = message;
+				if (debugPrintReceivedMessages)
+					Debug.Log($"Sending {message} to {endpoint}");
+				receiver.SendOSCPacket(message, oscBuffer);
+			}
+		}
+
+		private void ClearSentValues()
+		{
+			lastSent.Clear();
+			if (oscQueryReceivers != null)
+				foreach (var route in oscQueryReceivers.Routes)
+					route.Sent.Clear();
+		}
+
+		private void UpdateOscQuery()
+		{
+			if (receiver == null)
+				return;
+			if (oscQueryReceivers != null)
+			{
+				oscQueryReceivers.Refresh();
+				return;
+			}
+			if (Time.realtimeSinceStartup < retryOscQueryAt)
+				return;
+
+			try
+			{
+				if (oscQuery == null)
+				{
+					oscQuery = new Av3OscQueryServer(localPort);
+					localQueryPort = oscQuery.Port;
+				}
+				oscQueryDiscovery = new Av3OscQueryDiscovery(oscQuery.ServiceName, localQueryPort, localPort);
+				oscQueryReceivers = new Av3OscQueryReceivers(oscQueryDiscovery.Services, localPort);
+				oscQueryReceivers.Refresh();
+			}
+			catch (SocketException error)
+			{
+				if (retryOscQueryAt == 0)
+					Debug.LogWarning($"AV3 could not start OSCQuery. It will retry while OSC is open. {error.Message}", this);
+				retryOscQueryAt = Time.realtimeSinceStartup + 1f;
+			}
+		}
+
+		private void OnDisable() => CloseReceiver();
+		public void OnDestroy() => CloseReceiver();
+
+		private void CloseReceiver()
+		{
+			oscQueryReceivers?.Dispose();
+			oscQueryReceivers = null;
+			oscQueryDiscovery?.Dispose();
+			oscQueryDiscovery = null;
+			oscQuery?.Dispose();
+			oscQuery = null;
+			localQueryPort = 0;
+			retryOscQueryAt = 0;
+			receiver?.StopClient();
+			receiver = null;
+			localPort = -1;
+		}
+
 		Vector3 ScreenToWorld(float x, float y) {
 			Camera camera = Camera.current;
 			Vector3 s = camera.WorldToScreenPoint(transform.position);
