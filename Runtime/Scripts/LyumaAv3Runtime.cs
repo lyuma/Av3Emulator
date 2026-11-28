@@ -22,6 +22,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using UnityEditor.Animations;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -2059,6 +2060,14 @@ namespace Lyuma.Av3Emulator.Runtime
 				{
 					ac = vrcAnimLayer.animatorController;
 					mask = vrcAnimLayer.mask;
+					// The SDK refreshes humanoid FX and Gesture masks from the controller during upload.
+					if (animator.isHuman && ac is AnimatorController authoredController &&
+						(vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.FX ||
+						 vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.Gesture))
+					{
+						var controllerLayers = authoredController.layers;
+						mask = controllerLayers.Length > 0 ? controllerLayers[0].avatarMask : null;
+					}
 				}
 				if (vrcAnimLayer.isDefault || (mask == null && vrcAnimLayer.type == VRCAvatarDescriptor.AnimLayerType.FX)) {
 					//defaults to a mask that prevents muscle overrides.
