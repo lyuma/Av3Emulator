@@ -445,10 +445,27 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 		}
 
+		private void ClearOwnedPhysBoneParameters(VRCPhysBone bone)
+		{
+			bool IsOwned(object access) => access is Av3EmuParameterAccess parameter && parameter.runtime == this;
+			if (IsOwned(bone.param_Angle)) bone.param_Angle = null;
+			if (IsOwned(bone.param_IsGrabbed)) bone.param_IsGrabbed = null;
+			if (IsOwned(bone.param_Stretch)) bone.param_Stretch = null;
+			if (IsOwned(field_param_IsPosed?.GetValue(bone))) field_param_IsPosed.SetValue(bone, null);
+			if (IsOwned(field_param_Squish?.GetValue(bone))) field_param_Squish.SetValue(bone, null);
+		}
+
 		public void assignPhysBoneParameters(VRCPhysBone[] behaviours) {
 			AvDynamicsPhysBones = behaviours;
 			foreach (var mb in AvDynamicsPhysBones) {
+				if (!mb)
+					continue;
 				string parameter = mb.parameter;
+				if (string.IsNullOrEmpty(parameter))
+				{
+					ClearOwnedPhysBoneParameters(mb);
+					continue;
+				}
 				Av3EmuParameterAccess accessInst = new Av3EmuParameterAccess();
 				accessInst.runtime = this;
 				accessInst.paramName = parameter + VRCPhysBone.PARAM_ANGLE;
@@ -474,7 +491,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					accessInst.floatVal = mb.param_StretchValue;
 				}
 
-				if (posedParam != null)
+				if (posedParam != null && field_param_IsPosed != null && field_param_IsPosedValue != null)
 				{
 					accessInst = new Av3EmuParameterAccess();
 					accessInst.runtime = this;
@@ -486,7 +503,7 @@ namespace Lyuma.Av3Emulator.Runtime
 					}
 				}
 				
-				if (squishParam != null)
+				if (squishParam != null && field_param_Squish != null && field_param_SquishValue != null)
 				{
 					accessInst = new Av3EmuParameterAccess();
 					accessInst.runtime = this;
