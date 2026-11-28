@@ -1684,7 +1684,7 @@ namespace Lyuma.Av3Emulator.Runtime
 			}
 			if (!IsMirrorClone && !IsShadowClone && AvatarSyncSource == this) {
 				convertDynamicBones(avadesc.gameObject);
-				if (this.emulator != null) {
+				if (animator.isHuman && this.emulator != null) {
 					if (this.emulator.DescriptorColliders != DescriptorCollidersSendersHelper.DescriptorExtractionType.None) {
 						if (this.emulator.ForceUpdateDescriptorColliders) {
 							forceUpdateDescriptorColliders(avadesc);
