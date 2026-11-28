@@ -1434,19 +1434,22 @@ namespace Lyuma.Av3Emulator.Runtime
 				}
 				else if (playbackOrder.ToString() == Roundabout.ToString())
 				{
-					int newPlayIndex = ((int)playbackIndex.GetValue(playAudio) + 1) % clips.Length;
-					playbackIndex.SetValue(playAudio, newPlayIndex);
-					clip = clips[newPlayIndex];
+					int currentIndex = Mathf.Clamp((int)playbackIndex.GetValue(playAudio), 0, clips.Length - 1);
+					clip = clips[currentIndex];
+					playbackIndex.SetValue(playAudio, (currentIndex + 1) % clips.Length);
 				}
 				else if (playbackOrder.ToString() == Parameter.ToString())
 				{
 					string parameterName = (string)audioSubType.GetField("ParameterName").GetValue(playAudio);
-					int? newPlayIndex = runtime.Ints.FirstOrDefault(x => x.name == parameterName)?.value;
-					if (newPlayIndex.HasValue && newPlayIndex.Value < clips.Length)
+					int requestedIndex = 0;
+					if (!string.IsNullOrEmpty(parameterName) && runtime.ParameterNames.Contains(parameterName) &&
+						runtime.IntToIndex.TryGetValue(parameterName, out int parameterIndex))
 					{
-						playbackIndex.SetValue(playAudio, newPlayIndex.Value);
-						clip = clips[newPlayIndex.Value];
+						requestedIndex = runtime.Ints[parameterIndex].value;
 					}
+					int newPlayIndex = Mathf.Clamp(requestedIndex, 0, clips.Length - 1);
+					playbackIndex.SetValue(playAudio, newPlayIndex);
+					clip = clips[newPlayIndex];
 				}
 				audioSource.clip = clip;
 			}
